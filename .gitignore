@@ -1,12 +1,9 @@
-# ---------------------------------------------------------
-# aVincePulse - Git Ignore
-# ---------------------------------------------------------
+# =========================================================
+# aVincePulse
+# =========================================================
 
-# Alte manuelle Entwicklungs-Backups
-DOKUMENTATION/ALT_BACKUPS/
-
-# Allgemeine Backup-Dateien
-*.bak
+# Manuelle Sicherungsdateien
+*.bak*
 *.backup
 *~
 *.swp
@@ -16,9 +13,23 @@ DOKUMENTATION/ALT_BACKUPS/
 __pycache__/
 *.pyc
 
-# Betriebssystem-/Dateimanager-Dateien
+# Betriebssystem
 .DS_Store
 Thumbs.db
 
-# Temporäre Laufzeitdateien
+# Laufzeit-/Testdateien
 speedtest-values
+
+# ---------------------------------------------------------
+# NAS-Testversionen und AP-Snapshots
+#
+# Diese bleiben auf der Synology.
+# GitHub verwendet stattdessen Commits und Tags.
+# ---------------------------------------------------------
+06_TESTVERSIONEN/
+
+# Alte Quellcode-Sicherung vor AP05-Synchronisation
+05_DOKUMENTATION/QUELLCODE_VOR_AP05_SYNC_2026-09-16/
+
+# Lokale Git-Metadaten-Sicherungen
+09_GITHUB/git-metadata-before-root-move_*.tar.gz
