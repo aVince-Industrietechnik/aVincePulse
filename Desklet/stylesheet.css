@@ -1,0 +1,41 @@
+.avince-hw-container {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    spacing: 1px;
+}
+
+.avince-hw-row {
+    spacing: 3px;
+}
+
+.avince-hw-name {
+    width: 70px;
+    font-size: 14px;
+    color: white;
+    font-weight: 600;
+}
+
+.avince-hw-value {
+    width: 58px;
+    font-size: 14px;
+    color: white;
+    font-weight: 600;
+    text-align: right;
+}
+
+.avince-hw-unit {
+    width: 50px;
+    font-size: 14px;
+    color: white;
+    font-weight: 600;
+    text-align: left;
+}
+
+.avince-hwmonitor {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}

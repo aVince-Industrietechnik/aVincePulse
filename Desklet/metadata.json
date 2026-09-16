@@ -1,0 +1,7 @@
+{
+    "uuid": "avincepulse-desklet@avince",
+    "name": "aVincePulse Desklet",
+    "description": "Hardware- und Netzwerkmonitor für den Cinnamon-Desktop.",
+    "version": "0.1.0-dev",
+    "max-instances": 1
+}

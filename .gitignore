@@ -1,0 +1,24 @@
+# ---------------------------------------------------------
+# aVincePulse - Git Ignore
+# ---------------------------------------------------------
+
+# Alte manuelle Entwicklungs-Backups
+DOKUMENTATION/ALT_BACKUPS/
+
+# Allgemeine Backup-Dateien
+*.bak
+*.backup
+*~
+*.swp
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Betriebssystem-/Dateimanager-Dateien
+.DS_Store
+Thumbs.db
+
+# Temporäre Laufzeitdateien
+speedtest-values
