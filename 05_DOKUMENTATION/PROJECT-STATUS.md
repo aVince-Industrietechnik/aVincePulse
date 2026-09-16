@@ -434,7 +434,16 @@ Abschlussbackups nach AP05:
 - `aVincePulse_Git_AP05_FINAL.bundle`
 - `SHA256SUMS.txt`
 
-Das Git-Bundle wurde verifiziert und enthält die komplette Git-Historie einschließlich `main` und Tag `0.1.0-dev_AP05-END`.
+Abschlussbackup nach AP07 (maßgeblicher aktueller Sicherungsstand):
+
+`/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Backups/2026-09-17_00-22-37/`
+
+- `aVincePulse_Development_AP07_FINAL.tar.gz` – vollständiges Entwicklungsprojekt einschließlich `.git` und `06_TESTVERSIONEN/`
+- `aVincePulse_Git_AP07_FINAL.bundle` – komplette Git-Historie mit allen Branches und Tags
+- `SHA256SUMS.txt`
+- `BACKUP-INFO.txt` – Commit, Tag und Zeitpunkt der Sicherung
+
+Die Git-Bundles wurden verifiziert und enthalten die komplette Git-Historie einschließlich `main` und der Tags.
 
 Die SHA-256-Prüfung des Bundles und des vollständigen Entwicklungsarchivs war erfolgreich.
 
