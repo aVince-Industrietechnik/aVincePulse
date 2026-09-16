@@ -50,6 +50,8 @@ Struktur:
   - `Applet/`
   - `Desklet/`
 - `03_GRAFIK_ICONS/` – Grafiken und Icons
+  - `01_V_SIGNAL_ICONSET/` – Iconset zur C-1-Designrichtung: Referenzlogo,
+    PNG-Größen von 16 bis 1024 Pixel sowie Entwurfsvarianten
 - `04_UEBERSETZUNGEN/` – Übersetzungen
 - `05_DOKUMENTATION/` – technische und projektbezogene Dokumentation
 - `06_TESTVERSIONEN/` – lokale Entwicklungsstände und AP-Snapshots auf der NAS; absichtlich nicht in GitHub versioniert
@@ -72,6 +74,14 @@ Tags:
 - `0.1.0-dev_AP05-END` – Entwicklungsstand nach Abschluss von AP05
 - `0.1.0-dev_AP06-END` – Entwicklungsstand nach Abschluss von AP06
 - `0.1.0-dev_AP07-END` – Entwicklungsstand nach Abschluss von AP07
+
+Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
+zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
+waren zum Zeitpunkt des Commits bereits im Git-Index vorgemerkt und wurden
+dadurch mit aufgenommen. Die Commit-Nachricht erwähnt sie nicht.
+
+Die Historie wurde bewusst nicht nachträglich umgeschrieben, da der Commit
+bereits veröffentlicht war. Inhaltlich gehören die Dateien in das Repository.
 
 ## 6. Abgeschlossene Arbeitspakete
 
@@ -297,6 +307,28 @@ Wesentliche Dateien:
 
 Verantwortlichkeiten sollen sauber getrennt bleiben. Neue Funktionen nicht wieder direkt in `desklet.js` bündeln, wenn sie logisch in Messung, Hardwareerkennung oder ein eigenes Modul gehören.
 
+## 7a. Grafiken und Logo
+
+Die C-1-Designrichtung ist in `01_PROJEKT_ROADMAP/ROADMAP_V2.md`, Abschnitt 15,
+festgelegt.
+
+Im Repository liegt dazu:
+
+`03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`
+
+- `00_Referenz/` – originales Referenzlogo
+- `01_PNG_Iconset/` – PNG-Größen 16, 22, 24, 32, 48, 64, 96, 128, 192, 256, 512, 1024
+- `02_Varianten/` – Entwurfsvarianten auf Basis des V-Signal-Logos
+
+Diese Dateien sind Entwurfs- und Referenzmaterial. Laut Roadmap soll daraus vor
+einer Veröffentlichung ein technisch sauberes, eigenständiges Vektorlogo (SVG)
+erstellt und auf Lesbarkeit bei 16, 20, 24, 32 und 64 Pixel geprüft werden.
+
+Eine Lizenz- und Rechteprüfung der Grafiken steht noch aus.
+
+Das Applet verwendet derzeit weiterhin das Unicode-Zeichen `⚡` als Panel-Symbol
+und noch keines der hier abgelegten Icons.
+
 ## 8. Technische Regeln
 
 ### Cinnamon / GJS
@@ -466,6 +498,7 @@ Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die F
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
 - Die festen Spaltenbreiten in `stylesheet.css` passen nicht zur einstellbaren Schriftgröße.
 - Die Funktion „Hardware neu erkennen" aus der Roadmap ist noch nicht umgesetzt.
+- Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG), die Einbindung als Panel-Symbol des Applets und die Lizenz- und Rechteprüfung stehen noch aus.
 - Ein- und Ausblenden einzelner Messwerte sowie eine benutzerdefinierte Reihenfolge sind noch nicht über die Einstellungen möglich. Die technische Voraussetzung dafür besteht seit AP06.
 
 Vor Beginn von AP08:
