@@ -1,3 +1,17 @@
+/*
+ * aVincePulse
+ * Desklet – UI, Refresh und Integration
+ *
+ * Entwicklungsstand: 0.1.0-dev
+ *
+ * Die Anzeigezeilen werden zentral aus metrics.js erzeugt.
+ * METRIC_ORDER bestimmt Reihenfolge und Umfang der Anzeige,
+ * METRICS liefert Beschriftung, Einheit und Startwert.
+ *
+ * Messwerterfassung liegt in measurement.js,
+ * Hardware-/Sensorerkennung in hardwareDetection.js.
+ */
+
 const Desklet = imports.ui.desklet;
 const St = imports.gi.St;
 const GLib = imports.gi.GLib;
@@ -18,6 +32,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this.actor.add_style_class_name("avince-hwmonitor");
 
         this._timeout = null;
+
+        // Zuordnung Messwert-ID -> Anzeigezeile.
+        // Wird in _buildRows() aus METRIC_ORDER gefuellt.
+        this._rows = {};
 
         this.fontSize = 14;
         this.fontWeight = "600";
@@ -57,94 +75,42 @@ class AVinceHWMonitor extends Desklet.Desklet {
             style_class: "avince-hw-container"
         });
 
-        const cpuMetric = METRICS.cpu_temp;
-
-        this._cpu = this._makeRow(
-            cpuMetric.label,
-            cpuMetric.defaultValue,
-            cpuMetric.unit
-        );
-        const loadMetric = METRICS.cpu_load;
-
-        this._load = this._makeRow(
-            loadMetric.label,
-            loadMetric.defaultValue,
-            loadMetric.unit
-        );
-        const ramMetric = METRICS.ram_load;
-
-        this._ram = this._makeRow(
-            ramMetric.label,
-            ramMetric.defaultValue,
-            ramMetric.unit
-        );
-        const storageMetric = METRICS.storage_temp;
-        this._ssd = this._makeRow(
-            storageMetric.label,
-            storageMetric.defaultValue,
-            storageMetric.unit
-        );
-        const fanMetric = METRICS.fan_speed;
-        this._fan = this._makeRow(
-            fanMetric.label,
-            fanMetric.defaultValue,
-            fanMetric.unit
-        );
-        const downMetric = METRICS.net_down;
-        this._down = this._makeRow(
-            downMetric.label,
-            downMetric.defaultValue,
-            downMetric.unit
-        );
-        const upMetric = METRICS.net_up;
-        this._up = this._makeRow(
-            upMetric.label,
-            upMetric.defaultValue,
-            upMetric.unit
-        );
-
-        const speedDownMetric = METRICS.speed_down;
-        this._speedDown = this._makeRow(
-            speedDownMetric.label,
-            speedDownMetric.defaultValue,
-            speedDownMetric.unit
-        );
-        const speedUpMetric = METRICS.speed_up;
-        this._speedUp = this._makeRow(
-            speedUpMetric.label,
-            speedUpMetric.defaultValue,
-            speedUpMetric.unit
-        );
-        const pingMetric = METRICS.ping;
-        this._ping = this._makeRow(
-            pingMetric.label,
-            pingMetric.defaultValue,
-            pingMetric.unit
-        );
-        const jitterMetric = METRICS.jitter;
-        this._jitter = this._makeRow(
-            jitterMetric.label,
-            jitterMetric.defaultValue,
-            jitterMetric.unit
-        );
-
-        this._container.add_child(this._cpu.row);
-        this._container.add_child(this._load.row);
-        this._container.add_child(this._ram.row);
-        this._container.add_child(this._ssd.row);
-        this._container.add_child(this._fan.row);
-        this._container.add_child(this._down.row);
-        this._container.add_child(this._up.row);
-
-        this._container.add_child(this._speedDown.row);
-        this._container.add_child(this._speedUp.row);
-        this._container.add_child(this._ping.row);
-        this._container.add_child(this._jitter.row);
+        this._buildRows();
 
         this.setContent(this._container);
 
         this._applyStyle();
         this._update();
+    }
+
+    /*
+     * Erzeugt fuer jeden in METRIC_ORDER aufgefuehrten Messwert
+     * genau eine Anzeigezeile.
+     *
+     * Ein neuer Messwert erfordert dadurch nur noch einen Eintrag
+     * in metrics.js und keine Aenderung an dieser Datei.
+     */
+    _buildRows() {
+        for (const id of METRIC_ORDER) {
+            const metric = METRICS[id];
+
+            if (!metric) {
+                global.logError(
+                    "aVincePulse: METRIC_ORDER verweist auf einen " +
+                    "in METRICS nicht definierten Messwert: " + id
+                );
+                continue;
+            }
+
+            const row = this._makeRow(
+                metric.label,
+                metric.defaultValue,
+                metric.unit
+            );
+
+            this._rows[id] = row;
+            this._container.add_child(row.row);
+        }
     }
 
     _makeRow(name, value, unit) {
@@ -180,29 +146,48 @@ class AVinceHWMonitor extends Desklet.Desklet {
         };
     }
 
+    /*
+     * Setzt den Anzeigewert eines Messwertes.
+     * Nicht vorhandene Zeilen werden stillschweigend uebergangen,
+     * damit ein fehlender Messwert kein Programmfehler ist.
+     */
+    _setValue(id, value) {
+        const row = this._rows[id];
+
+        if (!row || value === undefined || value === null)
+            return;
+
+        row.value.set_text(String(value));
+    }
+
+    /*
+     * Setzt die Einheit eines Messwertes.
+     * Wird fuer Messwerte mit dynamischer Einheit benoetigt,
+     * zum Beispiel B/s, KB/s oder MB/s beim Netzwerkdurchsatz.
+     */
+    _setUnit(id, unit) {
+        const row = this._rows[id];
+
+        if (!row || !unit)
+            return;
+
+        row.unit.set_text(unit);
+    }
+
     _applyStyle() {
-        if (!this._cpu || !this._load || !this._ram || !this._ssd ||
-            !this._fan || !this._down || !this._up ||
-            !this._speedDown || !this._speedUp || !this._ping || !this._jitter)
+        if (!this._rows)
             return;
 
         const style =
             "font-size: " + this.fontSize + "px;" +
             "font-weight: " + this.fontWeight + ";";
 
-        for (const item of [
-            this._cpu,
-            this._load,
-            this._ram,
-            this._ssd,
-            this._fan,
-            this._down,
-            this._up,
-            this._speedDown,
-            this._speedUp,
-            this._ping,
-            this._jitter
-        ]) {
+        for (const id of METRIC_ORDER) {
+            const item = this._rows[id];
+
+            if (!item)
+                continue;
+
             item.name.set_style(style);
             item.value.set_style(style);
             item.unit.set_style(style);
@@ -235,23 +220,23 @@ class AVinceHWMonitor extends Desklet.Desklet {
         const up =
             this._measurement.formatRate(network.up);
 
-        this._cpu.value.set_text(cpu);
-        this._load.value.set_text(load);
-        this._ram.value.set_text(ram);
-        this._ssd.value.set_text(ssd);
-        this._fan.value.set_text(fan);
+        this._setValue("cpu_temp", cpu);
+        this._setValue("cpu_load", load);
+        this._setValue("ram_load", ram);
+        this._setValue("storage_temp", ssd);
+        this._setValue("fan_speed", fan);
 
-        this._down.value.set_text(down.value);
-        this._down.unit.set_text(down.unit);
+        this._setValue("net_down", down.value);
+        this._setUnit("net_down", down.unit);
 
-        this._up.value.set_text(up.value);
-        this._up.unit.set_text(up.unit);
+        this._setValue("net_up", up.value);
+        this._setUnit("net_up", up.unit);
 
         if (speedtest) {
-            this._speedDown.value.set_text(speedtest.SPEED_DOWN);
-            this._speedUp.value.set_text(speedtest.SPEED_UP);
-            this._ping.value.set_text(speedtest.PING);
-            this._jitter.value.set_text(speedtest.JITTER);
+            this._setValue("speed_down", speedtest.SPEED_DOWN);
+            this._setValue("speed_up", speedtest.SPEED_UP);
+            this._setValue("ping", speedtest.PING);
+            this._setValue("jitter", speedtest.JITTER);
         }
 
         // Aktuelle Messwerte für das aVince Hardware Popup bereitstellen.

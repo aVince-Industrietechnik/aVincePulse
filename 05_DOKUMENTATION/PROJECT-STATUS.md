@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 16.09.2026  
+Stand: 16.09.2026 (AP06)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP05-END`  
-Referenz-Commit: `e4cb758141a55a29f5a46a47fb419520e408316e`
+Aktueller Referenzstand: `0.1.0-dev_AP06-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP05-END` (`e4cb758141a55a29f5a46a47fb419520e408316e`)
 
 ## 1. Zweck dieses Dokuments
 
@@ -65,12 +65,12 @@ Bisherige relevante Commits:
 
 - `f0f7854` – Initial import: aVincePulse 0.1.0-dev through AP05
 - `e4cb758` – Restructure repository: use full aVincePulse development project
+- `6cb4ad6` – Add project handoff status for model-independent development
 
-Aktueller Tag:
+Tags:
 
-- `0.1.0-dev_AP05-END`
-
-Dieser Tag markiert den vollständig gesicherten Entwicklungsstand nach Abschluss von AP05.
+- `0.1.0-dev_AP05-END` – Entwicklungsstand nach Abschluss von AP05
+- `0.1.0-dev_AP06-END` – Entwicklungsstand nach Abschluss von AP06
 
 ## 6. Abgeschlossene Arbeitspakete
 
@@ -169,11 +169,50 @@ Wichtig: `hwmonN`-Nummern sind nicht stabil und dürfen nicht fest programmiert 
 
 Die frühere feste Auswertung von `sensors`-Texten für `Package id 0`, `Composite` und `fan1:` wurde aus `measurement.js` entfernt.
 
+### AP06 – Desklet-UI über METRIC_ORDER
+
+Abgeschlossen.
+
+Datei:
+
+- `02_QUELLCODE/Desklet/desklet.js`
+
+Ziel war, die Anzeigezeilen des Desklets nicht mehr einzeln im UI-Code aufzubauen, sondern zentral aus dem Messwertmodell zu erzeugen.
+
+Umsetzung:
+
+- neue Methode `_buildRows()` erzeugt die Anzeigezeilen in einer Schleife über `METRIC_ORDER`
+- Beschriftung, Einheit und Startwert stammen ausschließlich aus `METRICS`
+- neue Hilfsmethoden `_setValue(id, value)` und `_setUnit(id, unit)` sprechen Zeilen über die Messwert-ID an
+- `_applyStyle()` iteriert ebenfalls über `METRIC_ORDER`
+- Zuordnung Messwert-ID zu Anzeigezeile in `this._rows`
+- ein in `METRIC_ORDER` aufgeführter, in `METRICS` nicht definierter Messwert wird protokolliert und übersprungen, ohne die Anzeige zu unterbrechen
+
+Damit ist `metrics.js` die einzige Stelle, an der Messwerte, Reihenfolge, Beschriftung und Einheit definiert werden. Ein zusätzlicher Messwert erfordert keine Änderung mehr an `desklet.js`.
+
+Bewusst nicht Bestandteil von AP06:
+
+- Ein- und Ausblenden einzelner Messwerte
+- benutzerdefinierte Reihenfolge über die Einstellungen
+
+AP06 schafft dafür die technische Voraussetzung.
+
+Nachweis der Wirksamkeit:
+
+Ein Testtausch zweier Einträge in `METRIC_ORDER` innerhalb der lokalen Testinstallation führte zur erwarteten Vertauschung der Anzeigezeilen. Der Testeingriff wurde anschließend zurückgenommen; das Repository war davon nicht betroffen.
+
+Unverändert geblieben sind:
+
+- `metrics.js`, `measurement.js`, `hardwareDetection.js`
+- `settings-schema.json`, `stylesheet.css`, `metadata.json`
+- der gesamte Applet-Quellcode
+- das Format der gemeinsam genutzten Datei `/tmp/avince-hwmonitor-values`
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
 
-- `desklet.js` – UI, Refresh, Darstellung, Popup-Handoff
+- `desklet.js` – UI, Refresh, Darstellung, Popup-Handoff; baut die Anzeigezeilen aus `METRIC_ORDER` auf
 - `metrics.js` – Messwertmodell und Reihenfolge
 - `measurement.js` – Messlogik und Laufzeitwerte
 - `hardwareDetection.js` – dynamische Hardware-/Sensorerkennung
@@ -196,6 +235,15 @@ Module werden über die Cinnamon-Desklet-Struktur importiert. Beispielprinzip:
 Änderungen an importierten GJS-Modulen können von Cinnamon zwischengespeichert werden. Ein bloßes Entfernen und erneutes Hinzufügen des Desklets reicht daher nicht immer aus. Unter X11 kann ein Cinnamon-Neustart über `Alt+F2`, anschließend `r`, für einen vollständigen Reload notwendig sein.
 
 Es wurde bewusst keine zusätzliche Node.js- oder separate GJS-Testlaufzeit nur für Entwicklungsprüfungen installiert.
+
+Auf dem Referenzsystem ist jedoch die Cinnamon-eigene JavaScript-Laufzeit `cjs` vorhanden (`/usr/bin/cjs`). Sie eignet sich für reine Syntaxprüfungen, ohne das Desklet zu starten und ohne zusätzliche Installation. Dazu wird der Dateiinhalt in eine nicht aufgerufene Funktion eingeschlossen, damit er vollständig geparst, aber nicht ausgeführt wird:
+
+```bash
+{ echo "(function(){"; cat desklet.js; echo "});"; } > /tmp/syntaxcheck.js
+cjs /tmp/syntaxcheck.js && echo "SYNTAX OK"
+```
+
+Diese Prüfung ersetzt keinen Funktionstest im laufenden Cinnamon.
 
 ### Hardwareerkennung
 
@@ -247,14 +295,18 @@ Vor größeren oder riskanten Änderungen soll zusätzlich ein NAS-Snapshot erha
 
 ## 10. Sicherungskonzept
 
-Aktueller Abschlussbackup nach AP05:
+Abschlussbackups nach AP05:
 
 `/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Backups/2026-09-16_14-50-08/`
 
-Enthält:
-
 - `aVincePulse_Development_AP05_COMPLETE.tar.gz`
 - `aVincePulse_Git_AP05.bundle`
+- `SHA256SUMS.txt`
+
+`/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Backups/2026-09-16_14-59-24/` (maßgebliches finales AP05-Backup)
+
+- `aVincePulse_Development_AP05_FINAL.tar.gz`
+- `aVincePulse_Git_AP05_FINAL.bundle`
 - `SHA256SUMS.txt`
 
 Das Git-Bundle wurde verifiziert und enthält die komplette Git-Historie einschließlich `main` und Tag `0.1.0-dev_AP05-END`.
@@ -308,20 +360,27 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP05 sind abgeschlossen.
+AP01 bis AP06 sind abgeschlossen.
 
-**AP06 ist noch nicht verbindlich definiert.**
+**AP07 ist noch nicht verbindlich definiert.**
 
-Vor Beginn von AP06:
+Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
+
+- Das Applet entspricht weiterhin dem Baseline-Stand und bezieht seine Werte ausschließlich aus `/tmp/avince-hwmonitor-values`. Ohne laufendes Desklet zeigt es keine Werte an. Das widerspricht dem Grundsatz EIGENSTÄNDIG + KOOPERATIV.
+- Speedtest-Werte werden weiterhin unter der alten UUID `avince-hwmonitor@angelo` gespeichert und gelesen.
+- Der LibreSpeed-Pfad ist im Applet fest codiert.
+- Das Messwertmodell enthält noch nicht die für Version 1.0 verbindlichen Messwerte GPU-Temperatur, GPU-Auslastung, Akkuinformationen und Speicherplatzbelegung.
+
+Vor Beginn von AP07:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP06 definieren
+5. Ziel und Akzeptanzkriterien für AP07 definieren
 6. erst danach Code ändern
 
-Keine neue AP06-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
+Keine neue AP07-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
 ## 15. Hinweise für KI-Assistenten
 
@@ -352,13 +411,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP05:
+Erwarteter Ausgangspunkt nach AP06:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP05-END`
-- AP05 abgeschlossen
-- AP06 noch zu definieren
+- Referenz-Tag: `0.1.0-dev_AP06-END`
+- AP06 abgeschlossen
+- AP07 noch zu definieren
 
 ---
 
