@@ -8,6 +8,7 @@
  * Darstellung und UI bleiben in desklet.js.
  */
 
+const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ByteArray = imports.byteArray;
 
@@ -168,6 +169,14 @@ var MeasurementProvider = class MeasurementProvider {
         return this._hardwareDetector.readValues();
     }
 
+    /*
+     * Reicht die Verfuegbarkeit der hardwareabhaengigen Messwerte
+     * an die Anzeigeschicht weiter.
+     */
+    getMetricAvailability() {
+        return this._hardwareDetector.getAvailability();
+    }
+
     readNetworkSpeed() {
         const iface = this._getDefaultInterface();
 
@@ -259,6 +268,78 @@ var MeasurementProvider = class MeasurementProvider {
             value:
                 Math.round(bytesPerSecond).toString(),
             unit: "B/s"
+        };
+    }
+
+    /*
+     * Freier Speicherplatz der Systempartition.
+     *
+     * Die Abfrage erfolgt ueber GIO und damit ausschliesslich fuer das
+     * Dateisystem, in dem "/" liegt. Eingehaengte Netzlaufwerke,
+     * tmpfs und efivarfs werden dadurch nicht mit erfasst.
+     *
+     * Rueckgabe in Byte, oder null wenn der Wert nicht ermittelbar ist.
+     */
+    readStorageFree() {
+        try {
+            const file = Gio.File.new_for_path("/");
+
+            const info = file.query_filesystem_info(
+                "filesystem::free",
+                null
+            );
+
+            if (!info)
+                return null;
+
+            const free =
+                info.get_attribute_uint64("filesystem::free");
+
+            if (!Number.isFinite(free) || free < 0)
+                return null;
+
+            return free;
+
+        } catch (e) {
+            global.logError(e);
+            return null;
+        }
+    }
+
+    /*
+     * Formatiert eine Byte-Angabe als Speichergroesse.
+     * Die Einheit wird automatisch gewaehlt.
+     */
+    formatSize(bytes) {
+        if (bytes === null || !Number.isFinite(bytes)) {
+            return {
+                value: "--",
+                unit: "GB"
+            };
+        }
+
+        if (bytes >= 1024 * 1024 * 1024 * 1024) {
+            return {
+                value:
+                    (bytes /
+                    (1024 * 1024 * 1024 * 1024)).toFixed(1),
+                unit: "TB"
+            };
+        }
+
+        if (bytes >= 1024 * 1024 * 1024) {
+            return {
+                value:
+                    (bytes /
+                    (1024 * 1024 * 1024)).toFixed(1),
+                unit: "GB"
+            };
+        }
+
+        return {
+            value:
+                (bytes / (1024 * 1024)).toFixed(0),
+            unit: "MB"
         };
     }
 

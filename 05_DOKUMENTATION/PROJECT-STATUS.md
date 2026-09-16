@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 16.09.2026 (AP06)  
+Stand: 17.09.2026 (AP07)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP06-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP05-END` (`e4cb758141a55a29f5a46a47fb419520e408316e`)
+Aktueller Referenzstand: `0.1.0-dev_AP07-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP06-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -71,6 +71,7 @@ Tags:
 
 - `0.1.0-dev_AP05-END` – Entwicklungsstand nach Abschluss von AP05
 - `0.1.0-dev_AP06-END` – Entwicklungsstand nach Abschluss von AP06
+- `0.1.0-dev_AP07-END` – Entwicklungsstand nach Abschluss von AP07
 
 ## 6. Abgeschlossene Arbeitspakete
 
@@ -111,6 +112,8 @@ Zentral definierte Messwerte:
 - `speed_up`
 - `ping`
 - `jitter`
+
+In AP07 ergänzt: `storage_free`, `battery_charge`, `psu_state`.
 
 `METRIC_ORDER` definiert die zentrale Reihenfolge.
 
@@ -208,6 +211,78 @@ Unverändert geblieben sind:
 - der gesamte Applet-Quellcode
 - das Format der gemeinsam genutzten Datei `/tmp/avince-hwmonitor-values`
 
+### AP07 – Akku, Netzteil, Speicherplatz und Verfügbarkeitsprüfung
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Desklet/metrics.js`
+- `02_QUELLCODE/Desklet/hardwareDetection.js`
+- `02_QUELLCODE/Desklet/measurement.js`
+- `02_QUELLCODE/Desklet/desklet.js`
+
+#### Neue Messwerte
+
+- `battery_charge` – Ladezustand des Systemakkus in Prozent, Anzeige `BATT`
+- `psu_state` – Zustand der Stromversorgung, Anzeige `STATUS` mit dem Wert `PSU` und `ON` bzw. `OFF` in der Einheitenspalte
+- `storage_free` – freier Speicherplatz der Systempartition, Anzeige `FREE ⛁`, Einheit wechselt automatisch zwischen MB, GB und TB
+
+#### Akkuerkennung
+
+Der Systemakku wird in `hardwareDetection.js` über `/sys/class/power_supply` gesucht.
+
+Wesentlich dabei: Akkus von Peripheriegeräten – Funkmaus, Tastatur, Headset – melden sich dort ebenfalls mit `type = Battery`. Sie tragen jedoch zusätzlich `scope = Device` und werden ausgeschlossen. Fehlt die `scope`-Datei, handelt es sich nach Linux-Konvention um den Systemakku.
+
+Auf dem Latitude-5285 wurde erkannt:
+
+- Akku: `/sys/class/power_supply/BAT0`
+- Netzteil: `/sys/class/power_supply/AC`
+- ausgeschlossen: `hidpp_battery_124` (Logitech-Funkmaus)
+
+Der Ladezustand wird bevorzugt aus `capacity` gelesen. Stellt die Hardware diese Datei nicht bereit, wird er aus `charge_now/charge_full` bzw. `energy_now/energy_full` berechnet.
+
+Der Netzteilzustand stammt aus `AC/online`. Fehlt eine AC-Schnittstelle, wird er ersatzweise aus dem Akkustatus abgeleitet.
+
+#### Speicherplatz
+
+`measurement.js` ermittelt den freien Platz über `Gio.File.query_filesystem_info` für den Pfad `/`.
+
+Dadurch wird ausschließlich das Dateisystem der Systempartition erfasst. Eingehängte Netzlaufwerke, `tmpfs` und `efivarfs` fließen nicht ein, und es wird kein externer Prozess wie `df` benötigt.
+
+Der gelieferte Wert entspricht dem für Benutzer verfügbaren Platz, also ohne die für root reservierten Blöcke. Er stimmt mit der Spalte `Available` von `df` überein.
+
+Hinweis für Vergleiche: `df -h` rundet grundsätzlich auf, aVincePulse rundet kaufmännisch. Eine Abweichung in der ersten Nachkommastelle ist daher normal und kein Fehler.
+
+#### Verfügbarkeitsprüfung
+
+`HardwareDetector.getAvailability()` meldet, welche hardwareabhängigen Messwerte auf dem Gerät tatsächlich vorhanden sind.
+
+`_buildRows()` erzeugt für einen als nicht verfügbar gemeldeten Messwert keine Anzeigezeile. Ein fehlender Sensor führt damit weder zu einer dauerhaften Ausgabe `--` noch zu einem Fehler.
+
+Betroffene Messwerte:
+
+- `cpu_temp`
+- `storage_temp`
+- `fan_speed`
+- `battery_charge`
+- `psu_state`
+
+Nur ausdrücklich als nicht verfügbar gemeldete Messwerte entfallen. Alle übrigen – etwa CPU-Auslastung, RAM, Speicherplatz, Netzwerk und Speedtest – bleiben immer sichtbar. `speed_down`, `speed_up`, `ping` und `jitter` werden bewusst nicht ausgeblendet, damit das Desklet seine Höhe nach dem ersten Speedtest nicht ändert.
+
+`battery_charge` und `psu_state` hängen beide am Systemakku, nicht am Netzteil. Ein Desktop-PC meldet häufig eine AC-Schnittstelle, aber keinen Akku; eine dauerhafte Anzeige `PSU ON` wäre dort ohne Aussage.
+
+Die Erkennung läuft einmalig beim Laden des Desklets. Ändert sich die Hardware oder wird ein Treiber verzögert geladen, ist ein Neuladen erforderlich. Die in der Roadmap vorgesehene Funktion „Hardware neu erkennen" ist noch nicht umgesetzt.
+
+#### Geprüfte Hardwarefälle
+
+Auf dem Referenzsystem real geprüft, zusätzlich per Simulation der Sensorverfügbarkeit:
+
+- Latitude-5285, alle Sensoren vorhanden: 14 Zeilen
+- Desktop-PC ohne Lüftersensor und ohne Akku: 11 Zeilen
+- Mini-PC zusätzlich ohne Storage-Temperatur: 10 Zeilen
+- virtuelle Maschine ohne jeden Sensor: 9 Zeilen, stabil
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -215,7 +290,7 @@ Wesentliche Dateien:
 - `desklet.js` – UI, Refresh, Darstellung, Popup-Handoff; baut die Anzeigezeilen aus `METRIC_ORDER` auf
 - `metrics.js` – Messwertmodell und Reihenfolge
 - `measurement.js` – Messlogik und Laufzeitwerte
-- `hardwareDetection.js` – dynamische Hardware-/Sensorerkennung
+- `hardwareDetection.js` – dynamische Hardware-/Sensorerkennung, Akku- und Netzteilerkennung, Verfügbarkeitsmeldung
 - `settings-schema.json` – Einstellungen
 - `stylesheet.css` – Darstellung
 - `metadata.json` – Cinnamon-Metadaten
@@ -244,6 +319,24 @@ cjs /tmp/syntaxcheck.js && echo "SYNTAX OK"
 ```
 
 Diese Prüfung ersetzt keinen Funktionstest im laufenden Cinnamon.
+
+### Symbole in der Anzeige
+
+Emoji dürfen nicht als Anzeigesymbole verwendet werden. Zeichen wie `🔋` oder `⚡` besitzen laut Unicode-Standard eine Emoji-Voreinstellung und werden von Cinnamon farbig aus `Noto Color Emoji` gerendert, auch wenn `fc-match` eine einfarbige Schrift meldet. Das wurde am Referenzsystem bestätigt.
+
+Verwendet werden dürfen nur Zeichen aus den geometrischen Unicode-Blöcken, die in der Standardschrift enthalten sind, zum Beispiel `⛁`, `▤`, `↓` oder `↑`.
+
+Vor der Verwendung eines neuen Zeichens ist zu prüfen, aus welcher Schrift es stammt:
+
+```bash
+fc-list ":charset=26C1" family
+```
+
+### Feste Spaltenbreiten
+
+`stylesheet.css` verwendet feste Pixelbreiten für Bezeichnung, Wert und Einheit (70/58/50 px). Die Schriftgröße ist über die Einstellungen jedoch bis 30 px veränderbar. Ab etwa 20 px können dadurch auch Zahlen abgeschnitten werden.
+
+Dieser Punkt stammt aus der Baseline und ist noch offen. Die Breiten sollten aus der eingestellten Schriftgröße berechnet werden.
 
 ### Hardwareerkennung
 
@@ -360,27 +453,31 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP06 sind abgeschlossen.
+AP01 bis AP07 sind abgeschlossen.
 
-**AP07 ist noch nicht verbindlich definiert.**
+**AP08 ist noch nicht verbindlich definiert.**
 
 Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
 
 - Das Applet entspricht weiterhin dem Baseline-Stand und bezieht seine Werte ausschließlich aus `/tmp/avince-hwmonitor-values`. Ohne laufendes Desklet zeigt es keine Werte an. Das widerspricht dem Grundsatz EIGENSTÄNDIG + KOOPERATIV.
 - Speedtest-Werte werden weiterhin unter der alten UUID `avince-hwmonitor@angelo` gespeichert und gelesen.
 - Der LibreSpeed-Pfad ist im Applet fest codiert.
-- Das Messwertmodell enthält noch nicht die für Version 1.0 verbindlichen Messwerte GPU-Temperatur, GPU-Auslastung, Akkuinformationen und Speicherplatzbelegung.
+- Der Zeitpunkt des letzten erfolgreichen Speedtests wird nicht gespeichert, ist für Version 1.0 aber verbindlich vorgesehen.
+- GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
+- Die festen Spaltenbreiten in `stylesheet.css` passen nicht zur einstellbaren Schriftgröße.
+- Die Funktion „Hardware neu erkennen" aus der Roadmap ist noch nicht umgesetzt.
+- Ein- und Ausblenden einzelner Messwerte sowie eine benutzerdefinierte Reihenfolge sind noch nicht über die Einstellungen möglich. Die technische Voraussetzung dafür besteht seit AP06.
 
-Vor Beginn von AP07:
+Vor Beginn von AP08:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP07 definieren
+5. Ziel und Akzeptanzkriterien für AP08 definieren
 6. erst danach Code ändern
 
-Keine neue AP07-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
+Keine neue AP08-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
 ## 15. Hinweise für KI-Assistenten
 
@@ -411,13 +508,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP06:
+Erwarteter Ausgangspunkt nach AP07:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP06-END`
-- AP06 abgeschlossen
-- AP07 noch zu definieren
+- Referenz-Tag: `0.1.0-dev_AP07-END`
+- AP07 abgeschlossen
+- AP08 noch zu definieren
 
 ---
 

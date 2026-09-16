@@ -41,12 +41,38 @@ var METRICS = {
         defaultValue: "--"
     },
 
+    storage_free: {
+        id: "storage_free",
+        label: "FREE ⛁",
+        type: "storage",
+        unit: "GB",
+        defaultValue: "--",
+        dynamicUnit: true
+    },
+
     fan_speed: {
         id: "fan_speed",
         label: "FAN",
         type: "rotation",
         unit: "rpm",
         defaultValue: "----"
+    },
+
+    battery_charge: {
+        id: "battery_charge",
+        label: "BATT",
+        type: "percentage",
+        unit: "%",
+        defaultValue: "--"
+    },
+
+    psu_state: {
+        id: "psu_state",
+        label: "STATUS",
+        type: "state",
+        unit: "--",
+        defaultValue: "PSU",
+        dynamicUnit: true
     },
 
     net_down: {
@@ -105,7 +131,10 @@ var METRIC_ORDER = [
     "cpu_load",
     "ram_load",
     "storage_temp",
+    "storage_free",
     "fan_speed",
+    "battery_charge",
+    "psu_state",
     "net_down",
     "net_up",
     "speed_down",

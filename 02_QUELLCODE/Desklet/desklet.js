@@ -89,8 +89,15 @@ class AVinceHWMonitor extends Desklet.Desklet {
      *
      * Ein neuer Messwert erfordert dadurch nur noch einen Eintrag
      * in metrics.js und keine Aenderung an dieser Datei.
+     *
+     * Messwerte, fuer die auf diesem Geraet kein Sensor gefunden
+     * wurde, erhalten keine Zeile. Ein fehlender Sensor fuehrt
+     * damit weder zu einer Dauerausgabe "--" noch zu einem Fehler.
      */
     _buildRows() {
+        const availability =
+            this._measurement.getMetricAvailability();
+
         for (const id of METRIC_ORDER) {
             const metric = METRICS[id];
 
@@ -98,6 +105,16 @@ class AVinceHWMonitor extends Desklet.Desklet {
                 global.logError(
                     "aVincePulse: METRIC_ORDER verweist auf einen " +
                     "in METRICS nicht definierten Messwert: " + id
+                );
+                continue;
+            }
+
+            // Messwerte ohne passenden Sensor werden nicht angezeigt.
+            // Nur ausdruecklich als nicht verfuegbar gemeldete Werte
+            // entfallen; alle uebrigen bleiben sichtbar.
+            if (availability[id] === false) {
+                global.log(
+                    "aVincePulse AP07: metric hidden, no sensor -> " + id
                 );
                 continue;
             }
@@ -220,11 +237,25 @@ class AVinceHWMonitor extends Desklet.Desklet {
         const up =
             this._measurement.formatRate(network.up);
 
+        const storageFree =
+            this._measurement.formatSize(
+                this._measurement.readStorageFree()
+            );
+
         this._setValue("cpu_temp", cpu);
         this._setValue("cpu_load", load);
         this._setValue("ram_load", ram);
         this._setValue("storage_temp", ssd);
         this._setValue("fan_speed", fan);
+
+        this._setValue("storage_free", storageFree.value);
+        this._setUnit("storage_free", storageFree.unit);
+
+        this._setValue("battery_charge", hardware.batteryCharge);
+
+        // Die STATUS-Zeile zeigt den festen Text "PSU" als Wert,
+        // der Netzteilzustand ON/OFF steht in der Einheitenspalte.
+        this._setUnit("psu_state", hardware.psuState);
 
         this._setValue("net_down", down.value);
         this._setUnit("net_down", down.unit);
