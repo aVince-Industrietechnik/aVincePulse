@@ -118,6 +118,25 @@
         "default": true,
         "description": "JITTER  (ms)"
     },
+    "show-speed-age": {
+        "type": "switch",
+        "default": true,
+        "description": "LAST  (Alter des Speedtests)"
+    },
+    "kopf-speedtest": {
+        "type": "header",
+        "description": "Internet-Speedtest"
+    },
+    "hinweis-speedtest": {
+        "type": "label",
+        "description": "Rechtsklick auf das Desklet öffnet das Menü mit dem Eintrag „Internet-Speedtest starten“."
+    },
+    "btn-speedtest": {
+        "type": "button",
+        "description": "Speedtest jetzt starten",
+        "callback": "on_speedtest_starten",
+        "tooltip": "Der Test dauert etwa 20 Sekunden. Das Ergebnis wird gespeichert und steht auch der jeweils anderen Komponente zur Verfügung."
+    },
     "kopf-zuruecksetzen": {
         "type": "header",
         "description": "Zurücksetzen"

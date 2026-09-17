@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 17.09.2026 (AP10)  
+Stand: 17.09.2026 (AP11)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP10-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP09-END`
+Aktueller Referenzstand: `0.1.0-dev_AP11-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP10-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -77,6 +77,7 @@ Tags:
 - `0.1.0-dev_AP08-END` – Entwicklungsstand nach Abschluss von AP08
 - `0.1.0-dev_AP09-END` – Entwicklungsstand nach Abschluss von AP09
 - `0.1.0-dev_AP10-END` – Entwicklungsstand nach Abschluss von AP10
+- `0.1.0-dev_AP11-END` – Entwicklungsstand nach Abschluss von AP11
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -437,6 +438,67 @@ Werden Messwerte abgewählt, verkürzt sich die längste Beschriftung und die An
 
 Beide Komponenten besitzen nun eine Schaltfläche, die alle Einstellungen einschließlich der Messwertauswahl auf die Auslieferungswerte zurücksetzt. Die dort gesetzten Werte stimmen mit den Vorgaben im jeweiligen Schema überein.
 
+### AP11 – Speedtest in beiden Komponenten
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Desklet/speedtest.js` und `02_QUELLCODE/Applet/speedtest.js` (neu)
+- `metrics.js`, `measurement.js`, `desklet.js`, `applet.js`, beide `settings-schema.json`
+
+#### Ausgangslage
+
+Der gesamte Speedtest-Code lag ausschließlich in `applet.js`. Wer nur das Desklet installierte, konnte keinen Speedtest auslösen; die Zeilen `SPEED`, `PING` und `JITTER` wären dauerhaft leer geblieben. Das widersprach dem Grundsatz EIGENSTÄNDIG + KOOPERATIV.
+
+#### Gemeinsames Modul
+
+`speedtest.js` ist das vierte gemeinsame Modul neben `metrics.js`, `measurement.js` und `hardwareDetection.js` und in beiden Komponenten bitgenau identisch.
+
+- `SpeedtestRunner` – Programmsuche, Ausführung, Ablage, Auswertung des Alters
+- `SpeedtestAnzeige` – bildschirmmittige Rückmeldung während des Tests
+
+Die Anzeige liegt bewusst im gemeinsamen Modul, damit der Ablauf unabhängig von der auslösenden Komponente gleich aussieht. Eine Cinnamon-Benachrichtigung wurde erprobt und wieder verworfen: Sie ist leicht zu übersehen und erscheint nicht, wenn Benachrichtigungen abgeschaltet sind.
+
+#### Bedienung
+
+- Applet: Klick auf das Panel-Symbol, zusätzlich eine Schaltfläche in den Einstellungen
+- Desklet: Kontextmenü über Rechtsklick, zusätzlich eine Schaltfläche in den Einstellungen
+
+Auf einen Klick auf das Desklet wurde bewusst verzichtet, da ein Desklet häufiger verschoben als gemessen wird und ein versehentlich ausgelöster Test Zeit und Bandbreite kostet.
+
+Beide Einstellungsfenster enthalten einen Hinweis auf den jeweiligen Bedienweg.
+
+#### Programmsuche
+
+Der zuvor fest verdrahtete Pfad `/usr/local/bin/librespeed-cli` wurde ersetzt. Gesucht wird zuerst im Suchpfad des Systems, anschließend in vier üblichen Ablageorten. Fehlt das Programm, erscheint eine verständliche Meldung statt wortlosem Nichtstun.
+
+#### Ablage der Ergebnisse
+
+Neuer Ort: `~/.local/share/avincepulse/speedtest-values`
+
+Bewusst nicht im Einstellungsordner einer der beiden UUIDs: Beide Komponenten sollen dasselbe Ergebnis sehen, unabhängig davon, welche den Test ausgelöst hat und ob die andere überhaupt installiert ist.
+
+Ergebnisse aus der früheren Ablage unter der alten UUID `avince-hwmonitor@angelo` werden beim ersten Zugriff einmalig übernommen. Ein fehlgeschlagener Test überschreibt vorhandene gültige Werte nicht.
+
+#### Zeitpunkt des letzten Speedtests
+
+Die Ablage enthält nun `TIMESTAMP`. Der neue Messwert `speed_age` zeigt das Alter als `LAST ◷` an.
+
+Die Anzeige erfolgt in Minuten, Stunden oder Tagen, bewusst nicht in Sekunden: Applet und Desklet messen zu versetzten Zeitpunkten, eine Sekundenanzeige liefe sichtbar auseinander und wirkte unruhig, obwohl derselbe Messwert zugrunde liegt.
+
+#### Symbole in Beschriftungen
+
+Beschriftung und Symbol werden in `metrics.js` getrennt geführt (`label` und `symbol`). Das hält beides unabhängig: Die Beschriftung kann später übersetzt werden, ohne dass das Symbol mitgeführt oder dabei verloren gehen kann.
+
+Die Anzeige hebt das Symbol über Pango-Markup an, damit es auf der Höhe der Großbuchstaben sitzt. Der Faktor steht als `symbolAnhebung` beim jeweiligen Messwert, da Schriftzeichen unterschiedlich hoch auf der Grundlinie sitzen: `⛁` benötigt 30, `◷` benötigt 110. Ein gemeinsamer Wert für alle Zeichen führt dazu, dass eines richtig sitzt und das andere verrutscht.
+
+Der Faktor wird mit der Schriftgröße multipliziert und bleibt dadurch bei jeder Größe und Bildschirmauflösung im Verhältnis gleich. Ein fester Wert wäre bei kleiner Schrift zu groß und bei großer zu klein.
+
+Die Beschriftung wird vor dem Setzen maskiert, damit `&`, `<` oder `>` die Zeile nicht leeren können. Schlägt die Auszeichnung fehl, erscheint die Beschriftung mit Symbol als einfacher Text.
+
+Alle Zellen einer Zeile richten sich an der Mittellinie aus statt an der Schriftgrundlinie.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -445,6 +507,7 @@ Wesentliche Dateien:
 - `metrics.js` – Messwertmodell und Reihenfolge
 - `measurement.js` – Messlogik und Laufzeitwerte
 - `hardwareDetection.js` – dynamische Hardware-/Sensorerkennung, Akku- und Netzteilerkennung, Verfügbarkeitsmeldung
+- `speedtest.js` – Ausführung, Ablage und Rückmeldung des Internet-Speedtests
 - `settings-schema.json` – Einstellungen
 - `stylesheet.css` – Darstellung
 - `metadata.json` – Cinnamon-Metadaten
@@ -454,7 +517,7 @@ Verantwortlichkeiten sollen sauber getrennt bleiben. Neue Funktionen nicht wiede
 Das Applet enthält dieselben Module zusätzlich als Kopie:
 
 - `applet.js` – Panel-Symbol, Hover-Anzeige, Speedtest
-- `metrics.js`, `measurement.js`, `hardwareDetection.js` – identisch mit dem Desklet
+- `metrics.js`, `measurement.js`, `hardwareDetection.js`, `speedtest.js` – identisch mit dem Desklet
 - `icon.png`, `panel-icon.png`, `panel-icon-symbolic.png`
 
 Änderungen an den drei gemeinsamen Modulen sind stets in beide Verzeichnisse zu übernehmen und anschließend per Prüfsumme zu kontrollieren.
@@ -681,35 +744,31 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP08 sind abgeschlossen.
+AP01 bis AP11 sind abgeschlossen.
 
-**AP09 ist noch nicht verbindlich definiert.**
+**AP12 ist noch nicht verbindlich definiert.**
 
 Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
 
-- Speedtest-Werte werden weiterhin unter der alten UUID `avince-hwmonitor@angelo` gespeichert und gelesen.
 - Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Sobald das alte Applet `avince-hwpopup@angelo` nicht mehr verwendet wird, liest diese Datei niemand mehr und das Schreiben kann entfallen.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
 - Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße.
-- Der Internet-Speedtest lässt sich ausschließlich über das Applet auslösen. Wer nur das Desklet installiert, hat keine Möglichkeit dazu. Der Speedtest-Code liegt bisher allein in `applet.js` und gehört in ein gemeinsames Modul.
-- Im Applet fehlt ein Hinweis darauf, dass der Speedtest per Klick auf das Panel-Symbol gestartet wird.
-- Der LibreSpeed-Pfad ist im Applet fest codiert.
-- Der Zeitpunkt des letzten erfolgreichen Speedtests wird nicht gespeichert, ist für Version 1.0 aber verbindlich vorgesehen.
+- Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
 - Die Funktion „Hardware neu erkennen" aus der Roadmap ist noch nicht umgesetzt.
-- Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG), die Einbindung als Panel-Symbol des Applets und die Lizenz- und Rechteprüfung stehen noch aus.
+- Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
 - Eine benutzerdefinierte Reihenfolge der Messwerte ist noch nicht möglich. Sie soll gemeinsam mit dem Umbenennen der Sensoren in einer einzigen Liste umgesetzt werden, statt in zwei getrennten Bedienelementen.
 
-Vor Beginn von AP09:
+Vor Beginn von AP12:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP09 definieren
+5. Ziel und Akzeptanzkriterien für AP12 definieren
 6. erst danach Code ändern
 
-Keine neue AP09-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
+Keine neue AP12-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
 ## 15. Hinweise für KI-Assistenten
 
@@ -740,13 +799,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP08:
+Erwarteter Ausgangspunkt nach AP11:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP08-END`
-- AP08 abgeschlossen
-- AP09 noch zu definieren
+- Referenz-Tag: `0.1.0-dev_AP11-END`
+- AP11 abgeschlossen
+- AP12 noch zu definieren
 
 ---
 

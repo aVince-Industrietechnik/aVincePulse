@@ -6,6 +6,22 @@
  *
  * Diese Datei enthält ausschließlich die Beschreibung der Messwerte.
  * Hardware-Erkennung und Messwerterfassung erfolgen getrennt.
+ *
+ * Das optionale Feld "symbol" führt ein Sinnbild getrennt von der
+ * Beschriftung. Beides bleibt dadurch unabhängig: Die Beschriftung
+ * kann übersetzt werden, ohne dass das Symbol mitgeführt oder dabei
+ * verloren gehen kann.
+ *
+ * "symbolAnhebung" bestimmt, wie weit das Symbol angehoben wird,
+ * damit es auf der Höhe der Großbuchstaben sitzt. Der Wert gehört
+ * zum Zeichen, nicht zur Anzeige: Schriftzeichen haben
+ * unterschiedliche Metriken und sitzen von Haus aus verschieden
+ * hoch auf der Grundlinie. Mit derselben Anhebung für alle Zeichen
+ * wirkt das eine richtig und das andere verrutscht.
+ *
+ * Der Wert wird mit der Schriftgröße multipliziert und bleibt
+ * dadurch bei jeder Größe und Bildschirmauflösung im Verhältnis
+ * gleich. Fehlt er, wird ein mittlerer Vorgabewert verwendet.
  */
 
 var METRICS = {
@@ -43,7 +59,9 @@ var METRICS = {
 
     storage_free: {
         id: "storage_free",
-        label: "FREE ⛁",
+        label: "FREE",
+        symbol: "⛁",
+        symbolAnhebung: 30,
         type: "storage",
         unit: "GB",
         defaultValue: "--",
@@ -117,6 +135,17 @@ var METRICS = {
         defaultValue: "--"
     },
 
+    speed_age: {
+        id: "speed_age",
+        label: "LAST",
+        symbol: "◷",
+        symbolAnhebung: 110,
+        type: "age",
+        unit: "min",
+        defaultValue: "--",
+        dynamicUnit: true
+    },
+
     jitter: {
         id: "jitter",
         label: "JITTER",
@@ -140,5 +169,6 @@ var METRIC_ORDER = [
     "speed_down",
     "speed_up",
     "ping",
-    "jitter"
+    "jitter",
+    "speed_age"
 ];

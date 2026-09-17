@@ -14,15 +14,21 @@
 
 const Desklet = imports.ui.desklet;
 const St = imports.gi.St;
+const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
+const PopupMenu = imports.ui.popupMenu;
+const Main = imports.ui.main;
 const Metrics = imports.desklets['avincepulse-desklet@avince'].metrics;
 const Measurement = imports.desklets['avincepulse-desklet@avince'].measurement;
 const HardwareDetection = imports.desklets['avincepulse-desklet@avince'].hardwareDetection;
+const Speedtest = imports.desklets['avincepulse-desklet@avince'].speedtest;
 
 const MeasurementProvider = Measurement.MeasurementProvider;
 const HardwareDetector = HardwareDetection.HardwareDetector;
+const SpeedtestRunner = Speedtest.SpeedtestRunner;
+const SpeedtestAnzeige = Speedtest.SpeedtestAnzeige;
 
 const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
@@ -44,8 +50,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this.fontWeight = "600";
         this.refreshInterval = 3;
 
+        this._speedtest = new SpeedtestRunner();
+        this._speedtestAnzeige = new SpeedtestAnzeige();
+
         this._measurement = new MeasurementProvider(
-            new HardwareDetector()
+            new HardwareDetector(),
+            this._speedtest
         );
 
         this.settings = new Settings.DeskletSettings(
@@ -85,6 +95,21 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._buildRows();
 
         this.setContent(this._container);
+
+        /*
+         * Der Speedtest laesst sich ueber das Kontextmenue ausloesen.
+         * Ein Klick auf das Desklet waere zwar schneller erreichbar,
+         * wuerde aber beim Verschieben versehentlich einen Test
+         * starten, der spuerbar Zeit und Bandbreite kostet.
+         */
+        this._menuEintragSpeedtest =
+            new PopupMenu.PopupMenuItem("Internet-Speedtest starten");
+
+        this._menuEintragSpeedtest.connect("activate", () => {
+            this.starteSpeedtest();
+        });
+
+        this._menu.addMenuItem(this._menuEintragSpeedtest);
 
         this._applyStyle();
         this._update();
@@ -133,7 +158,9 @@ class AVinceHWMonitor extends Desklet.Desklet {
             const row = this._makeRow(
                 metric.label,
                 metric.defaultValue,
-                metric.unit
+                metric.unit,
+                metric.symbol,
+                metric.symbolAnhebung
             );
 
             this._rows[id] = row;
@@ -199,7 +226,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._update();
     }
 
-    _makeRow(name, value, unit) {
+    _makeRow(name, value, unit, symbol, symbolAnhebung) {
         const row = new St.BoxLayout({
             vertical: false,
             style_class: "avince-hw-row"
@@ -220,6 +247,17 @@ class AVinceHWMonitor extends Desklet.Desklet {
             style_class: "avince-hw-unit"
         });
 
+        /*
+         * Alle drei Zellen auf der Mittellinie der Zeile ausrichten.
+         *
+         * Ohne das richten sie sich an der Schriftgrundlinie aus.
+         * Zeichen wie die Uhr bei LAST oder der Datentraeger bei FREE
+         * haben eine andere Hoehe als Grossbuchstaben und wirken
+         * dadurch gegenueber der Beschriftung nach unten versetzt.
+         */
+        for (const zelle of [nameLabel, valueLabel, unitLabel])
+            zelle.set_y_align(Clutter.ActorAlign.CENTER);
+
         row.add_child(nameLabel);
         row.add_child(valueLabel);
         row.add_child(unitLabel);
@@ -228,7 +266,13 @@ class AVinceHWMonitor extends Desklet.Desklet {
             row: row,
             name: nameLabel,
             value: valueLabel,
-            unit: unitLabel
+            unit: unitLabel,
+            // Beschriftung und Symbol getrennt aufbewahren, damit
+            // _setzeBeschriftung() die Auszeichnung bei jeder
+            // Groessenaenderung neu aufbauen kann.
+            nameText: name,
+            symbol: symbol || "",
+            symbolAnhebung: symbolAnhebung
         };
     }
 
@@ -269,6 +313,71 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * Bei groesserer Schrift wurden Beschriftungen wie "SPEED" und
      * Einheiten wie "MBit/s" abgeschnitten.
      */
+
+    /*
+     * Maskiert die Zeichen, die Pango-Markup als Auszeichnung deutet.
+     * Ohne das wuerde eine Beschriftung mit & oder < die Zeile leeren.
+     */
+    _maskiereMarkup(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    /*
+     * Setzt die Beschriftung einer Zeile und hebt ein vorhandenes
+     * Symbol leicht an.
+     *
+     * Sinnbilder wie die Uhr oder der Datentraeger sind kleiner und
+     * runder als Grossbuchstaben und sitzen auf der gemeinsamen
+     * Schriftgrundlinie optisch zu tief.
+     *
+     * Die Anhebung wird aus der Schriftgroesse berechnet, nicht fest
+     * vorgegeben. Ein fester Wert waere bei kleiner Schrift zu gross
+     * und bei grosser zu klein und wuerde auf hochaufloesenden
+     * Bildschirmen zusaetzlich verrutschen.
+     */
+    _setzeBeschriftung(item, fontSize) {
+        if (!item)
+            return;
+
+        if (!item.symbol) {
+            item.name.set_text(item.nameText);
+            return;
+        }
+
+        try {
+            /*
+             * Pango rechnet in 1/1024 Punkt.
+             *
+             * Der Faktor gehoert zum jeweiligen Zeichen, da
+             * Schriftzeichen unterschiedlich hoch auf der
+             * Grundlinie sitzen. Er steht deshalb in metrics.js.
+             */
+            const faktor =
+                Number.isFinite(Number(item.symbolAnhebung))
+                    ? Number(item.symbolAnhebung)
+                    : 110;
+
+            const anhebung = Math.round(fontSize * faktor);
+
+            item.name.clutter_text.set_use_markup(true);
+            item.name.clutter_text.set_markup(
+                this._maskiereMarkup(item.nameText) +
+                " <span rise='" + anhebung + "'>" +
+                this._maskiereMarkup(item.symbol) +
+                "</span>"
+            );
+
+        } catch (e) {
+            // Schlaegt die Auszeichnung fehl, bleibt die Zeile
+            // lesbar: Beschriftung und Symbol als einfacher Text.
+            global.logError(e);
+            item.name.set_text(item.nameText + " " + item.symbol);
+        }
+    }
+
     _berechneSpaltenbreiten(fontSize) {
         let maxLabel = 0;
         let maxEinheit = 0;
@@ -279,7 +388,11 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
             const metric = METRICS[id];
 
-            maxLabel = Math.max(maxLabel, String(metric.label).length);
+            const beschriftung =
+                String(metric.label) +
+                (metric.symbol ? " " + metric.symbol : "");
+
+            maxLabel = Math.max(maxLabel, beschriftung.length);
             maxEinheit = Math.max(maxEinheit, String(metric.unit).length);
         }
 
@@ -321,6 +434,8 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
             item.name.set_style(
                 style + "width: " + breiten.name + "px;");
+
+            this._setzeBeschriftung(item, fontSize);
 
             item.value.set_style(
                 style +
@@ -391,6 +506,14 @@ class AVinceHWMonitor extends Desklet.Desklet {
             this._setValue("speed_up", speedtest.SPEED_UP);
             this._setValue("ping", speedtest.PING);
             this._setValue("jitter", speedtest.JITTER);
+
+            const alter =
+                this._measurement.readSpeedtestAge(speedtest);
+
+            if (alter) {
+                this._setValue("speed_age", alter.value);
+                this._setUnit("speed_age", alter.unit);
+            }
         }
 
         // Aktuelle Messwerte für das aVince Hardware Popup bereitstellen.
@@ -465,7 +588,39 @@ class AVinceHWMonitor extends Desklet.Desklet {
         global.log("aVincePulse AP10: settings reset to defaults");
     }
 
+    /*
+     * Startet den Internet-Speedtest.
+     * Wird aus dem Kontextmenue und aus den Einstellungen gerufen.
+     */
+    starteSpeedtest() {
+        if (this._speedtest.istAktiv())
+            return;
+
+        this._speedtestAnzeige.zeige("Internet-Speedtest läuft …");
+
+        this._speedtest.starte(ergebnis => {
+            if (ergebnis.erfolg) {
+                this._speedtestAnzeige.verberge();
+                this._update();
+            } else {
+                // Die Meldung bleibt kurz stehen, damit der Grund
+                // des Fehlschlags lesbar ist.
+                this._speedtestAnzeige.zeige(ergebnis.meldung);
+                this._speedtestAnzeige.verbergeNach(8);
+            }
+        });
+    }
+
+    on_speedtest_starten() {
+        this.starteSpeedtest();
+    }
+
     on_desklet_removed() {
+        if (this._speedtestAnzeige) {
+            this._speedtestAnzeige.zerstoere();
+            this._speedtestAnzeige = null;
+        }
+
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;

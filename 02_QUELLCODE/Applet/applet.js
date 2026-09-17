@@ -19,6 +19,7 @@
 const Applet = imports.ui.applet;
 const Settings = imports.ui.settings;
 const St = imports.gi.St;
+const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Main = imports.ui.main;
@@ -27,9 +28,12 @@ const Mainloop = imports.mainloop;
 const Metrics = imports.applets['avincepulse-applet@avince'].metrics;
 const Measurement = imports.applets['avincepulse-applet@avince'].measurement;
 const HardwareDetection = imports.applets['avincepulse-applet@avince'].hardwareDetection;
+const Speedtest = imports.applets['avincepulse-applet@avince'].speedtest;
 
 const MeasurementProvider = Measurement.MeasurementProvider;
 const HardwareDetector = HardwareDetection.HardwareDetector;
+const SpeedtestRunner = Speedtest.SpeedtestRunner;
+const SpeedtestAnzeige = Speedtest.SpeedtestAnzeige;
 
 const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
@@ -142,14 +146,16 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._bindeSichtbarkeit();
         this._applyPanelSymbol();
-        this._speedtestRunning = false;
-        this._speedtestStatus = null;
 
         // Zuordnung Messwert-ID -> Anzeigezeile.
         this._rows = {};
 
+        this._speedtest = new SpeedtestRunner();
+        this._speedtestAnzeige = new SpeedtestAnzeige();
+
         this._measurement = new MeasurementProvider(
-            new HardwareDetector()
+            new HardwareDetector(),
+            this._speedtest
         );
 
         this._popup = new St.BoxLayout({
@@ -211,7 +217,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             const row = this._makeRow(
                 metric.label,
                 metric.defaultValue,
-                metric.unit
+                metric.unit,
+                metric.symbol,
+                metric.symbolAnhebung
             );
 
             this._rows[id] = row;
@@ -468,7 +476,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._update();
     }
 
-    _makeRow(name, value, unit) {
+    _makeRow(name, value, unit, symbol, symbolAnhebung) {
         const row = new St.BoxLayout({
             vertical: false
         });
@@ -476,6 +484,17 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         const nameLabel = new St.Label({ text: name });
         const valueLabel = new St.Label({ text: value });
         const unitLabel = new St.Label({ text: unit });
+
+        /*
+         * Alle drei Zellen auf der Mittellinie der Zeile ausrichten.
+         *
+         * Ohne das richten sie sich an der Schriftgrundlinie aus.
+         * Zeichen wie die Uhr bei LAST oder der Datentraeger bei FREE
+         * haben eine andere Hoehe als Grossbuchstaben und wirken
+         * dadurch gegenueber der Beschriftung nach unten versetzt.
+         */
+        for (const zelle of [nameLabel, valueLabel, unitLabel])
+            zelle.set_y_align(Clutter.ActorAlign.CENTER);
 
         row.add_child(nameLabel);
         row.add_child(valueLabel);
@@ -487,7 +506,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             row: row,
             name: nameLabel,
             value: valueLabel,
-            unit: unitLabel
+            unit: unitLabel,
+            // Beschriftung und Symbol getrennt aufbewahren, damit
+            // _setzeBeschriftung() die Auszeichnung bei jeder
+            // Groessenaenderung neu aufbauen kann.
+            nameText: name,
+            symbol: symbol || "",
+            symbolAnhebung: symbolAnhebung
         };
     }
 
@@ -507,6 +532,71 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * Bei groesserer Schrift wurden Beschriftungen wie "SPEED" und
      * Einheiten wie "MBit/s" abgeschnitten.
      */
+
+    /*
+     * Maskiert die Zeichen, die Pango-Markup als Auszeichnung deutet.
+     * Ohne das wuerde eine Beschriftung mit & oder < die Zeile leeren.
+     */
+    _maskiereMarkup(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    /*
+     * Setzt die Beschriftung einer Zeile und hebt ein vorhandenes
+     * Symbol leicht an.
+     *
+     * Sinnbilder wie die Uhr oder der Datentraeger sind kleiner und
+     * runder als Grossbuchstaben und sitzen auf der gemeinsamen
+     * Schriftgrundlinie optisch zu tief.
+     *
+     * Die Anhebung wird aus der Schriftgroesse berechnet, nicht fest
+     * vorgegeben. Ein fester Wert waere bei kleiner Schrift zu gross
+     * und bei grosser zu klein und wuerde auf hochaufloesenden
+     * Bildschirmen zusaetzlich verrutschen.
+     */
+    _setzeBeschriftung(item, fontSize) {
+        if (!item)
+            return;
+
+        if (!item.symbol) {
+            item.name.set_text(item.nameText);
+            return;
+        }
+
+        try {
+            /*
+             * Pango rechnet in 1/1024 Punkt.
+             *
+             * Der Faktor gehoert zum jeweiligen Zeichen, da
+             * Schriftzeichen unterschiedlich hoch auf der
+             * Grundlinie sitzen. Er steht deshalb in metrics.js.
+             */
+            const faktor =
+                Number.isFinite(Number(item.symbolAnhebung))
+                    ? Number(item.symbolAnhebung)
+                    : 110;
+
+            const anhebung = Math.round(fontSize * faktor);
+
+            item.name.clutter_text.set_use_markup(true);
+            item.name.clutter_text.set_markup(
+                this._maskiereMarkup(item.nameText) +
+                " <span rise='" + anhebung + "'>" +
+                this._maskiereMarkup(item.symbol) +
+                "</span>"
+            );
+
+        } catch (e) {
+            // Schlaegt die Auszeichnung fehl, bleibt die Zeile
+            // lesbar: Beschriftung und Symbol als einfacher Text.
+            global.logError(e);
+            item.name.set_text(item.nameText + " " + item.symbol);
+        }
+    }
+
     _berechneSpaltenbreiten(fontSize) {
         let maxLabel = 0;
         let maxEinheit = 0;
@@ -517,7 +607,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
             const metric = METRICS[id];
 
-            maxLabel = Math.max(maxLabel, String(metric.label).length);
+            const beschriftung =
+                String(metric.label) +
+                (metric.symbol ? " " + metric.symbol : "");
+
+            maxLabel = Math.max(maxLabel, beschriftung.length);
             maxEinheit = Math.max(maxEinheit, String(metric.unit).length);
         }
 
@@ -590,6 +684,8 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             item.name.set_style(
                 commonStyle + "width: " + nameWidth + "px;"
             );
+
+            this._setzeBeschriftung(item, fontSize);
 
             item.value.set_style(
                 commonStyle +
@@ -666,129 +762,52 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._popup.set_position(x, y);
     }
 
+    /*
+     * Ein Klick auf das Panel-Symbol startet den Speedtest.
+     * Ausfuehrung und Ablage verantwortet speedtest.js, damit
+     * Applet und Desklet dieselbe Umsetzung verwenden.
+     */
     on_applet_clicked(event) {
-        if (this._speedtestRunning)
-            return;
-
-        this._speedtestRunning = true;
-        this._hidePopup();
-        this._showSpeedtestStatus("Internet-Speedtest läuft …");
-
-        try {
-            const proc = Gio.Subprocess.new(
-                ["/usr/local/bin/librespeed-cli", "--json"],
-                Gio.SubprocessFlags.STDOUT_PIPE |
-                Gio.SubprocessFlags.STDERR_PIPE
-            );
-
-            proc.communicate_utf8_async(null, null, (process, result) => {
-                try {
-                    const [, stdout, stderr] =
-                        process.communicate_utf8_finish(result);
-
-                    if (!process.get_successful())
-                        throw new Error(stderr || "LibreSpeed fehlgeschlagen");
-
-                    const data = JSON.parse(stdout)[0];
-
-                    if (
-                        data.download === undefined ||
-                        data.upload === undefined ||
-                        data.ping === undefined ||
-                        data.jitter === undefined
-                    ) {
-                        throw new Error("Unvollständige LibreSpeed-Daten");
-                    }
-
-                    const dir =
-                        GLib.build_filenamev([
-                            GLib.get_home_dir(),
-                            ".config",
-                            "cinnamon",
-                            "spices",
-                            "avince-hwmonitor@angelo"
-                        ]);
-
-                    GLib.mkdir_with_parents(dir, 0o755);
-
-                    const file =
-                        GLib.build_filenamev([
-                            dir,
-                            "speedtest-values"
-                        ]);
-
-                    const text =
-                        "SPEED_DOWN=" + Number(data.download).toFixed(2) + "\n" +
-                        "SPEED_UP=" + Number(data.upload).toFixed(2) + "\n" +
-                        "PING=" + Number(data.ping).toFixed(2) + "\n" +
-                        "JITTER=" + Number(data.jitter).toFixed(2) + "\n";
-
-                    GLib.file_set_contents(file, text);
-
-                } catch (e) {
-                    global.logError(e);
-                }
-
-                this._speedtestRunning = false;
-                this._hideSpeedtestStatus();
-            });
-
-        } catch (e) {
-            global.logError(e);
-            this._speedtestRunning = false;
-            this._hideSpeedtestStatus();
-        }
+        this.starteSpeedtest();
     }
 
-    _showSpeedtestStatus(text) {
-        if (!this._speedtestStatus) {
-            this._speedtestStatus = new St.Label({
-                text: text,
-                style:
-                    "font-size: 34px;" +
-                    "font-weight: 700;" +
-                    "color: white;" +
-                    "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);" +
-                    "background-color: rgba(0, 0, 0, " +
-                    (this._gueltig(this.popupOpacity, 45, 85,
-                                   DEFAULT_POPUP_OPACITY * 100) / 100) + ");" +
-                    "border-radius: 18px;" +
-                    "padding: 28px 40px;"
-            });
+    /*
+     * Startet den Internet-Speedtest.
+     * Wird vom Panel-Symbol und aus den Einstellungen gerufen.
+     */
+    starteSpeedtest() {
+        if (this._speedtest.istAktiv())
+            return;
 
-            Main.uiGroup.add_child(this._speedtestStatus);
-        } else {
-            this._speedtestStatus.set_text(text);
-        }
+        this._hidePopup();
 
-        this._speedtestStatus.show();
+        const deckkraft =
+            this._gueltig(this.popupOpacity, 45, 85,
+                          DEFAULT_POPUP_OPACITY * 100) / 100;
 
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            if (this._speedtestStatus) {
-                const monitor = Main.layoutManager.primaryMonitor;
+        this._speedtestAnzeige.zeige(
+            "Internet-Speedtest läuft …", deckkraft);
 
-                const x =
-                    monitor.x +
-                    Math.round(
-                        (monitor.width - this._speedtestStatus.width) / 2
-                    );
-
-                const y =
-                    monitor.y +
-                    Math.round(
-                        (monitor.height - this._speedtestStatus.height) / 2
-                    );
-
-                this._speedtestStatus.set_position(x, y);
+        this._speedtest.starte(ergebnis => {
+            if (ergebnis.erfolg) {
+                this._speedtestAnzeige.verberge();
+                this._update();
+            } else {
+                // Die Meldung bleibt kurz stehen, damit der Grund
+                // des Fehlschlags lesbar ist.
+                this._speedtestAnzeige.zeige(ergebnis.meldung, deckkraft);
+                this._speedtestAnzeige.verbergeNach(8);
             }
-
-            return GLib.SOURCE_REMOVE;
         });
     }
 
-    _hideSpeedtestStatus() {
-        if (this._speedtestStatus)
-            this._speedtestStatus.hide();
+    /*
+     * Wird von der Schaltflaeche im Einstellungsfenster gerufen.
+     * Dieser Rueckruf fehlte bisher, weshalb die Schaltflaeche
+     * im Applet wirkungslos blieb.
+     */
+    on_speedtest_starten() {
+        this.starteSpeedtest();
     }
 
     /*
@@ -848,6 +867,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._setValue("speed_up", speedtest.SPEED_UP);
             this._setValue("ping", speedtest.PING);
             this._setValue("jitter", speedtest.JITTER);
+
+            const alter =
+                this._measurement.readSpeedtestAge(speedtest);
+
+            if (alter) {
+                this._setValue("speed_age", alter.value);
+                this._setUnit("speed_age", alter.unit);
+            }
         }
 
         if (this._popup.visible)
@@ -878,9 +905,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._timeout = null;
         }
 
-        if (this._speedtestStatus) {
-            this._speedtestStatus.destroy();
-            this._speedtestStatus = null;
+        if (this._speedtestAnzeige) {
+            this._speedtestAnzeige.zerstoere();
+            this._speedtestAnzeige = null;
         }
 
         if (this._popup) {

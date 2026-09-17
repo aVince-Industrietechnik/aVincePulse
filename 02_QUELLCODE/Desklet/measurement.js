@@ -21,8 +21,9 @@ const GLib = imports.gi.GLib;
 const ByteArray = imports.byteArray;
 
 var MeasurementProvider = class MeasurementProvider {
-    constructor(hardwareDetector) {
+    constructor(hardwareDetector, speedtestRunner) {
         this._hardwareDetector = hardwareDetector;
+        this._speedtestRunner = speedtestRunner;
 
         this._lastRx = null;
         this._lastTx = null;
@@ -121,49 +122,26 @@ var MeasurementProvider = class MeasurementProvider {
         }
     }
 
+    /*
+     * Liest die gespeicherten Speedtest-Werte.
+     * Ablage und Format verantwortet speedtest.js.
+     */
     readSpeedtestValues() {
-        try {
-            const path =
-                GLib.build_filenamev([
-                    GLib.get_home_dir(),
-                    ".config",
-                    "cinnamon",
-                    "spices",
-                    "avince-hwmonitor@angelo",
-                    "speedtest-values"
-                ]);
-
-            const text = this._readFile(path);
-
-            if (!text)
-                return null;
-
-            const values = {};
-
-            for (const line of text.split("\n")) {
-                const pos = line.indexOf("=");
-
-                if (pos > 0) {
-                    const key = line.substring(0, pos);
-                    const value = line.substring(pos + 1);
-                    values[key] = value;
-                }
-            }
-
-            if (
-                values.SPEED_DOWN === undefined ||
-                values.SPEED_UP === undefined ||
-                values.PING === undefined ||
-                values.JITTER === undefined
-            )
-                return null;
-
-            return values;
-
-        } catch (e) {
-            global.logError(e);
+        if (!this._speedtestRunner)
             return null;
-        }
+
+        return this._speedtestRunner.leseWerte();
+    }
+
+    /*
+     * Alter des letzten erfolgreichen Speedtests, aufbereitet
+     * fuer die Anzeige in einer Messwertzeile.
+     */
+    readSpeedtestAge(werte) {
+        if (!this._speedtestRunner)
+            return null;
+
+        return this._speedtestRunner.alterDesErgebnisses(werte);
     }
 
     readHardwareValues() {
