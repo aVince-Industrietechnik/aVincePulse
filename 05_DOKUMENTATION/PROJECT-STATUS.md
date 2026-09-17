@@ -672,16 +672,24 @@ Abschlussbackup nach AP07 (maßgeblicher aktueller Sicherungsstand):
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Commit, Tag und Zeitpunkt der Sicherung
 
-Abschlussbackup nach AP08 (maßgeblicher aktueller Sicherungsstand):
+### Aktueller Sicherungsstand
 
-`/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Backups/2026-09-17_10-16-07/`
+Nach jedem abgeschlossenen Arbeitspaket entsteht ein Vollbackup unter:
 
-- `aVincePulse_Development_AP08_FINAL.tar.gz` – vollständiges Entwicklungsprojekt einschließlich `.git` und `06_TESTVERSIONEN/`
-- `aVincePulse_Git_AP08_FINAL.bundle` – komplette Git-Historie mit allen Branches und Tags
+`/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Backups/<Zeitstempel>/`
+
+Das jeweils jüngste Verzeichnis ist der maßgebliche Stand. Welchem Arbeitspaket und welchem Commit es entspricht, steht in der enthaltenen `BACKUP-INFO.txt`; diese Datei wird hier bewusst nicht dupliziert, damit die Angaben nicht auseinanderlaufen.
+
+Jedes Backup enthält:
+
+- `aVincePulse_Development_<AP>_FINAL.tar.gz` – vollständiges Entwicklungsprojekt einschließlich `.git` und `06_TESTVERSIONEN/`
+- `aVincePulse_Git_<AP>_FINAL.bundle` – komplette Git-Historie mit allen Branches und Tags
 - `SHA256SUMS.txt`
-- `BACKUP-INFO.txt` – Commit, Tag und Zeitpunkt der Sicherung
+- `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Die Git-Bundles wurden verifiziert und enthalten die komplette Git-Historie einschließlich `main` und der Tags.
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-17_15-39-17` (AP11).
+
+Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
 ### Verhältnis von NAS-Sicherung und GitHub
 
