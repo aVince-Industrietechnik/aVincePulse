@@ -515,7 +515,28 @@ Abschlussbackup nach AP07 (maßgeblicher aktueller Sicherungsstand):
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Commit, Tag und Zeitpunkt der Sicherung
 
+Abschlussbackup nach AP08 (maßgeblicher aktueller Sicherungsstand):
+
+`/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Backups/2026-09-17_10-16-07/`
+
+- `aVincePulse_Development_AP08_FINAL.tar.gz` – vollständiges Entwicklungsprojekt einschließlich `.git` und `06_TESTVERSIONEN/`
+- `aVincePulse_Git_AP08_FINAL.bundle` – komplette Git-Historie mit allen Branches und Tags
+- `SHA256SUMS.txt`
+- `BACKUP-INFO.txt` – Commit, Tag und Zeitpunkt der Sicherung
+
 Die Git-Bundles wurden verifiziert und enthalten die komplette Git-Historie einschließlich `main` und der Tags.
+
+### Verhältnis von NAS-Sicherung und GitHub
+
+Beide Wege sichern unterschiedliche Dinge und ersetzen einander nicht.
+
+GitHub enthält den vollständigen versionierten Projektstand mit Historie und Tags. Über einen Tag lässt sich jeder Entwicklungsstand als Archiv abrufen, ohne dass dafür ein Release angelegt werden muss:
+
+`https://github.com/aVince-Industrietechnik/aVincePulse/archive/refs/tags/<TAG>.tar.gz`
+
+Nicht in GitHub enthalten sind die per `.gitignore` ausgeschlossenen Inhalte, insbesondere `06_TESTVERSIONEN/` mit den manuellen AP-Snapshots sowie die lokalen Git-Metadaten-Sicherungen. Diese liegen ausschließlich auf der NAS.
+
+Die NAS-Sicherung ist zudem unabhängig von der Erreichbarkeit und vom Fortbestand des GitHub-Kontos.
 
 Die SHA-256-Prüfung des Bundles und des vollständigen Entwicklungsarchivs war erfolgreich.
 
