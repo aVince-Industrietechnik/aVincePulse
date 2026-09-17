@@ -17,6 +17,7 @@
  */
 
 const Applet = imports.ui.applet;
+const Settings = imports.ui.settings;
 const St = imports.gi.St;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
@@ -34,21 +35,20 @@ const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
 
 /*
- * Aktualisierungsintervall der Hover-Anzeige in Sekunden.
+ * Vorgabewerte.
  *
- * Entspricht dem Standardintervall des Desklets, damit beide
- * Komponenten im gleichen Takt messen und nicht sichtbar
- * unterschiedliche Werte anzeigen.
+ * Sie greifen nur, solange die Einstellungen noch nicht geladen
+ * sind oder ein Wert ungueltig ist. Massgeblich sind sonst die
+ * Werte aus settings-schema.json.
  *
- * Applet und Desklet messen eigenstaendig. Ihre Zeitgeber laufen
- * daher nicht exakt gleichzeitig, wodurch sich einzelne Werte
- * kurzzeitig um einen Messzyklus unterscheiden koennen. Das ist
- * die bewusste Folge der Eigenstaendigkeit beider Komponenten.
- *
- * Ein eigenes settings-schema.json fuer das Applet ist vorgesehen,
- * damit der Wert spaeter einstellbar wird.
+ * Zum Aktualisierungsintervall: Applet und Desklet messen
+ * eigenstaendig. Ihre Zeitgeber laufen daher nicht exakt
+ * gleichzeitig, wodurch sich einzelne Werte kurzzeitig um einen
+ * Messzyklus unterscheiden koennen. Das ist die bewusste Folge
+ * der Eigenstaendigkeit beider Komponenten. Gleiche Intervalle
+ * in Applet und Desklet lassen den Unterschied nicht auffallen.
  */
-const REFRESH_INTERVAL_SECONDS = 3;
+const DEFAULT_REFRESH_INTERVAL_SECONDS = 3;
 
 /*
  * Anteil der Bildschirmhoehe, den die Hover-Anzeige hoechstens
@@ -59,7 +59,7 @@ const REFRESH_INTERVAL_SECONDS = 3;
  * und bleibt auch dann vollstaendig sichtbar, wenn spaeter weitere
  * Messwerte hinzukommen.
  */
-const POPUP_MAX_HEIGHT_RATIO = 0.70;
+const DEFAULT_POPUP_HEIGHT_RATIO = 0.70;
 
 // Grenzen der berechneten Schriftgroesse in Pixeln.
 const POPUP_MIN_FONT_SIZE = 14;
@@ -84,42 +84,63 @@ const POPUP_MAX_FONT_SIZE = 48;
  * Fuer grosse, fette Schrift gilt 3.0 : 1 als Mindestkontrast.
  * Werte unter 0.45 sollten daher nicht angeboten werden.
  *
- * Vorgesehen ist, diesen Wert spaeter ueber ein eigenes
- * settings-schema.json des Applets einstellbar zu machen.
- * Sinnvoller Bereich: 0.45 bis 0.85.
+ * Der Wert ist ueber die Einstellungen veraenderbar. Das Schema
+ * laesst bewusst nur 45 bis 85 Prozent zu.
  */
-const POPUP_BACKGROUND_OPACITY = 0.55;
+const DEFAULT_POPUP_OPACITY = 0.55;
 
 
 class AVincePulseApplet extends Applet.TextIconApplet {
     constructor(metadata, orientation, panel_height, instance_id) {
         super(orientation, panel_height, instance_id);
 
-        /*
-         * Panel-Symbol: C-1-Logo, weiss-blau-rot auf transparentem Grund.
-         * Cinnamon skaliert die Datei auf die jeweilige Panelhoehe.
-         *
-         * Bewusst nicht "icon.png": diesen Dateinamen verwendet die
-         * Cinnamon-Verwaltung fuer die Darstellung in der Applet-Liste.
-         * Die Liste hat einen hellen Hintergrund, auf dem ein weisses
-         * Logo mit transparentem Grund nicht zu erkennen waere.
-         * Dort liegt deshalb die Fassung mit dunklem Hintergrund,
-         * fuer das Panel diese hier.
-         */
-        try {
-            this.set_applet_icon_path(
-                GLib.build_filenamev([metadata.path, "panel-icon.png"])
-            );
-        } catch (e) {
-            // Fehlt die Icondatei, bleibt das Applet ueber ein
-            // Textkuerzel bedienbar.
-            global.logError(e);
-            this.set_applet_label("aVP");
-        }
-
         this.set_applet_tooltip("aVincePulse");
 
+        this._metadataPath = metadata.path;
         this._timeout = null;
+        this._symbolischAktiv = false;
+
+        // Vorgabewerte, bis die Einstellungen geladen sind.
+        this.refreshInterval = DEFAULT_REFRESH_INTERVAL_SECONDS;
+        this.popupHeightRatio = DEFAULT_POPUP_HEIGHT_RATIO * 100;
+        this.popupOpacity = DEFAULT_POPUP_OPACITY * 100;
+        this.panelSymbol = "icon";
+
+        this.settings = new Settings.AppletSettings(
+            this,
+            metadata.uuid,
+            instance_id
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "refresh-interval",
+            "refreshInterval",
+            this._onRefreshIntervalChanged.bind(this)
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "popup-height-ratio",
+            "popupHeightRatio",
+            this._applyPopupScale.bind(this)
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "popup-opacity",
+            "popupOpacity",
+            this._applyPopupStyle.bind(this)
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "panel-symbol",
+            "panelSymbol",
+            this._applyPanelSymbol.bind(this)
+        );
+
+        this._applyPanelSymbol();
         this._speedtestRunning = false;
         this._speedtestStatus = null;
 
@@ -133,17 +154,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._popup = new St.BoxLayout({
             vertical: true,
             reactive: false,
-            visible: false,
-            style:
-                // Abgedunkelte Flaeche hinter der Anzeige,
-                // siehe POPUP_BACKGROUND_OPACITY.
-                "background-color: rgba(0, 0, 0, " +
-                POPUP_BACKGROUND_OPACITY + ");" +
-                "border-radius: 18px;" +
-                "padding: 28px 40px;" +
-                "spacing: 8px;"
+            visible: false
         });
 
+        this._applyPopupStyle();
         this._buildRows();
         this._applyPopupScale();
 
@@ -200,6 +214,190 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         }
     }
 
+    /*
+     * Setzt das Panel-Symbol entsprechend der Einstellung.
+     *
+     * Die Dateinamen sind bewusst nicht "icon.png": diesen Namen
+     * verwendet die Cinnamon-Verwaltung fuer die Darstellung in der
+     * Applet-Liste. Die Liste hat einen hellen Hintergrund, auf dem
+     * ein weisses Logo mit transparentem Grund nicht zu erkennen
+     * waere. Dort liegt deshalb die Fassung mit dunklem Hintergrund.
+     */
+    _applyPanelSymbol() {
+        const variante = this.panelSymbol || "icon";
+
+        if (variante === "text") {
+            this._zeigeTextkuerzel();
+            return;
+        }
+
+        const einfarbig =
+            variante === "symbolic" ||
+            variante === "symbolic-status";
+
+        // Nur die Variante "symbolic" wird auf die Groesse des
+        // farbigen Logos angehoben. "symbolic-status" behaelt
+        // bewusst die kleinere Cinnamon-Groesse fuer Statusanzeigen.
+        this._symbolischAktiv = (variante === "symbolic");
+
+        const datei =
+            einfarbig
+                ? "panel-icon-symbolic.png"
+                : "panel-icon.png";
+
+        const pfad =
+            GLib.build_filenamev([this._metadataPath, datei]);
+
+        try {
+            if (einfarbig)
+                this.set_applet_icon_symbolic_path(pfad);
+            else
+                this.set_applet_icon_path(pfad);
+
+            // Ein zuvor gesetztes Textkuerzel wuerde sonst
+            // neben dem Symbol stehen bleiben.
+            this.set_applet_label("");
+            this.hide_applet_label(true);
+
+            this._angleicheIconGroesse();
+
+        } catch (e) {
+            // Fehlt die Icondatei, bleibt das Applet ueber ein
+            // Textkuerzel bedienbar.
+            global.logError(e);
+            this._zeigeTextkuerzel();
+        }
+    }
+
+    /*
+     * Gleicht die Groesse des symbolischen Logos an die des
+     * farbigen an.
+     *
+     * Cinnamon stellt symbolische Symbole absichtlich kleiner dar
+     * als farbige, weil dort ueblicherweise Statusanzeigen wie
+     * WLAN oder Lautstaerke sitzen. In der rechten Panelzone sind
+     * das 16 statt 24 Pixel. Fuer ein Produktlogo ist das zu klein,
+     * und beide Varianten sollen gleich gross erscheinen.
+     */
+    _angleicheIconGroesse() {
+        if (!this._symbolischAktiv)
+            return;
+
+        try {
+            if (this._applet_icon) {
+                this._applet_icon.set_icon_size(
+                    this.getPanelIconSize(St.IconType.FULLCOLOR)
+                );
+            }
+        } catch (e) {
+            global.logError(e);
+        }
+    }
+
+    /*
+     * Wird von Cinnamon gerufen, wenn sich die Panelhoehe oder die
+     * eingestellte Symbolgroesse aendert. Die Angleichung muss danach
+     * erneut erfolgen, da Cinnamon die Groesse dabei zuruecksetzt.
+     */
+    on_panel_icon_size_changed(size) {
+        this._angleicheIconGroesse();
+    }
+
+    /*
+     * Setzt alle Einstellungen auf die Auslieferungswerte zurueck.
+     * Wird ueber die Schaltflaeche im Einstellungsfenster gerufen.
+     */
+    on_standardwerte_zuruecksetzen() {
+        if (!this.settings)
+            return;
+
+        const intervall = DEFAULT_REFRESH_INTERVAL_SECONDS;
+        const groesse = Math.round(DEFAULT_POPUP_HEIGHT_RATIO * 100);
+        const deckkraft = Math.round(DEFAULT_POPUP_OPACITY * 100);
+        const symbol = "icon";
+
+        this.settings.setValue("refresh-interval", intervall);
+        this.settings.setValue("popup-height-ratio", groesse);
+        this.settings.setValue("popup-opacity", deckkraft);
+        this.settings.setValue("panel-symbol", symbol);
+
+        /*
+         * setValue schreibt ausschliesslich die Einstellungsdatei.
+         * Weder die gebundenen Eigenschaften noch die zugehoerigen
+         * Rueckrufe werden dabei aktualisiert. Die Werte werden
+         * deshalb hier selbst uebernommen und angewendet, damit das
+         * Zuruecksetzen sofort sichtbar wird.
+         */
+        this.refreshInterval = intervall;
+        this.popupHeightRatio = groesse;
+        this.popupOpacity = deckkraft;
+        this.panelSymbol = symbol;
+
+        this._applyPanelSymbol();
+        this._applyPopupStyle();
+        this._applyPopupScale();
+        this._onRefreshIntervalChanged();
+
+        global.log("aVincePulse AP09: settings reset to defaults");
+    }
+
+    _zeigeTextkuerzel() {
+        this._symbolischAktiv = false;
+
+        // Ein zuvor gesetztes Symbol wuerde sonst neben dem
+        // Text stehen bleiben.
+        this.hide_applet_icon();
+
+        this.set_applet_label("aVP");
+        this.hide_applet_label(false);
+    }
+
+    /*
+     * Setzt Hintergrundflaeche und Abstaende der Hover-Anzeige.
+     * Die Deckkraft stammt aus den Einstellungen.
+     */
+    _applyPopupStyle() {
+        if (!this._popup)
+            return;
+
+        const deckkraft =
+            this._gueltig(this.popupOpacity, 45, 85,
+                          DEFAULT_POPUP_OPACITY * 100) / 100;
+
+        this._popup.set_style(
+            "background-color: rgba(0, 0, 0, " + deckkraft + ");" +
+            "border-radius: 18px;" +
+            "padding: 28px 40px;" +
+            "spacing: 8px;"
+        );
+    }
+
+    /*
+     * Begrenzt einen Einstellungswert auf den zulaessigen Bereich
+     * und faellt bei ungueltiger Eingabe auf den Vorgabewert zurueck.
+     */
+    _gueltig(wert, min, max, vorgabe) {
+        const zahl = Number(wert);
+
+        if (!Number.isFinite(zahl))
+            return vorgabe;
+
+        return Math.max(min, Math.min(max, zahl));
+    }
+
+    /*
+     * Setzt den Zeitgeber nach einer Aenderung des Intervalls
+     * sofort neu, damit die Aenderung ohne Wartezeit wirkt.
+     */
+    _onRefreshIntervalChanged() {
+        if (this._timeout) {
+            Mainloop.source_remove(this._timeout);
+            this._timeout = null;
+        }
+
+        this._update();
+    }
+
     _makeRow(name, value, unit) {
         const row = new St.BoxLayout({
             vertical: false
@@ -238,10 +436,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (!monitor || zeilen === 0)
             return;
 
+        const anteil =
+            this._gueltig(this.popupHeightRatio, 40, 90,
+                          DEFAULT_POPUP_HEIGHT_RATIO * 100) / 100;
+
         // Zeilenhoehe entspricht rund dem 1.35-fachen der Schriftgroesse,
         // dazu kommen Innenabstand und Zeilenabstand.
         const verfuegbar =
-            monitor.height * POPUP_MAX_HEIGHT_RATIO - 2 * 28;
+            monitor.height * anteil - 2 * 28;
 
         let fontSize =
             Math.floor(verfuegbar / (zeilen * 1.35 + zeilen * 0.18));
@@ -291,8 +493,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         }
 
         global.log(
-            "aVincePulse AP08: popup scaled - " + zeilen +
-            " rows, font " + fontSize + "px, monitor " +
+            "aVincePulse AP09: popup scaled - " + zeilen +
+            " rows, font " + fontSize + "px, " +
+            Math.round(anteil * 100) + "% of " +
             monitor.width + "x" + monitor.height
         );
     }
@@ -435,7 +638,8 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                     "color: white;" +
                     "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);" +
                     "background-color: rgba(0, 0, 0, " +
-                    POPUP_BACKGROUND_OPACITY + ");" +
+                    (this._gueltig(this.popupOpacity, 45, 85,
+                                   DEFAULT_POPUP_OPACITY * 100) / 100) + ");" +
                     "border-radius: 18px;" +
                     "padding: 28px 40px;"
             });
@@ -537,8 +741,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (this._popup.visible)
             this._updatePopupPosition();
 
+        const sekunden = Math.round(
+            this._gueltig(this.refreshInterval, 1, 30,
+                          DEFAULT_REFRESH_INTERVAL_SECONDS)
+        );
+
         this._timeout = Mainloop.timeout_add_seconds(
-            REFRESH_INTERVAL_SECONDS,
+            sekunden,
             () => {
                 this._update();
                 return false;
@@ -547,6 +756,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     on_applet_removed_from_panel() {
+        if (this.settings) {
+            this.settings.finalize();
+            this.settings = null;
+        }
+
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;

@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 17.09.2026 (AP08)  
+Stand: 17.09.2026 (AP09)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP08-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP07-END`
+Aktueller Referenzstand: `0.1.0-dev_AP09-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP08-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -75,6 +75,7 @@ Tags:
 - `0.1.0-dev_AP06-END` – Entwicklungsstand nach Abschluss von AP06
 - `0.1.0-dev_AP07-END` – Entwicklungsstand nach Abschluss von AP07
 - `0.1.0-dev_AP08-END` – Entwicklungsstand nach Abschluss von AP08
+- `0.1.0-dev_AP09-END` – Entwicklungsstand nach Abschluss von AP09
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -357,6 +358,49 @@ Wichtig ist die Unterscheidung zweier Dateien:
 
 Herkunft und Bearbeitung der Panel-Icons sind in `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/03_Panel/README.txt` dokumentiert.
 
+### AP09 – Einstellungen für das Applet
+
+Abgeschlossen.
+
+Datei:
+
+- `02_QUELLCODE/Applet/settings-schema.json` (neu)
+- `02_QUELLCODE/Applet/applet.js`
+
+Das Applet besaß bisher keine Einstellungen; alle Werte waren fest im Quelltext.
+
+#### Einstellbare Werte
+
+| Einstellung | Typ | Bereich | Standard |
+|---|---|---|---|
+| Aktualisierungsintervall | spinbutton | 1–30 s | 3 |
+| Anzeigegröße | scale | 40–90 % | 70 |
+| Deckkraft der Hintergrundfläche | scale | 45–85 % | 55 |
+| Panel-Symbol | combobox | vier Varianten | Logo farbig |
+
+Die Untergrenze der Deckkraft von 45 Prozent ist bewusst gesetzt: Darunter unterschreitet weiße Schrift auf hellem Bildschirminhalt den Mindestkontrast von 3.0 : 1. Zusätzlich begrenzt `_gueltig()` alle Werte im Code, sodass eine beschädigte oder von Hand bearbeitete Einstellungsdatei nicht zu einer unbrauchbaren Darstellung führt.
+
+#### Panel-Symbol
+
+Vier Varianten stehen zur Wahl:
+
+- `icon` – farbiges Logo, 24 px
+- `symbolic` – einfarbiges Logo in Theme-Farbe, auf 24 px angehoben
+- `symbolic-status` – einfarbiges Logo in der Cinnamon-Größe für Statusanzeigen, 16 px
+- `text` – Textkürzel `aVP`
+
+Cinnamon stellt symbolische Symbole absichtlich kleiner dar als farbige, in der rechten Panelzone 16 statt 24 Pixel, da dort üblicherweise Statusanzeigen wie WLAN oder Lautstärke sitzen. Für ein Produktlogo ist das zu klein, weshalb `symbolic` die Größe über `_angleicheIconGroesse()` anhebt. `symbolic-status` verzichtet bewusst darauf, damit sich das Logo bei den übrigen Statusanzeigen einreiht.
+
+Die Angleichung wird in `on_panel_icon_size_changed()` wiederholt, da Cinnamon die Größe bei einer Änderung der Panelhöhe zurücksetzt.
+
+Beim Wechsel zwischen Symbol und Textkürzel muss die jeweils andere Darstellung ausdrücklich entfernt werden (`hide_applet_icon()` bzw. `hide_applet_label()`), sonst bleiben beide nebeneinander stehen.
+
+#### Zurücksetzen
+
+Eine Schaltfläche im Einstellungsfenster setzt alle Werte auf die Vorgaben zurück.
+
+Wichtig dabei: `settings.setValue()` schreibt ausschließlich die Einstellungsdatei. Weder die gebundenen Eigenschaften noch die zugehörigen Rückrufe werden dabei aktualisiert. Die Werte müssen deshalb zusätzlich im Objekt gesetzt und die Anwendungsmethoden selbst aufgerufen werden, sonst wirkt das Zurücksetzen nicht sichtbar.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -490,6 +534,20 @@ git push origin 0.1.0-dev_AP06-END
 
 Vor größeren oder riskanten Änderungen soll zusätzlich ein NAS-Snapshot erhalten bleiben.
 
+### Sicherung nach jedem Arbeitspaket
+
+Festgelegt am 17.09.2026. Nach jedem abgeschlossenen und geprüften Arbeitspaket erfolgt ohne weitere Rückfrage:
+
+1. Snapshot unter `06_TESTVERSIONEN/0.1.0-dev_APxx-END/`
+2. Fortschreibung dieses Dokuments
+3. Commit und Push auf `main`
+4. Tag `0.1.0-dev_APxx-END` setzen und pushen
+5. Vollbackup auf der NAS unter `aVincePulse_Backups/<Zeitstempel>/` mit `tar.gz`, Git-Bundle, `SHA256SUMS.txt` und `BACKUP-INFO.txt`
+6. Wiederherstellungsprobe: Prüfsummen vergleichen, Bundle in ein temporäres Verzeichnis klonen, Quellcode gegen das Original vergleichen
+7. GitHub-Release zum Tag anlegen
+
+Für Schritt 7 wird die GitHub-CLI `gh` verwendet. Sie ist auf dem Referenzsystem eingerichtet; der Zugangstoken liegt im System-Schlüsselbund und ist auf das Repository `aVincePulse` mit den Rechten `Contents: Read and write` und `Metadata: Read-only` beschränkt.
+
 ## 10. Sicherungskonzept
 
 Abschlussbackups nach AP05:
@@ -594,9 +652,9 @@ AP01 bis AP08 sind abgeschlossen.
 Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
 
 - Speedtest-Werte werden weiterhin unter der alten UUID `avince-hwmonitor@angelo` gespeichert und gelesen.
-- Das Applet besitzt noch kein `settings-schema.json`. Vorgesehen sind mindestens Deckkraft der Hover-Fläche (Bereich 0.45 bis 0.85), Aktualisierungsintervall und eine Begrenzung der Anzeigegröße.
 - Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Sobald das alte Applet `avince-hwpopup@angelo` nicht mehr verwendet wird, liest diese Datei niemand mehr und das Schreiben kann entfallen.
-- `panel-icon-symbolic.png` liegt bereit, wird aber noch nicht verwendet. Offen ist, wie das Applet ein helles Panel-Theme erkennt und selbsttätig umschaltet.
+- Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
+- Das Desklet besitzt noch keine Einstellungen für Deckkraft, Anzeigegröße oder das Ausblenden einzelner Messwerte.
 - Der LibreSpeed-Pfad ist im Applet fest codiert.
 - Der Zeitpunkt des letzten erfolgreichen Speedtests wird nicht gespeichert, ist für Version 1.0 aber verbindlich vorgesehen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.

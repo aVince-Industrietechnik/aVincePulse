@@ -1,0 +1,64 @@
+{
+    "kopf-anzeige": {
+        "type": "header",
+        "description": "Hover-Anzeige"
+    },
+    "refresh-interval": {
+        "type": "spinbutton",
+        "default": 3,
+        "min": 1,
+        "max": 30,
+        "step": 1,
+        "units": "Sekunden",
+        "description": "Aktualisierungsintervall",
+        "tooltip": "Das Desklet verwendet standardmäßig ebenfalls 3 Sekunden. Gleiche Werte lassen beide Anzeigen im selben Takt messen."
+    },
+    "popup-height-ratio": {
+        "type": "scale",
+        "default": 70,
+        "min": 40,
+        "max": 90,
+        "step": 5,
+        "digits": 0,
+        "units": "%",
+        "description": "Anzeigegröße",
+        "tooltip": "Anteil der Bildschirmhöhe, den die Hover-Anzeige einnimmt. Schriftgröße und Spaltenbreiten werden daraus und aus der Anzahl der angezeigten Messwerte berechnet."
+    },
+    "popup-opacity": {
+        "type": "scale",
+        "default": 55,
+        "min": 45,
+        "max": 85,
+        "step": 5,
+        "digits": 0,
+        "units": "%",
+        "description": "Deckkraft der Hintergrundfläche",
+        "tooltip": "Je höher der Wert, desto dunkler die Fläche hinter der Anzeige. Werte unter 45 Prozent sind nicht wählbar, da die weiße Schrift auf hellem Bildschirminhalt sonst nicht mehr ausreichend lesbar ist."
+    },
+    "kopf-panel": {
+        "type": "header",
+        "description": "Panel"
+    },
+    "panel-symbol": {
+        "type": "combobox",
+        "default": "icon",
+        "description": "Panel-Symbol",
+        "tooltip": "Das farbige Logo passt zu dunklen Panels. Die einfarbigen Varianten übernehmen die Farbe des Panel-Themes und eignen sich auch für helle Panels. Größe wie Statusanzeigen reiht das Logo bei WLAN, Lautstärke und Akku ein, statt es wie ein Programmsymbol hervorzuheben.",
+        "options": {
+            "Logo farbig": "icon",
+            "Logo einfarbig": "symbolic",
+            "Logo einfarbig, Größe wie Statusanzeigen": "symbolic-status",
+            "Textkürzel aVP": "text"
+        }
+    },
+    "kopf-zuruecksetzen": {
+        "type": "header",
+        "description": "Zurücksetzen"
+    },
+    "btn-standardwerte": {
+        "type": "button",
+        "description": "Auf Standardwerte zurücksetzen",
+        "callback": "on_standardwerte_zuruecksetzen",
+        "tooltip": "Setzt Aktualisierungsintervall, Anzeigegröße, Deckkraft und Panel-Symbol auf die Auslieferungswerte zurück."
+    }
+}
