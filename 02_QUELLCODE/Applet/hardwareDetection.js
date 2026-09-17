@@ -598,6 +598,66 @@ var HardwareDetector = class HardwareDetector {
         }
     }
 
+    /*
+     * Lesbarer Bericht ueber die erkannte Hardware.
+     * Dient der Anzeige und dem Abspeichern als Textdatei.
+     */
+    berichtText(komponente) {
+        const zeilen = [];
+
+        zeilen.push("aVincePulse - Erkannte Hardware");
+        zeilen.push("================================");
+        zeilen.push("");
+        zeilen.push("Erstellt am  : " + new Date().toLocaleString());
+        zeilen.push("Erstellt von : " + (komponente || "unbekannt"));
+        zeilen.push("");
+
+        zeilen.push("Sensoren");
+        zeilen.push("--------");
+        zeilen.push("CPU-Temperatur     : " + this._describe(this._mapping.cpu));
+        zeilen.push("Storage-Temperatur : " + this._describe(this._mapping.storage));
+        zeilen.push("Luefter            : " + this._describe(this._mapping.fan));
+        zeilen.push("Akku / Netzteil    : " + this._describeBattery(this._mapping.battery));
+        zeilen.push("");
+
+        const verfuegbar = this.getAvailability();
+
+        zeilen.push("Verfuegbare Messwerte");
+        zeilen.push("---------------------");
+
+        for (const id of Object.keys(verfuegbar)) {
+            zeilen.push(
+                id.padEnd(20) +
+                (verfuegbar[id] ? "vorhanden" : "nicht vorhanden")
+            );
+        }
+
+        zeilen.push("");
+        zeilen.push("Alle uebrigen Messwerte haengen nicht von einem");
+        zeilen.push("Sensor ab und sind immer verfuegbar.");
+        zeilen.push("");
+        zeilen.push("Vollstaendige Sensorliste des Systems");
+        zeilen.push("-------------------------------------");
+
+        const alle = this._scanHwmon();
+
+        for (const s of alle.temperatures) {
+            zeilen.push(
+                "Temperatur  " + s.chip.padEnd(14) +
+                (s.label || "ohne Bezeichnung").padEnd(18) + s.path
+            );
+        }
+
+        for (const s of alle.fans) {
+            zeilen.push(
+                "Luefter     " + s.chip.padEnd(14) +
+                (s.label || "ohne Bezeichnung").padEnd(18) + s.path
+            );
+        }
+
+        return zeilen.join("\n") + "\n";
+    }
+
     _describeBattery(battery) {
         if (!battery || !battery.path)
             return "NOT FOUND (system without battery)";

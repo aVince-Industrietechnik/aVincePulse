@@ -33,7 +33,7 @@ const Speedtest = imports.applets['avincepulse-applet@avince'].speedtest;
 const MeasurementProvider = Measurement.MeasurementProvider;
 const HardwareDetector = HardwareDetection.HardwareDetector;
 const SpeedtestRunner = Speedtest.SpeedtestRunner;
-const SpeedtestAnzeige = Speedtest.SpeedtestAnzeige;
+const StatusAnzeige = Speedtest.StatusAnzeige;
 
 const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
@@ -151,7 +151,8 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._rows = {};
 
         this._speedtest = new SpeedtestRunner();
-        this._speedtestAnzeige = new SpeedtestAnzeige();
+        this._speedtest.setzeQuelle("aVincePulse Applet");
+        this._statusAnzeige = new StatusAnzeige();
 
         this._measurement = new MeasurementProvider(
             new HardwareDetector(),
@@ -320,6 +321,170 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * Setzt alle Einstellungen auf die Auslieferungswerte zurueck.
      * Wird ueber die Schaltflaeche im Einstellungsfenster gerufen.
      */
+
+    /*
+     * Fuehrt die Hardware- und Sensorerkennung erneut durch und
+     * baut die Anzeige danach neu auf.
+     *
+     * Die Erkennung laeuft sonst nur einmal beim Laden. Nach einem
+     * Hardwarewechsel oder bei einem verzoegert geladenen Treiber
+     * waere ein Messwert bis zum naechsten Cinnamon-Neustart nicht
+     * verfuegbar.
+     */
+    on_hardware_neu_erkennen() {
+        this._statusAnzeige.zeige("Hardware wird neu erkannt \u2026");
+
+        try {
+            const detector = new HardwareDetector();
+
+            this._measurement.setHardwareDetector(detector);
+
+            const verfuegbar = detector.getAvailability();
+
+            const gefunden = Object.keys(verfuegbar)
+                .filter(id => verfuegbar[id] === true);
+
+            const fehlend = Object.keys(verfuegbar)
+                .filter(id => verfuegbar[id] === false);
+
+            global.log(
+                "aVincePulse AP12: hardware rescan - available: " +
+                (gefunden.join(", ") || "none") +
+                " | missing: " + (fehlend.join(", ") || "none")
+            );
+
+            // Bericht ablegen, damit das Ergebnis nachlesbar ist,
+            // ohne das Systemprotokoll durchsuchen zu muessen.
+            const pfad = this._schreibeHardwareBericht(detector);
+
+            // Die Verfuegbarkeit kann sich geaendert haben, deshalb
+            // werden die Anzeigezeilen vollstaendig neu aufgebaut.
+            this._baueZeilenNeu();
+
+            const meldung =
+                "Hardware neu erkannt\n\n" +
+                gefunden.length + " von " +
+                Object.keys(verfuegbar).length +
+                " sensorabhaengigen Messwerten verfuegbar" +
+                (fehlend.length
+                    ? "\nNicht gefunden: " + fehlend.join(", ")
+                    : "") +
+                (pfad
+                    ? "\n\nBericht abgelegt \u2013 zu finden über die " +
+                      "Einstellungen unter „Hardware-Berichte öffnen“"
+                    : "");
+
+            this._statusAnzeige.zeige(meldung);
+            this._statusAnzeige.verbergeNach(10);
+
+        } catch (e) {
+            global.logError(e);
+            this._statusAnzeige.zeige("Die Hardwareerkennung ist fehlgeschlagen.");
+            this._statusAnzeige.verbergeNach(8);
+        }
+    }
+
+    /*
+     * Schreibt den Hardwarebericht als Textdatei.
+     *
+     * Jeder Bericht bleibt erhalten und traegt Datum und Uhrzeit im
+     * Dateinamen, wodurch sich die Dateien von selbst chronologisch
+     * sortieren. Das Kuerzel am Anfang zeigt, welche Komponente den
+     * Bericht erstellt hat.
+     *
+     * Rueckgabe: Pfad oder null.
+     */
+    _schreibeHardwareBericht(detector) {
+        try {
+            const verzeichnis = this._berichtsVerzeichnis("Hardware");
+
+            GLib.mkdir_with_parents(verzeichnis, 0o755);
+
+            const jetzt = new Date();
+            const zwei = zahl => String(zahl).padStart(2, "0");
+
+            const stempel =
+                jetzt.getFullYear() + "-" +
+                zwei(jetzt.getMonth() + 1) + "-" +
+                zwei(jetzt.getDate()) + "_" +
+                zwei(jetzt.getHours()) + "-" +
+                zwei(jetzt.getMinutes()) + "-" +
+                zwei(jetzt.getSeconds());
+
+            const pfad = GLib.build_filenamev([
+                verzeichnis,
+                "aVP-applet" + "-hardware-bericht_" + stempel + ".txt"
+            ]);
+
+            GLib.file_set_contents(
+                pfad,
+                detector.berichtText("aVincePulse Applet")
+            );
+
+            return pfad;
+
+        } catch (e) {
+            global.logError(e);
+            return null;
+        }
+    }
+
+    /*
+     * Verzeichnis der Berichte.
+     *
+     * Hardwareerkennung und Speedtest legen in getrennten
+     * Unterordnern ab, damit die Uebersicht erhalten bleibt.
+     */
+    _berichtsVerzeichnis(unterordner) {
+        const teile = [
+            GLib.get_user_data_dir(),
+            "avincepulse",
+            "berichte"
+        ];
+
+        if (unterordner)
+            teile.push(unterordner);
+
+        return GLib.build_filenamev(teile);
+    }
+
+    /*
+     * Oeffnet einen Berichtsordner im Dateimanager.
+     *
+     * Hardwareerkennung und Speedtest legen in getrennten
+     * Unterordnern ab. Die Schaltflaechen fuehren deshalb direkt
+     * zum jeweils passenden Ordner, statt beide in den
+     * gemeinsamen Elternordner zu fuehren.
+     */
+    _oeffneBerichte(unterordner) {
+        try {
+            const verzeichnis = this._berichtsVerzeichnis(unterordner);
+
+            GLib.mkdir_with_parents(verzeichnis, 0o755);
+
+            Gio.AppInfo.launch_default_for_uri(
+                "file://" + verzeichnis,
+                null
+            );
+
+        } catch (e) {
+            global.logError(e);
+
+            this._statusAnzeige.zeige(
+                "Der Berichtsordner konnte nicht geöffnet werden."
+            );
+            this._statusAnzeige.verbergeNach(8);
+        }
+    }
+
+    on_berichte_hardware_oeffnen() {
+        this._oeffneBerichte("Hardware");
+    }
+
+    on_berichte_speedtest_oeffnen() {
+        this._oeffneBerichte("Speedtest");
+    }
+
     on_standardwerte_zuruecksetzen() {
         if (!this.settings)
             return;
@@ -358,7 +523,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._applyPopupStyle();
         this._baueZeilenNeu();
 
-        global.log("aVincePulse AP10: settings reset to defaults");
+        this._statusAnzeige.zeige(
+            "Einstellungen auf Standardwerte zurückgesetzt");
+        this._statusAnzeige.verbergeNach(5);
+
+        global.log("aVincePulse AP12: settings reset to defaults");
     }
 
     _zeigeTextkuerzel() {
@@ -785,18 +954,27 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._gueltig(this.popupOpacity, 45, 85,
                           DEFAULT_POPUP_OPACITY * 100) / 100;
 
-        this._speedtestAnzeige.zeige(
+        this._statusAnzeige.zeige(
             "Internet-Speedtest läuft …", deckkraft);
 
         this._speedtest.starte(ergebnis => {
             if (ergebnis.erfolg) {
-                this._speedtestAnzeige.verberge();
+                this._statusAnzeige.zeige(
+                    "Speedtest abgeschlossen\n\n" +
+                    "Download " + ergebnis.werte.SPEED_DOWN + " MBit/s, " +
+                    "Upload " + ergebnis.werte.SPEED_UP + " MBit/s" +
+                    (ergebnis.bericht
+                        ? "\n\nBericht abgelegt \u2013 zu finden über die " +
+                          "Einstellungen unter „Speedtest-Berichte öffnen“"
+                        : "")
+                );
+                this._statusAnzeige.verbergeNach(8);
                 this._update();
             } else {
                 // Die Meldung bleibt kurz stehen, damit der Grund
                 // des Fehlschlags lesbar ist.
-                this._speedtestAnzeige.zeige(ergebnis.meldung, deckkraft);
-                this._speedtestAnzeige.verbergeNach(8);
+                this._statusAnzeige.zeige(ergebnis.meldung, deckkraft);
+                this._statusAnzeige.verbergeNach(8);
             }
         });
     }
@@ -905,9 +1083,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._timeout = null;
         }
 
-        if (this._speedtestAnzeige) {
-            this._speedtestAnzeige.zerstoere();
-            this._speedtestAnzeige = null;
+        if (this._statusAnzeige) {
+            this._statusAnzeige.zerstoere();
+            this._statusAnzeige = null;
         }
 
         if (this._popup) {

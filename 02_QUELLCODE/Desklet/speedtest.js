@@ -37,6 +37,7 @@ const ZUSAETZLICHE_PFADE = [
 var SpeedtestRunner = class SpeedtestRunner {
     constructor() {
         this._laeuft = false;
+        this._quelle = "";
     }
 
     /*
@@ -139,6 +140,10 @@ var SpeedtestRunner = class SpeedtestRunner {
             const werte = {};
 
             for (const zeile of inhalt.split("\n")) {
+                // Kommentarzeilen des erklaerenden Kopfes ueberspringen.
+                if (zeile.trim().startsWith("#"))
+                    continue;
+
                 const pos = zeile.indexOf("=");
 
                 if (pos > 0) {
@@ -181,12 +186,34 @@ var SpeedtestRunner = class SpeedtestRunner {
         try {
             GLib.mkdir_with_parents(this.datenVerzeichnis(), 0o755);
 
+            const zeitpunkt = werte.TIMESTAMP
+                ? new Date(Number(werte.TIMESTAMP) * 1000).toLocaleString()
+                : "unbekannt";
+
+            /*
+             * Die Datei wird maschinell gelesen. Der erklaerende Kopf
+             * steht deshalb in Kommentarzeilen, die beim Einlesen
+             * uebersprungen werden.
+             */
             const text =
+                "# aVincePulse - Letzter Internet-Speedtest\n" +
+                "# =========================================\n" +
+                "#\n" +
+                "# Gemessen am : " + zeitpunkt + "\n" +
+                "# Gemessen von: " + (werte.QUELLE || "unbekannt") + "\n" +
+                "#\n" +
+                "# SPEED_DOWN und SPEED_UP in MBit/s, PING und JITTER in ms.\n" +
+                "# TIMESTAMP ist der Messzeitpunkt in Sekunden seit 1970.\n" +
+                "#\n" +
+                "# Diese Datei wird von aVincePulse geschrieben.\n" +
+                "# Aenderungen von Hand werden beim naechsten Test ueberschrieben.\n" +
+                "\n" +
                 "SPEED_DOWN=" + werte.SPEED_DOWN + "\n" +
                 "SPEED_UP=" + werte.SPEED_UP + "\n" +
                 "PING=" + werte.PING + "\n" +
                 "JITTER=" + werte.JITTER + "\n" +
-                "TIMESTAMP=" + (werte.TIMESTAMP || "") + "\n";
+                "TIMESTAMP=" + (werte.TIMESTAMP || "") + "\n" +
+                "QUELLE=" + (werte.QUELLE || "") + "\n";
 
             GLib.file_set_contents(this.datenPfad(), text);
             return true;
@@ -194,6 +221,78 @@ var SpeedtestRunner = class SpeedtestRunner {
         } catch (e) {
             global.logError(e);
             return false;
+        }
+    }
+
+    /*
+     * Schreibt einen bleibenden Bericht ueber die Messung.
+     *
+     * Die Wertedatei enthaelt immer nur das juengste Ergebnis und
+     * wird ueberschrieben. Die Berichte bleiben erhalten und lassen
+     * sich dadurch im Verlauf vergleichen. Datum und Uhrzeit im
+     * Dateinamen sorgen fuer eine chronologische Sortierung, die
+     * Herkunft steht am Anfang.
+     *
+     * Rueckgabe: Pfad oder null.
+     */
+    _schreibeBericht(werte) {
+        try {
+            const verzeichnis = GLib.build_filenamev([
+                GLib.get_user_data_dir(),
+                "avincepulse",
+                "berichte",
+                "Speedtest"
+            ]);
+
+            GLib.mkdir_with_parents(verzeichnis, 0o755);
+
+            const jetzt = new Date();
+            const zwei = z => String(z).padStart(2, "0");
+
+            const stempel =
+                jetzt.getFullYear() + "-" +
+                zwei(jetzt.getMonth() + 1) + "-" +
+                zwei(jetzt.getDate()) + "_" +
+                zwei(jetzt.getHours()) + "-" +
+                zwei(jetzt.getMinutes()) + "-" +
+                zwei(jetzt.getSeconds());
+
+            const quelle = this._quelle || "unbekannt";
+
+            const kuerzel =
+                quelle.toLowerCase().indexOf("applet") >= 0
+                    ? "aVP-applet"
+                    : (quelle.toLowerCase().indexOf("desklet") >= 0
+                        ? "aVP-desklet"
+                        : "aVP");
+
+            const pfad = GLib.build_filenamev([
+                verzeichnis,
+                kuerzel + "-speedtest-bericht_" + stempel + ".txt"
+            ]);
+
+            const text =
+                "aVincePulse - Internet-Speedtest\n" +
+                "================================\n" +
+                "\n" +
+                "Gemessen am  : " + jetzt.toLocaleString() + "\n" +
+                "Gemessen von : " + quelle + "\n" +
+                "Programm     : " + (this.findeProgramm() || "unbekannt") + "\n" +
+                "\n" +
+                "Ergebnis\n" +
+                "--------\n" +
+                "Download : " + werte.SPEED_DOWN + " MBit/s\n" +
+                "Upload   : " + werte.SPEED_UP + " MBit/s\n" +
+                "Ping     : " + werte.PING + " ms\n" +
+                "Jitter   : " + werte.JITTER + " ms\n";
+
+            GLib.file_set_contents(pfad, text);
+
+            return pfad;
+
+        } catch (e) {
+            global.logError(e);
+            return null;
         }
     }
 
@@ -247,6 +346,14 @@ var SpeedtestRunner = class SpeedtestRunner {
      * Ein fehlgeschlagener Test ueberschreibt vorhandene gueltige
      * Werte nicht.
      */
+    /*
+     * Bezeichnung der Komponente, die den Test ausloest.
+     * Sie wird in der Wertedatei vermerkt.
+     */
+    setzeQuelle(bezeichnung) {
+        this._quelle = bezeichnung;
+    }
+
     starte(rueckmeldung) {
         if (this._laeuft) {
             rueckmeldung({
@@ -308,13 +415,23 @@ var SpeedtestRunner = class SpeedtestRunner {
                         SPEED_UP: Number(daten.upload).toFixed(2),
                         PING: Number(daten.ping).toFixed(2),
                         JITTER: Number(daten.jitter).toFixed(2),
-                        TIMESTAMP: String(Math.floor(Date.now() / 1000))
+                        TIMESTAMP: String(Math.floor(Date.now() / 1000)),
+                        QUELLE: this._quelle || "unbekannt"
                     };
 
                     if (!this._schreibeWerte(werte))
                         throw new Error("Das Ergebnis konnte nicht gespeichert werden.");
 
-                    rueckmeldung({ erfolg: true, werte: werte });
+                    // Zusaetzlich zur Wertedatei, die stets den
+                    // aktuellen Stand enthaelt, einen bleibenden
+                    // Bericht ablegen.
+                    const bericht = this._schreibeBericht(werte);
+
+                    rueckmeldung({
+                        erfolg: true,
+                        werte: werte,
+                        bericht: bericht
+                    });
 
                 } catch (e) {
                     global.logError(e);
@@ -340,13 +457,17 @@ var SpeedtestRunner = class SpeedtestRunner {
 
 
 /*
- * Bildschirmmittige Rueckmeldung waehrend des Speedtests.
+ * Bildschirmmittige Rueckmeldung fuer laenger laufende Vorgaenge.
  *
  * Applet und Desklet verwenden dieselbe Darstellung, damit der
  * Ablauf unabhaengig davon gleich aussieht, welche Komponente den
- * Test ausgeloest hat.
+ * Vorgang ausgeloest hat.
+ *
+ * Verwendet wird sie beim Speedtest und bei der Hardwareerkennung.
+ * Sie liegt hier, weil sie mit dem Speedtest entstanden ist; bei
+ * weiterer Verwendung gehoert sie in ein eigenes Modul.
  */
-var SpeedtestAnzeige = class SpeedtestAnzeige {
+var StatusAnzeige = class StatusAnzeige {
     constructor() {
         this._label = null;
         this._timeout = null;
@@ -367,11 +488,18 @@ var SpeedtestAnzeige = class SpeedtestAnzeige {
 
         const monitor = Main.layoutManager.primaryMonitor;
 
-        // Schriftgroesse an die Bildschirmhoehe koppeln, damit die
-        // Meldung auf kleinen wie grossen Bildschirmen passt.
+        /*
+         * Schrift- und Hoechstbreite an den Bildschirm koppeln.
+         *
+         * Eine feste Groesse fuehrt auf kleinen Bildschirmen dazu,
+         * dass die Meldung ueber den Rand hinauslaeuft und darunter
+         * liegende Fenster verdeckt.
+         */
         const schrift = Math.round(
-            Math.max(20, Math.min(48, monitor.height * 0.035))
+            Math.max(16, Math.min(32, monitor.height * 0.024))
         );
+
+        const hoechstbreite = Math.round(monitor.width * 0.55);
 
         const stil =
             "font-size: " + schrift + "px;" +
@@ -380,7 +508,8 @@ var SpeedtestAnzeige = class SpeedtestAnzeige {
             "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);" +
             "background-color: rgba(0, 0, 0, " + opazitaet + ");" +
             "border-radius: 18px;" +
-            "padding: 28px 40px;";
+            "padding: 24px 32px;" +
+            "max-width: " + hoechstbreite + "px;";
 
         if (!this._label) {
             this._label = new St.Label({ text: text, style: stil });
@@ -388,6 +517,14 @@ var SpeedtestAnzeige = class SpeedtestAnzeige {
         } else {
             this._label.set_text(text);
             this._label.set_style(stil);
+        }
+
+        // Lange Meldungen umbrechen statt ueber den Rand laufen lassen.
+        try {
+            this._label.clutter_text.set_line_wrap(true);
+            this._label.clutter_text.set_line_alignment(1);
+        } catch (e) {
+            global.logError(e);
         }
 
         this._label.show();

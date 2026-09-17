@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 17.09.2026 (AP11)  
+Stand: 17.09.2026 (AP12)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP11-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP10-END`
+Aktueller Referenzstand: `0.1.0-dev_AP12-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP11-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -78,6 +78,7 @@ Tags:
 - `0.1.0-dev_AP09-END` – Entwicklungsstand nach Abschluss von AP09
 - `0.1.0-dev_AP10-END` – Entwicklungsstand nach Abschluss von AP10
 - `0.1.0-dev_AP11-END` – Entwicklungsstand nach Abschluss von AP11
+- `0.1.0-dev_AP12-END` – Entwicklungsstand nach Abschluss von AP12
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -499,6 +500,50 @@ Die Beschriftung wird vor dem Setzen maskiert, damit `&`, `<` oder `>` die Zeile
 
 Alle Zellen einer Zeile richten sich an der Mittellinie aus statt an der Schriftgrundlinie.
 
+### AP12 – Hardware neu erkennen und Berichte
+
+Abgeschlossen.
+
+#### Hardware neu erkennen
+
+Die Sensorerkennung lief bisher nur einmalig beim Laden. Nach einem Hardwarewechsel oder bei einem verzögert geladenen Treiber war ein Messwert bis zum nächsten Cinnamon-Neustart nicht verfügbar.
+
+Beide Komponenten besitzen nun eine Schaltfläche, die die Erkennung erneut durchführt. `MeasurementProvider.setHardwareDetector()` tauscht die Erkennung aus, anschließend werden die Anzeigezeilen neu aufgebaut, da sich die Verfügbarkeit geändert haben kann.
+
+#### Berichte
+
+Jede Hardwareerkennung und jeder Speedtest legt einen bleibenden Bericht ab:
+
+```
+~/.local/share/avincepulse/berichte/
+    Hardware/   aVP-desklet-hardware-bericht_2026-09-17_19-20-11.txt
+    Speedtest/  aVP-applet-speedtest-bericht_2026-09-17_20-11-02.txt
+```
+
+Getrennte Unterordner je Art, Herkunft am Anfang des Dateinamens, Datum und Uhrzeit für die chronologische Sortierung. Berichte werden nicht überschrieben, sodass sich die Entwicklung nachvollziehen lässt.
+
+Der Hardwarebericht enthält die ausgewählten Sensoren, die Verfügbarkeit jedes sensorabhängigen Messwerts und eine vollständige Liste aller Sensoren des Systems. Letztere ist die Vorarbeit für eine spätere Sensorauswahl durch den Benutzer: Auf dem Latitude-5285 stehen 15 Temperatursensoren zur Verfügung, von denen zwei verwendet werden.
+
+Die Berichte werden bewusst nicht automatisch gelöscht. Das Programm soll keine vom Benutzer einsehbaren Daten ungefragt entfernen.
+
+Die Datei `speedtest-values` enthält weiterhin nur den jüngsten Stand für die Anzeige und wird überschrieben. Sie trägt nun einen erklärenden Kopf in Kommentarzeilen, die beim Einlesen übersprungen werden, sowie den Vermerk, welche Komponente die Messung ausgelöst hat.
+
+#### Rückmeldungen
+
+Speedtest, Hardwareerkennung und Zurücksetzen melden sich über die gemeinsame `StatusAnzeige`, die dafür von `SpeedtestAnzeige` umbenannt wurde.
+
+Schriftgröße und Höchstbreite richten sich nach dem Bildschirm (16 bis 32 px, höchstens 55 Prozent der Breite), lange Texte brechen um. Zuvor lief die Meldung über den Bildschirmrand hinaus und verdeckte das Einstellungsfenster.
+
+Der vollständige Dateipfad wird in der Meldung bewusst nicht genannt; sie verweist stattdessen auf die zuständige Schaltfläche.
+
+#### Berichtsordner öffnen
+
+Je eine Schaltfläche unter Speedtest und unter Geräte öffnet gezielt den jeweiligen Unterordner, statt beide in den gemeinsamen Elternordner zu führen.
+
+#### Nebenbefund
+
+Cinnamon übersetzt bekannte englische Begriffe in den Einstellungen selbsttätig über die eigenen Übersetzungsdateien; aus der Überschrift `Hardware` wird so `Geräte`. Eigene Formulierungen bleiben unübersetzt, bis das Projekt eigene Übersetzungsdateien mitliefert.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -752,9 +797,9 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP11 sind abgeschlossen.
+AP01 bis AP12 sind abgeschlossen.
 
-**AP12 ist noch nicht verbindlich definiert.**
+**AP13 ist noch nicht verbindlich definiert.**
 
 Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
 
@@ -763,20 +808,19 @@ Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die F
 - Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße.
 - Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
-- Die Funktion „Hardware neu erkennen" aus der Roadmap ist noch nicht umgesetzt.
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
 - Eine benutzerdefinierte Reihenfolge der Messwerte ist noch nicht möglich. Sie soll gemeinsam mit dem Umbenennen der Sensoren in einer einzigen Liste umgesetzt werden, statt in zwei getrennten Bedienelementen.
 
-Vor Beginn von AP12:
+Vor Beginn von AP13:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP12 definieren
+5. Ziel und Akzeptanzkriterien für AP13 definieren
 6. erst danach Code ändern
 
-Keine neue AP12-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
+Keine neue AP13-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
 ## 15. Hinweise für KI-Assistenten
 
@@ -807,13 +851,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP11:
+Erwarteter Ausgangspunkt nach AP12:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP11-END`
-- AP11 abgeschlossen
-- AP12 noch zu definieren
+- Referenz-Tag: `0.1.0-dev_AP12-END`
+- AP12 abgeschlossen
+- AP13 noch zu definieren
 
 ---
 

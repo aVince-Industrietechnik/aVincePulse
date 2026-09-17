@@ -156,6 +156,28 @@
         "callback": "on_speedtest_starten",
         "tooltip": "Der Test dauert etwa 20 Sekunden. Das Ergebnis wird gespeichert und steht auch der jeweils anderen Komponente zur Verfügung."
     },
+    "btn-berichte-speedtest": {
+        "type": "button",
+        "description": "Speedtest-Berichte öffnen",
+        "callback": "on_berichte_speedtest_oeffnen",
+        "tooltip": "Öffnet den Ordner mit den Speedtest-Berichten. Jede Messung legt dort eine eigene Datei mit Datum und Uhrzeit ab."
+    },
+    "kopf-hardware": {
+        "type": "header",
+        "description": "Hardware"
+    },
+    "btn-hardware-neu": {
+        "type": "button",
+        "description": "Hardware neu erkennen",
+        "callback": "on_hardware_neu_erkennen",
+        "tooltip": "Sucht die Sensoren erneut. Nötig nach einem Hardwarewechsel, etwa einer neuen SSD, oder wenn ein Messwert fehlt, weil sein Treiber beim Start noch nicht geladen war. Ein Neustart von Cinnamon ist dafür nicht erforderlich."
+    },
+    "btn-berichte-hardware": {
+        "type": "button",
+        "description": "Hardware-Berichte öffnen",
+        "callback": "on_berichte_hardware_oeffnen",
+        "tooltip": "Öffnet den Ordner mit den Hardwareberichten. Jede Erkennung legt dort eine eigene Datei mit Datum und Uhrzeit ab."
+    },
     "kopf-zuruecksetzen": {
         "type": "header",
         "description": "Zurücksetzen"

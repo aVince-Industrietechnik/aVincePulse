@@ -149,6 +149,17 @@ var MeasurementProvider = class MeasurementProvider {
     }
 
     /*
+     * Tauscht die Hardwareerkennung gegen eine neu durchgefuehrte aus.
+     *
+     * Die Erkennung laeuft sonst nur einmal beim Laden. Aendert sich
+     * die Hardware oder wird ein Treiber verzoegert geladen, bliebe
+     * ein Messwert bis zum naechsten Neustart verschwunden.
+     */
+    setHardwareDetector(hardwareDetector) {
+        this._hardwareDetector = hardwareDetector;
+    }
+
+    /*
      * Reicht die Verfuegbarkeit der hardwareabhaengigen Messwerte
      * an die Anzeigeschicht weiter.
      */
