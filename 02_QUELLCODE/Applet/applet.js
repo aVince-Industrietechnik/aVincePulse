@@ -1,61 +1,151 @@
+/*
+ * aVincePulse
+ * Applet – Panel-Symbol und zentrale Hover-Anzeige
+ *
+ * Entwicklungsstand: 0.1.0-dev
+ *
+ * Das Applet ist eigenständig lauffähig und benötigt weder ein
+ * installiertes noch ein aktives aVincePulse Desklet.
+ *
+ * Die Anzeigezeilen werden zentral aus metrics.js erzeugt,
+ * die Messwerte über measurement.js erfasst und die Sensoren
+ * über hardwareDetection.js erkannt.
+ *
+ * metrics.js, measurement.js und hardwareDetection.js sind mit den
+ * Dateien des Desklets identisch. Cinnamon Spices verlangt für Applet
+ * und Desklet getrennte Pakete, deshalb liegt hier jeweils eine Kopie.
+ */
+
 const Applet = imports.ui.applet;
 const St = imports.gi.St;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
-const ByteArray = imports.byteArray;
 
-class AVinceHWPopup extends Applet.TextIconApplet {
+const Metrics = imports.applets['avincepulse-applet@avince'].metrics;
+const Measurement = imports.applets['avincepulse-applet@avince'].measurement;
+const HardwareDetection = imports.applets['avincepulse-applet@avince'].hardwareDetection;
+
+const MeasurementProvider = Measurement.MeasurementProvider;
+const HardwareDetector = HardwareDetection.HardwareDetector;
+
+const METRICS = Metrics.METRICS;
+const METRIC_ORDER = Metrics.METRIC_ORDER;
+
+/*
+ * Aktualisierungsintervall der Hover-Anzeige in Sekunden.
+ *
+ * Entspricht dem Standardintervall des Desklets, damit beide
+ * Komponenten im gleichen Takt messen und nicht sichtbar
+ * unterschiedliche Werte anzeigen.
+ *
+ * Applet und Desklet messen eigenstaendig. Ihre Zeitgeber laufen
+ * daher nicht exakt gleichzeitig, wodurch sich einzelne Werte
+ * kurzzeitig um einen Messzyklus unterscheiden koennen. Das ist
+ * die bewusste Folge der Eigenstaendigkeit beider Komponenten.
+ *
+ * Ein eigenes settings-schema.json fuer das Applet ist vorgesehen,
+ * damit der Wert spaeter einstellbar wird.
+ */
+const REFRESH_INTERVAL_SECONDS = 3;
+
+/*
+ * Anteil der Bildschirmhoehe, den die Hover-Anzeige hoechstens
+ * einnehmen soll. Aus diesem Wert und der Anzahl der tatsaechlich
+ * angezeigten Messwerte wird die Schriftgroesse berechnet.
+ *
+ * Dadurch passt sich die Anzeige an unterschiedliche Bildschirme an
+ * und bleibt auch dann vollstaendig sichtbar, wenn spaeter weitere
+ * Messwerte hinzukommen.
+ */
+const POPUP_MAX_HEIGHT_RATIO = 0.70;
+
+// Grenzen der berechneten Schriftgroesse in Pixeln.
+const POPUP_MIN_FONT_SIZE = 14;
+const POPUP_MAX_FONT_SIZE = 48;
+
+/*
+ * Deckkraft der abgedunkelten Flaeche hinter der Hover-Anzeige.
+ *
+ * Die Flaeche haelt die weisse Schrift auf jedem Bildschirminhalt
+ * lesbar, ohne dass Schrift- und Schattenfarbe je nach Hintergrund
+ * umgeschaltet werden muessen.
+ *
+ * Geprueft wurde der unguenstigste Fall, ein reinweisser Inhalt
+ * hinter der Anzeige:
+ *
+ *   0.72  Kontrast 9.3 : 1
+ *   0.55  Kontrast 4.7 : 1   <- Standard
+ *   0.50  Kontrast 3.9 : 1
+ *   0.45  Kontrast 3.4 : 1   unterste sinnvolle Grenze
+ *   0.40  Kontrast 2.8 : 1   zu schwach
+ *
+ * Fuer grosse, fette Schrift gilt 3.0 : 1 als Mindestkontrast.
+ * Werte unter 0.45 sollten daher nicht angeboten werden.
+ *
+ * Vorgesehen ist, diesen Wert spaeter ueber ein eigenes
+ * settings-schema.json des Applets einstellbar zu machen.
+ * Sinnvoller Bereich: 0.45 bis 0.85.
+ */
+const POPUP_BACKGROUND_OPACITY = 0.55;
+
+
+class AVincePulseApplet extends Applet.TextIconApplet {
     constructor(metadata, orientation, panel_height, instance_id) {
         super(orientation, panel_height, instance_id);
 
-        this.set_applet_label("⚡");
-        this.set_applet_tooltip("aVince Hardware Monitor");
+        /*
+         * Panel-Symbol: C-1-Logo, weiss-blau-rot auf transparentem Grund.
+         * Cinnamon skaliert die Datei auf die jeweilige Panelhoehe.
+         *
+         * Bewusst nicht "icon.png": diesen Dateinamen verwendet die
+         * Cinnamon-Verwaltung fuer die Darstellung in der Applet-Liste.
+         * Die Liste hat einen hellen Hintergrund, auf dem ein weisses
+         * Logo mit transparentem Grund nicht zu erkennen waere.
+         * Dort liegt deshalb die Fassung mit dunklem Hintergrund,
+         * fuer das Panel diese hier.
+         */
+        try {
+            this.set_applet_icon_path(
+                GLib.build_filenamev([metadata.path, "panel-icon.png"])
+            );
+        } catch (e) {
+            // Fehlt die Icondatei, bleibt das Applet ueber ein
+            // Textkuerzel bedienbar.
+            global.logError(e);
+            this.set_applet_label("aVP");
+        }
+
+        this.set_applet_tooltip("aVincePulse");
 
         this._timeout = null;
         this._speedtestRunning = false;
         this._speedtestStatus = null;
-        this._lastRx = null;
-        this._lastTx = null;
-        this._lastNetTime = null;
-        this._lastInterface = null;
+
+        // Zuordnung Messwert-ID -> Anzeigezeile.
+        this._rows = {};
+
+        this._measurement = new MeasurementProvider(
+            new HardwareDetector()
+        );
 
         this._popup = new St.BoxLayout({
             vertical: true,
             reactive: false,
             visible: false,
             style:
-                "background-color: transparent;" +
-                "padding: 20px;" +
+                // Abgedunkelte Flaeche hinter der Anzeige,
+                // siehe POPUP_BACKGROUND_OPACITY.
+                "background-color: rgba(0, 0, 0, " +
+                POPUP_BACKGROUND_OPACITY + ");" +
+                "border-radius: 18px;" +
+                "padding: 28px 40px;" +
                 "spacing: 8px;"
         });
 
-        this._cpu = this._makeRow("CPU", "--", "°C");
-        this._load = this._makeRow("LOAD", "--", "%");
-        this._ram = this._makeRow("RAM", "--", "%");
-        this._ssd = this._makeRow("SSD", "--", "°C");
-        this._fan = this._makeRow("FAN", "----", "rpm");
-        this._down = this._makeRow("DOWN", "0.0", "KB/s");
-        this._up = this._makeRow("UP", "0.0", "KB/s");
-
-        this._speedDown = this._makeRow("SPEED ↓", "--", "MBit/s");
-        this._speedUp = this._makeRow("SPEED ↑", "--", "MBit/s");
-        this._ping = this._makeRow("PING", "--", "ms");
-        this._jitter = this._makeRow("JITTER", "--", "ms");
-
-        this._popup.add_child(this._cpu.row);
-        this._popup.add_child(this._load.row);
-        this._popup.add_child(this._ram.row);
-        this._popup.add_child(this._ssd.row);
-        this._popup.add_child(this._fan.row);
-        this._popup.add_child(this._down.row);
-        this._popup.add_child(this._up.row);
-
-        this._popup.add_child(this._speedDown.row);
-        this._popup.add_child(this._speedUp.row);
-        this._popup.add_child(this._ping.row);
-        this._popup.add_child(this._jitter.row);
+        this._buildRows();
+        this._applyPopupScale();
 
         Main.uiGroup.add_child(this._popup);
 
@@ -70,45 +160,61 @@ class AVinceHWPopup extends Applet.TextIconApplet {
         this._update();
     }
 
+    /*
+     * Erzeugt für jeden in METRIC_ORDER aufgeführten Messwert
+     * genau eine Anzeigezeile.
+     *
+     * Messwerte, für die auf diesem Gerät kein Sensor gefunden
+     * wurde, erhalten keine Zeile.
+     */
+    _buildRows() {
+        const availability =
+            this._measurement.getMetricAvailability();
+
+        for (const id of METRIC_ORDER) {
+            const metric = METRICS[id];
+
+            if (!metric) {
+                global.logError(
+                    "aVincePulse: METRIC_ORDER verweist auf einen " +
+                    "in METRICS nicht definierten Messwert: " + id
+                );
+                continue;
+            }
+
+            if (availability[id] === false) {
+                global.log(
+                    "aVincePulse AP08: metric hidden, no sensor -> " + id
+                );
+                continue;
+            }
+
+            const row = this._makeRow(
+                metric.label,
+                metric.defaultValue,
+                metric.unit
+            );
+
+            this._rows[id] = row;
+            this._popup.add_child(row.row);
+        }
+    }
+
     _makeRow(name, value, unit) {
         const row = new St.BoxLayout({
-            vertical: false,
-            style: "spacing: 18px;"
+            vertical: false
         });
 
-        const commonStyle =
-            "font-size: 48px;" +
-            "font-weight: 700;" +
-            "color: white;" +
-            "text-shadow: 0px 0px 8px rgba(0,0,0,1);";
-
-        const nameLabel = new St.Label({
-            text: name,
-            style:
-                commonStyle +
-                "width: 180px;"
-        });
-
-        const valueLabel = new St.Label({
-            text: value,
-            style:
-                commonStyle +
-                "width: 220px;" +
-                "text-align: right;"
-        });
-
-        const unitLabel = new St.Label({
-            text: unit,
-            style:
-                commonStyle +
-                "width: 150px;" +
-                "text-align: left;"
-        });
+        const nameLabel = new St.Label({ text: name });
+        const valueLabel = new St.Label({ text: value });
+        const unitLabel = new St.Label({ text: unit });
 
         row.add_child(nameLabel);
         row.add_child(valueLabel);
         row.add_child(unitLabel);
 
+        // Schriftgroesse und Spaltenbreiten setzt _applyPopupScale(),
+        // da sie von der Bildschirmhoehe und der Zeilenzahl abhaengen.
         return {
             row: row,
             name: nameLabel,
@@ -117,132 +223,103 @@ class AVinceHWPopup extends Applet.TextIconApplet {
         };
     }
 
-    _readSensors() {
-        try {
-            const result = GLib.spawn_command_line_sync("sensors");
+    /*
+     * Berechnet Schriftgroesse und Spaltenbreiten der Hover-Anzeige
+     * aus der Hoehe des Bildschirms und der Anzahl angezeigter Zeilen.
+     *
+     * Die Anzeige belegt dadurch unabhaengig von Bildschirmgroesse und
+     * Messwertanzahl stets etwa denselben Anteil der Bildschirmhoehe.
+     */
+    _applyPopupScale() {
+        const monitor = Main.layoutManager.primaryMonitor;
 
-            if (!result[0])
-                return "";
+        const zeilen = Object.keys(this._rows).length;
 
-            return ByteArray.toString(result[1]);
-        } catch (e) {
-            global.logError(e);
-            return "";
-        }
-    }
+        if (!monitor || zeilen === 0)
+            return;
 
-    _readFile(path) {
-        try {
-            const result = GLib.file_get_contents(path);
+        // Zeilenhoehe entspricht rund dem 1.35-fachen der Schriftgroesse,
+        // dazu kommen Innenabstand und Zeilenabstand.
+        const verfuegbar =
+            monitor.height * POPUP_MAX_HEIGHT_RATIO - 2 * 28;
 
-            if (!result[0])
-                return null;
+        let fontSize =
+            Math.floor(verfuegbar / (zeilen * 1.35 + zeilen * 0.18));
 
-            return ByteArray.toString(result[1]).trim();
-        } catch (e) {
-            return null;
-        }
-    }
+        fontSize = Math.max(
+            POPUP_MIN_FONT_SIZE,
+            Math.min(POPUP_MAX_FONT_SIZE, fontSize)
+        );
 
-    _getDefaultInterface() {
-        try {
-            const result = GLib.spawn_command_line_sync(
-                "sh -c \"ip route show default | awk 'NR==1 {print $5}'\""
+        const commonStyle =
+            "font-size: " + fontSize + "px;" +
+            "font-weight: 700;" +
+            "color: white;" +
+            "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);";
+
+        // Spaltenbreiten aus der Schriftgroesse ableiten, damit
+        // Beschriftungen bei keiner Groesse abgeschnitten werden.
+        const nameWidth = Math.round(fontSize * 5.4);
+        const valueWidth = Math.round(fontSize * 4.6);
+        const unitWidth = Math.round(fontSize * 3.2);
+
+        for (const id of METRIC_ORDER) {
+            const item = this._rows[id];
+
+            if (!item)
+                continue;
+
+            item.row.set_style(
+                "spacing: " + Math.round(fontSize * 0.38) + "px;"
             );
 
-            if (!result[0])
-                return null;
+            item.name.set_style(
+                commonStyle + "width: " + nameWidth + "px;"
+            );
 
-            const iface = ByteArray.toString(result[1]).trim();
+            item.value.set_style(
+                commonStyle +
+                "width: " + valueWidth + "px;" +
+                "text-align: right;"
+            );
 
-            return iface || null;
-        } catch (e) {
-            return null;
+            item.unit.set_style(
+                commonStyle +
+                "width: " + unitWidth + "px;" +
+                "text-align: left;"
+            );
         }
+
+        global.log(
+            "aVincePulse AP08: popup scaled - " + zeilen +
+            " rows, font " + fontSize + "px, monitor " +
+            monitor.width + "x" + monitor.height
+        );
     }
 
-    _readNetworkSpeed() {
-        const iface = this._getDefaultInterface();
+    _setValue(id, value) {
+        const row = this._rows[id];
 
-        if (!iface)
-            return { down: 0, up: 0 };
+        if (!row || value === undefined || value === null)
+            return;
 
-        const rxText = this._readFile(
-            "/sys/class/net/" + iface + "/statistics/rx_bytes"
-        );
-
-        const txText = this._readFile(
-            "/sys/class/net/" + iface + "/statistics/tx_bytes"
-        );
-
-        if (rxText === null || txText === null)
-            return { down: 0, up: 0 };
-
-        const rx = Number(rxText);
-        const tx = Number(txText);
-        const now = GLib.get_monotonic_time() / 1000000;
-
-        if (
-            this._lastRx === null ||
-            this._lastTx === null ||
-            this._lastNetTime === null ||
-            this._lastInterface !== iface
-        ) {
-            this._lastRx = rx;
-            this._lastTx = tx;
-            this._lastNetTime = now;
-            this._lastInterface = iface;
-
-            return { down: 0, up: 0 };
-        }
-
-        const elapsed = now - this._lastNetTime;
-
-        let down = 0;
-        let up = 0;
-
-        if (elapsed > 0) {
-            down = Math.max(0, (rx - this._lastRx) / elapsed);
-            up = Math.max(0, (tx - this._lastTx) / elapsed);
-        }
-
-        this._lastRx = rx;
-        this._lastTx = tx;
-        this._lastNetTime = now;
-        this._lastInterface = iface;
-
-        return { down: down, up: up };
+        row.value.set_text(String(value));
     }
 
-    _formatRate(bytesPerSecond) {
-        if (bytesPerSecond >= 1024 * 1024 * 1024) {
-            return {
-                value: (bytesPerSecond / (1024 * 1024 * 1024)).toFixed(1),
-                unit: "GB/s"
-            };
-        }
+    _setUnit(id, unit) {
+        const row = this._rows[id];
 
-        if (bytesPerSecond >= 1024 * 1024) {
-            return {
-                value: (bytesPerSecond / (1024 * 1024)).toFixed(1),
-                unit: "MB/s"
-            };
-        }
+        if (!row || !unit)
+            return;
 
-        if (bytesPerSecond >= 1024) {
-            return {
-                value: (bytesPerSecond / 1024).toFixed(1),
-                unit: "KB/s"
-            };
-        }
-
-        return {
-            value: Math.round(bytesPerSecond).toString(),
-            unit: "B/s"
-        };
+        row.unit.set_text(unit);
     }
 
     _showPopup() {
+        // Erneut skalieren, falls sich Bildschirm oder Aufloesung
+        // seit dem letzten Anzeigen geaendert haben.
+        this._applyPopupScale();
+
         this._popup.show();
 
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
@@ -255,6 +332,23 @@ class AVinceHWPopup extends Applet.TextIconApplet {
 
     _hidePopup() {
         this._popup.hide();
+    }
+
+    _updatePopupPosition() {
+        const monitor = Main.layoutManager.primaryMonitor;
+
+        const width = this._popup.width;
+        const height = this._popup.height;
+
+        const x =
+            monitor.x +
+            Math.round((monitor.width - width) / 2);
+
+        const y =
+            monitor.y +
+            Math.round((monitor.height - height) / 2);
+
+        this._popup.set_position(x, y);
     }
 
     on_applet_clicked(event) {
@@ -336,11 +430,14 @@ class AVinceHWPopup extends Applet.TextIconApplet {
             this._speedtestStatus = new St.Label({
                 text: text,
                 style:
-                    "font-size: 48px;" +
+                    "font-size: 34px;" +
                     "font-weight: 700;" +
                     "color: white;" +
-                    "text-shadow: 0px 0px 8px rgba(0,0,0,1);" +
-                    "padding: 20px;"
+                    "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);" +
+                    "background-color: rgba(0, 0, 0, " +
+                    POPUP_BACKGROUND_OPACITY + ");" +
+                    "border-radius: 18px;" +
+                    "padding: 28px 40px;"
             });
 
             Main.uiGroup.add_child(this._speedtestStatus);
@@ -378,94 +475,75 @@ class AVinceHWPopup extends Applet.TextIconApplet {
             this._speedtestStatus.hide();
     }
 
-    _updatePopupPosition() {
-        const monitor = Main.layoutManager.primaryMonitor;
-
-        const width = this._popup.width;
-        const height = this._popup.height;
-
-        const x =
-            monitor.x +
-            Math.round((monitor.width - width) / 2);
-
-        const y =
-            monitor.y +
-            Math.round((monitor.height - height) / 2);
-
-        this._popup.set_position(x, y);
-    }
-
+    /*
+     * Erfasst die Messwerte eigenständig.
+     *
+     * Es wird bewusst keine vom Desklet bereitgestellte Datei gelesen.
+     * Das Applet bleibt dadurch unabhängig davon, ob ein Desklet
+     * installiert oder aktiv ist.
+     */
     _update() {
-        try {
-            const result = GLib.file_get_contents(
-                "/tmp/avince-hwmonitor-values"
+        const hardware =
+            this._measurement.readHardwareValues();
+
+        const load =
+            this._measurement.readCpuLoad();
+
+        const ram =
+            this._measurement.readRamUsage();
+
+        const speedtest =
+            this._measurement.readSpeedtestValues();
+
+        const network =
+            this._measurement.readNetworkSpeed();
+
+        const down =
+            this._measurement.formatRate(network.down);
+
+        const up =
+            this._measurement.formatRate(network.up);
+
+        const storageFree =
+            this._measurement.formatSize(
+                this._measurement.readStorageFree()
             );
 
-            if (result[0]) {
-                const text = ByteArray.toString(result[1]);
-                const values = {};
+        this._setValue("cpu_temp", hardware.cpu);
+        this._setValue("cpu_load", load);
+        this._setValue("ram_load", ram);
+        this._setValue("storage_temp", hardware.ssd);
+        this._setValue("fan_speed", hardware.fan);
 
-                for (const line of text.split("\n")) {
-                    const pos = line.indexOf("=");
+        this._setValue("storage_free", storageFree.value);
+        this._setUnit("storage_free", storageFree.unit);
 
-                    if (pos > 0) {
-                        const key = line.substring(0, pos);
-                        const value = line.substring(pos + 1);
-                        values[key] = value;
-                    }
-                }
+        this._setValue("battery_charge", hardware.batteryCharge);
+        this._setUnit("psu_state", hardware.psuState);
 
-                if (values.CPU !== undefined)
-                    this._cpu.value.set_text(values.CPU);
+        this._setValue("net_down", down.value);
+        this._setUnit("net_down", down.unit);
 
-                if (values.LOAD !== undefined)
-                    this._load.value.set_text(values.LOAD);
+        this._setValue("net_up", up.value);
+        this._setUnit("net_up", up.unit);
 
-                if (values.RAM !== undefined)
-                    this._ram.value.set_text(values.RAM);
-
-                if (values.SSD !== undefined)
-                    this._ssd.value.set_text(values.SSD);
-
-                if (values.FAN !== undefined)
-                    this._fan.value.set_text(values.FAN);
-
-                if (values.DOWN_VALUE !== undefined)
-                    this._down.value.set_text(values.DOWN_VALUE);
-
-                if (values.DOWN_UNIT !== undefined)
-                    this._down.unit.set_text(values.DOWN_UNIT);
-
-                if (values.UP_VALUE !== undefined)
-                    this._up.value.set_text(values.UP_VALUE);
-
-                if (values.UP_UNIT !== undefined)
-                    this._up.unit.set_text(values.UP_UNIT);
-
-                if (values.SPEED_DOWN !== undefined && values.SPEED_DOWN !== "")
-                    this._speedDown.value.set_text(values.SPEED_DOWN);
-
-                if (values.SPEED_UP !== undefined && values.SPEED_UP !== "")
-                    this._speedUp.value.set_text(values.SPEED_UP);
-
-                if (values.PING !== undefined && values.PING !== "")
-                    this._ping.value.set_text(values.PING);
-
-                if (values.JITTER !== undefined && values.JITTER !== "")
-                    this._jitter.value.set_text(values.JITTER);
-            }
-        } catch (e) {
-            // Falls das Desklet noch keinen Wert geschrieben hat,
-            // bleiben die zuletzt angezeigten Werte erhalten.
+        if (speedtest) {
+            this._setValue("speed_down", speedtest.SPEED_DOWN);
+            this._setValue("speed_up", speedtest.SPEED_UP);
+            this._setValue("ping", speedtest.PING);
+            this._setValue("jitter", speedtest.JITTER);
         }
 
         if (this._popup.visible)
             this._updatePopupPosition();
 
-        this._timeout = Mainloop.timeout_add_seconds(1, () => {
-            this._update();
-            return false;
-        });
+        this._timeout = Mainloop.timeout_add_seconds(
+            REFRESH_INTERVAL_SECONDS,
+            () => {
+                this._update();
+                return false;
+            }
+        );
     }
 
     on_applet_removed_from_panel() {
@@ -487,7 +565,7 @@ class AVinceHWPopup extends Applet.TextIconApplet {
 }
 
 function main(metadata, orientation, panel_height, instance_id) {
-    return new AVinceHWPopup(
+    return new AVincePulseApplet(
         metadata,
         orientation,
         panel_height,

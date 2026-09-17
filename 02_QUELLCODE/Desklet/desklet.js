@@ -19,7 +19,10 @@ const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
 const Metrics = imports.desklets['avincepulse-desklet@avince'].metrics;
 const Measurement = imports.desklets['avincepulse-desklet@avince'].measurement;
+const HardwareDetection = imports.desklets['avincepulse-desklet@avince'].hardwareDetection;
+
 const MeasurementProvider = Measurement.MeasurementProvider;
+const HardwareDetector = HardwareDetection.HardwareDetector;
 
 const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
@@ -41,7 +44,9 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this.fontWeight = "600";
         this.refreshInterval = 3;
 
-        this._measurement = new MeasurementProvider();
+        this._measurement = new MeasurementProvider(
+            new HardwareDetector()
+        );
 
         this.settings = new Settings.DeskletSettings(
             this,

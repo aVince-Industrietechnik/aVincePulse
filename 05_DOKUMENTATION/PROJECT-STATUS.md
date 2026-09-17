@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 17.09.2026 (AP07)  
+Stand: 17.09.2026 (AP08)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP07-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP06-END`
+Aktueller Referenzstand: `0.1.0-dev_AP08-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP07-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -74,6 +74,7 @@ Tags:
 - `0.1.0-dev_AP05-END` – Entwicklungsstand nach Abschluss von AP05
 - `0.1.0-dev_AP06-END` – Entwicklungsstand nach Abschluss von AP06
 - `0.1.0-dev_AP07-END` – Entwicklungsstand nach Abschluss von AP07
+- `0.1.0-dev_AP08-END` – Entwicklungsstand nach Abschluss von AP08
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -293,6 +294,69 @@ Auf dem Referenzsystem real geprüft, zusätzlich per Simulation der Sensorverf�
 - Mini-PC zusätzlich ohne Storage-Temperatur: 10 Zeilen
 - virtuelle Maschine ohne jeden Sensor: 9 Zeilen, stabil
 
+### AP08 – Applet eigenständig
+
+Abgeschlossen.
+
+Ziel war, das Applet vom Desklet zu lösen. Bis dahin bezog es sämtliche Werte aus `/tmp/avince-hwmonitor-values`; ohne laufendes Desklet zeigte es nichts an. Das widersprach dem Grundsatz EIGENSTÄNDIG + KOOPERATIV.
+
+#### Gemeinsame Module
+
+`metrics.js`, `measurement.js` und `hardwareDetection.js` liegen nun zusätzlich im Applet.
+
+Cinnamon Spices verlangt getrennte Pakete mit eigener UUID und lässt keine gemeinsame Core-Installation zu. Die Module müssen deshalb als Kopie vorliegen.
+
+Damit die Kopien nicht auseinanderlaufen, importiert `measurement.js` den `HardwareDetector` nicht mehr selbst, sondern bekommt ihn beim Erzeugen übergeben:
+
+```js
+this._measurement = new MeasurementProvider(new HardwareDetector());
+```
+
+Der komponentenspezifische Importpfad steht dadurch nur noch in `desklet.js` und `applet.js`. Die drei gemeinsamen Module sind in beiden Komponenten bitgenau identisch und lassen sich per Prüfsumme vergleichen:
+
+```bash
+for f in metrics.js measurement.js hardwareDetection.js; do
+    sha256sum 02_QUELLCODE/Desklet/$f 02_QUELLCODE/Applet/$f
+done
+```
+
+Ein Auseinanderlaufen fällt damit sofort auf. Änderungen an einem der drei Module sind immer in beide Verzeichnisse zu übernehmen.
+
+#### Entfernter Code
+
+Aus `applet.js` wurden rund 130 Zeiten toter Code entfernt: `_readSensors()`, `_readNetworkSpeed()`, `_formatRate()`, `_readFile()`, `_getDefaultInterface()` sowie die Zustandsvariablen `_lastRx`, `_lastTx`, `_lastNetTime` und `_lastInterface`. Diese Funktionen waren definiert, wurden aber nirgends aufgerufen; sie stammten aus der Zeit vor der Umstellung auf die gemeinsame Datei.
+
+#### Eigene Messung
+
+Das Applet liest `/tmp/avince-hwmonitor-values` nicht mehr, sondern misst selbst. Das Popup wird wie im Desklet aus `METRIC_ORDER` aufgebaut und blendet Messwerte ohne Sensor aus.
+
+Das Desklet schreibt die Datei weiterhin unverändert, damit das alte Applet `avince-hwpopup@angelo` weiterläuft.
+
+Dass beide Komponenten bei gleichzeitigem Betrieb dieselben Sensoren lesen, ist vertretbar: Es handelt sich um wenige Dateien aus `/sys`. Die Roadmap sieht eine gemeinsame Datenbasis als Option, nicht als Pflicht.
+
+#### Hover-Anzeige
+
+- Aktualisierungsintervall auf 3 Sekunden gesetzt, entspricht dem Standard des Desklets. Vollständige Synchronität ist nicht erreichbar, da beide Komponenten eigenständig messen und ihre Zeitgeber versetzt laufen.
+- Schriftgröße und Spaltenbreiten werden aus Bildschirmhöhe und Zeilenzahl berechnet, statt fest bei 48 px zu liegen. Die Anzeige belegt dadurch etwa 70 Prozent der Bildschirmhöhe, unabhängig von Auflösung und Messwertanzahl. Neu berechnet wird bei jedem Öffnen, womit Monitor- und Auflösungswechsel berücksichtigt sind.
+- Die Beschriftung `SPEED ↓` wurde zuvor abgeschnitten; die Spaltenbreiten skalieren nun mit der Schriftgröße.
+- Hinter der Anzeige liegt eine abgedunkelte Fläche mit abgerundeten Ecken. Die Schrift bleibt dadurch auf jedem Bildschirminhalt lesbar, ohne Schrift- und Schattenfarbe je nach Hintergrund umzuschalten.
+
+Zur Deckkraft siehe `POPUP_BACKGROUND_OPACITY` in `applet.js`. Der Standardwert 0.55 ergibt gegenüber weißer Schrift im ungünstigsten Fall – reinweißer Inhalt dahinter – einen Kontrast von 4.7 : 1. Werte unter 0.45 unterschreiten die Schwelle von 3.0 : 1 für große, fette Schrift und sollten auch später nicht einstellbar sein.
+
+Eine Auswertung des tatsächlichen Bildschirminhalts über `global.stage.read_pixels` wäre technisch möglich, wurde aber verworfen: Unter einer großflächigen Anzeige liegt selten einheitlich Helles oder Dunkles, und die Umschaltung würde beim Verschieben von Fenstern springen.
+
+#### Symbole
+
+Das Applet zeigte bisher das Unicode-Zeichen `⚡` im Panel. Es wurde durch das C-1-Logo ersetzt.
+
+Wichtig ist die Unterscheidung zweier Dateien:
+
+- `icon.png` – von der Cinnamon-Verwaltung für die Darstellung in der Applet- und Desklet-Liste verwendet. Der Dateiname ist fest vorgegeben. Die Liste hat einen hellen Hintergrund, weshalb dort die Fassung mit dunklem Hintergrund liegt. Ein weißes Logo auf transparentem Grund wäre dort unsichtbar.
+- `panel-icon.png` – vom Applet über `set_applet_icon_path()` geladen. Weiß-blau-rot auf transparentem Grund.
+- `panel-icon-symbolic.png` – einfarbige Fassung für helle Panel-Themes, noch nicht aktiv.
+
+Herkunft und Bearbeitung der Panel-Icons sind in `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/03_Panel/README.txt` dokumentiert.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -306,6 +370,14 @@ Wesentliche Dateien:
 - `metadata.json` – Cinnamon-Metadaten
 
 Verantwortlichkeiten sollen sauber getrennt bleiben. Neue Funktionen nicht wieder direkt in `desklet.js` bündeln, wenn sie logisch in Messung, Hardwareerkennung oder ein eigenes Modul gehören.
+
+Das Applet enthält dieselben Module zusätzlich als Kopie:
+
+- `applet.js` – Panel-Symbol, Hover-Anzeige, Speedtest
+- `metrics.js`, `measurement.js`, `hardwareDetection.js` – identisch mit dem Desklet
+- `icon.png`, `panel-icon.png`, `panel-icon-symbolic.png`
+
+Änderungen an den drei gemeinsamen Modulen sind stets in beide Verzeichnisse zu übernehmen und anschließend per Prüfsumme zu kontrollieren.
 
 ## 7a. Grafiken und Logo
 
@@ -494,14 +566,16 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP07 sind abgeschlossen.
+AP01 bis AP08 sind abgeschlossen.
 
-**AP08 ist noch nicht verbindlich definiert.**
+**AP09 ist noch nicht verbindlich definiert.**
 
 Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
 
-- Das Applet entspricht weiterhin dem Baseline-Stand und bezieht seine Werte ausschließlich aus `/tmp/avince-hwmonitor-values`. Ohne laufendes Desklet zeigt es keine Werte an. Das widerspricht dem Grundsatz EIGENSTÄNDIG + KOOPERATIV.
 - Speedtest-Werte werden weiterhin unter der alten UUID `avince-hwmonitor@angelo` gespeichert und gelesen.
+- Das Applet besitzt noch kein `settings-schema.json`. Vorgesehen sind mindestens Deckkraft der Hover-Fläche (Bereich 0.45 bis 0.85), Aktualisierungsintervall und eine Begrenzung der Anzeigegröße.
+- Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Sobald das alte Applet `avince-hwpopup@angelo` nicht mehr verwendet wird, liest diese Datei niemand mehr und das Schreiben kann entfallen.
+- `panel-icon-symbolic.png` liegt bereit, wird aber noch nicht verwendet. Offen ist, wie das Applet ein helles Panel-Theme erkennt und selbsttätig umschaltet.
 - Der LibreSpeed-Pfad ist im Applet fest codiert.
 - Der Zeitpunkt des letzten erfolgreichen Speedtests wird nicht gespeichert, ist für Version 1.0 aber verbindlich vorgesehen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
@@ -510,16 +584,16 @@ Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die F
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG), die Einbindung als Panel-Symbol des Applets und die Lizenz- und Rechteprüfung stehen noch aus.
 - Ein- und Ausblenden einzelner Messwerte sowie eine benutzerdefinierte Reihenfolge sind noch nicht über die Einstellungen möglich. Die technische Voraussetzung dafür besteht seit AP06.
 
-Vor Beginn von AP08:
+Vor Beginn von AP09:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP08 definieren
+5. Ziel und Akzeptanzkriterien für AP09 definieren
 6. erst danach Code ändern
 
-Keine neue AP08-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
+Keine neue AP09-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
 ## 15. Hinweise für KI-Assistenten
 
@@ -550,13 +624,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP07:
+Erwarteter Ausgangspunkt nach AP08:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP07-END`
-- AP07 abgeschlossen
-- AP08 noch zu definieren
+- Referenz-Tag: `0.1.0-dev_AP08-END`
+- AP08 abgeschlossen
+- AP09 noch zu definieren
 
 ---
 
