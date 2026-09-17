@@ -140,6 +140,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._applyPanelSymbol.bind(this)
         );
 
+        this._bindeSichtbarkeit();
         this._applyPanelSymbol();
         this._speedtestRunning = false;
         this._speedtestStatus = null;
@@ -195,6 +196,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                 );
                 continue;
             }
+
+            // Vom Benutzer abgewaehlte Messwerte erhalten keine Zeile.
+            if (!this._istSichtbar(id))
+                continue;
 
             if (availability[id] === false) {
                 global.log(
@@ -321,6 +326,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.settings.setValue("popup-opacity", deckkraft);
         this.settings.setValue("panel-symbol", symbol);
 
+        // Alle Messwerte wieder einblenden.
+        for (const id of METRIC_ORDER) {
+            const schluessel = this._sichtbarkeitsSchluessel(id);
+
+            this.settings.setValue(schluessel, true);
+            this["zeige_" + id] = true;
+        }
+
         /*
          * setValue schreibt ausschliesslich die Einstellungsdatei.
          * Weder die gebundenen Eigenschaften noch die zugehoerigen
@@ -335,10 +348,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._applyPanelSymbol();
         this._applyPopupStyle();
-        this._applyPopupScale();
-        this._onRefreshIntervalChanged();
+        this._baueZeilenNeu();
 
-        global.log("aVincePulse AP09: settings reset to defaults");
+        global.log("aVincePulse AP10: settings reset to defaults");
     }
 
     _zeigeTextkuerzel() {
@@ -398,6 +410,64 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._update();
     }
 
+
+    /*
+     * Schluessel der Sichtbarkeitseinstellung eines Messwertes.
+     * Die Messwert-ID verwendet Unterstriche, die Einstellungen
+     * nach Cinnamon-Konvention Bindestriche.
+     */
+    _sichtbarkeitsSchluessel(id) {
+        return "show-" + id.replace(/_/g, "-");
+    }
+
+    /*
+     * Bindet fuer jeden Messwert den zugehoerigen Schalter.
+     * Aendert sich einer, werden die Anzeigezeilen neu aufgebaut.
+     */
+    _bindeSichtbarkeit() {
+        for (const id of METRIC_ORDER) {
+            this.settings.bindProperty(
+                Settings.BindingDirection.IN,
+                this._sichtbarkeitsSchluessel(id),
+                "zeige_" + id,
+                this._baueZeilenNeu.bind(this)
+            );
+        }
+    }
+
+    /*
+     * Meldet, ob ein Messwert angezeigt werden soll.
+     * Nur ein ausdrueckliches false blendet aus; fehlt die
+     * Einstellung, bleibt der Messwert sichtbar.
+     */
+    _istSichtbar(id) {
+        return this["zeige_" + id] !== false;
+    }
+
+    /*
+     * Baut die Anzeigezeilen nach einer Aenderung der Auswahl neu auf.
+     */
+    _baueZeilenNeu() {
+        if (!this._popup)
+            return;
+
+        this._popup.destroy_all_children();
+        this._rows = {};
+
+        this._buildRows();
+        this._applyPopupScale();
+
+        // Der laufende Zeitgeber muss entfernt werden, bevor _update()
+        // einen neuen setzt. Sonst liefe die Messschleife doppelt und
+        // wuerde sich mit jeder weiteren Aenderung vervielfachen.
+        if (this._timeout) {
+            Mainloop.source_remove(this._timeout);
+            this._timeout = null;
+        }
+
+        this._update();
+    }
+
     _makeRow(name, value, unit) {
         const row = new St.BoxLayout({
             vertical: false
@@ -428,6 +498,48 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * Die Anzeige belegt dadurch unabhaengig von Bildschirmgroesse und
      * Messwertanzahl stets etwa denselben Anteil der Bildschirmhoehe.
      */
+
+    /*
+     * Berechnet die Spaltenbreiten aus der Schriftgroesse und den
+     * tatsaechlich angezeigten Beschriftungen.
+     *
+     * Feste Pixelbreiten passen nur zu einer einzigen Schriftgroesse.
+     * Bei groesserer Schrift wurden Beschriftungen wie "SPEED" und
+     * Einheiten wie "MBit/s" abgeschnitten.
+     */
+    _berechneSpaltenbreiten(fontSize) {
+        let maxLabel = 0;
+        let maxEinheit = 0;
+
+        for (const id of METRIC_ORDER) {
+            if (!this._rows[id])
+                continue;
+
+            const metric = METRICS[id];
+
+            maxLabel = Math.max(maxLabel, String(metric.label).length);
+            maxEinheit = Math.max(maxEinheit, String(metric.unit).length);
+        }
+
+        if (maxLabel === 0)
+            maxLabel = 6;
+
+        // Die Einheiten von Netzwerk und Speedtest wechseln zur
+        // Laufzeit zwischen B/s, KB/s, MB/s, GB/s und MBit/s.
+        // Die Spalte muss die laengste davon aufnehmen koennen.
+        maxEinheit = Math.max(maxEinheit, 6);
+
+        // Mittlere Zeichenbreite bei fetter Schrift, zuzueglich
+        // eines Zeichens Reserve.
+        const proZeichen = 0.62;
+
+        return {
+            name: Math.round(fontSize * proZeichen * (maxLabel + 1)),
+            value: Math.round(fontSize * proZeichen * 7),
+            unit: Math.round(fontSize * proZeichen * (maxEinheit + 1))
+        };
+    }
+
     _applyPopupScale() {
         const monitor = Main.layoutManager.primaryMonitor;
 
@@ -459,11 +571,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             "color: white;" +
             "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);";
 
-        // Spaltenbreiten aus der Schriftgroesse ableiten, damit
-        // Beschriftungen bei keiner Groesse abgeschnitten werden.
-        const nameWidth = Math.round(fontSize * 5.4);
-        const valueWidth = Math.round(fontSize * 4.6);
-        const unitWidth = Math.round(fontSize * 3.2);
+        const breiten = this._berechneSpaltenbreiten(fontSize);
+
+        const nameWidth = breiten.name;
+        const valueWidth = breiten.value;
+        const unitWidth = breiten.unit;
 
         for (const id of METRIC_ORDER) {
             const item = this._rows[id];

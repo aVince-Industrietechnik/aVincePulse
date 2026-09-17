@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 17.09.2026 (AP09)  
+Stand: 17.09.2026 (AP10)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP09-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP08-END`
+Aktueller Referenzstand: `0.1.0-dev_AP10-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP09-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -76,6 +76,7 @@ Tags:
 - `0.1.0-dev_AP07-END` – Entwicklungsstand nach Abschluss von AP07
 - `0.1.0-dev_AP08-END` – Entwicklungsstand nach Abschluss von AP08
 - `0.1.0-dev_AP09-END` – Entwicklungsstand nach Abschluss von AP09
+- `0.1.0-dev_AP10-END` – Entwicklungsstand nach Abschluss von AP10
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -401,6 +402,41 @@ Eine Schaltfläche im Einstellungsfenster setzt alle Werte auf die Vorgaben zur�
 
 Wichtig dabei: `settings.setValue()` schreibt ausschließlich die Einstellungsdatei. Weder die gebundenen Eigenschaften noch die zugehörigen Rückrufe werden dabei aktualisiert. Die Werte müssen deshalb zusätzlich im Objekt gesetzt und die Anwendungsmethoden selbst aufgerufen werden, sonst wirkt das Zurücksetzen nicht sichtbar.
 
+### AP10 – Auswahl der angezeigten Messwerte
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Applet/settings-schema.json`, `applet.js`
+- `02_QUELLCODE/Desklet/settings-schema.json`, `desklet.js`, `stylesheet.css`
+
+#### Auswahl der Messwerte
+
+Beide Komponenten besitzen je einen Schalter pro Messwert, gegliedert in Hardware, Netzwerk und Internet-Speedtest. Der Schlüssel ergibt sich aus der Messwert-ID: `cpu_temp` wird zu `show-cpu-temp`, da Cinnamon für Einstellungen Bindestriche verwendet.
+
+`_buildRows()` überspringt abgewählte Messwerte. Nur ein ausdrückliches `false` blendet aus; fehlt die Einstellung, bleibt der Messwert sichtbar.
+
+Applet und Desklet werden getrennt eingestellt. Das ist beabsichtigt: Eine gemeinsame Auswahl würde eine Kopplung schaffen, die dem Grundsatz EIGENSTÄNDIG + KOOPERATIV widerspricht.
+
+Das Schema wurde aus `metrics.js` erzeugt und anschließend geprüft, dass alle Schlüssel im Schema exakt denen entsprechen, die der Code bildet. Bei einer Abweichung würde Cinnamon das Binden mit einem Fehler abbrechen.
+
+Wichtig beim Neuaufbau der Zeilen: Der laufende Zeitgeber muss entfernt werden, bevor `_update()` einen neuen setzt. Andernfalls liefe die Messschleife doppelt und würde sich mit jeder weiteren Änderung vervielfachen.
+
+#### Spaltenbreiten
+
+Die festen Pixelbreiten des Desklets (70/58/50) wurden aus `stylesheet.css` entfernt. Beide Komponenten berechnen die Breiten nun in `_berechneSpaltenbreiten()` aus der Schriftgröße und den tatsächlich angezeigten Beschriftungen.
+
+Die alten Werte passten nur zu einer Schriftgröße von 14 px; bei 20 px und mehr wurden Beschriftungen abgeschnitten. Die Einheitenspalte war selbst bei 14 px zu schmal für `MBit/s`.
+
+Die Einheitenspalte ist immer für mindestens sechs Zeichen ausgelegt, da die Einheiten von Netzwerk und Speedtest zur Laufzeit zwischen `B/s`, `KB/s`, `MB/s`, `GB/s` und `MBit/s` wechseln.
+
+Werden Messwerte abgewählt, verkürzt sich die längste Beschriftung und die Anzeige wird von selbst schmaler.
+
+#### Zurücksetzen
+
+Beide Komponenten besitzen nun eine Schaltfläche, die alle Einstellungen einschließlich der Messwertauswahl auf die Auslieferungswerte zurücksetzt. Die dort gesetzten Werte stimmen mit den Vorgaben im jeweiligen Schema überein.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -654,14 +690,15 @@ Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die F
 - Speedtest-Werte werden weiterhin unter der alten UUID `avince-hwmonitor@angelo` gespeichert und gelesen.
 - Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Sobald das alte Applet `avince-hwpopup@angelo` nicht mehr verwendet wird, liest diese Datei niemand mehr und das Schreiben kann entfallen.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
-- Das Desklet besitzt noch keine Einstellungen für Deckkraft, Anzeigegröße oder das Ausblenden einzelner Messwerte.
+- Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße.
+- Der Internet-Speedtest lässt sich ausschließlich über das Applet auslösen. Wer nur das Desklet installiert, hat keine Möglichkeit dazu. Der Speedtest-Code liegt bisher allein in `applet.js` und gehört in ein gemeinsames Modul.
+- Im Applet fehlt ein Hinweis darauf, dass der Speedtest per Klick auf das Panel-Symbol gestartet wird.
 - Der LibreSpeed-Pfad ist im Applet fest codiert.
 - Der Zeitpunkt des letzten erfolgreichen Speedtests wird nicht gespeichert, ist für Version 1.0 aber verbindlich vorgesehen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
-- Die festen Spaltenbreiten in `stylesheet.css` passen nicht zur einstellbaren Schriftgröße.
 - Die Funktion „Hardware neu erkennen" aus der Roadmap ist noch nicht umgesetzt.
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG), die Einbindung als Panel-Symbol des Applets und die Lizenz- und Rechteprüfung stehen noch aus.
-- Ein- und Ausblenden einzelner Messwerte sowie eine benutzerdefinierte Reihenfolge sind noch nicht über die Einstellungen möglich. Die technische Voraussetzung dafür besteht seit AP06.
+- Eine benutzerdefinierte Reihenfolge der Messwerte ist noch nicht möglich. Sie soll gemeinsam mit dem Umbenennen der Sensoren in einer einzigen Liste umgesetzt werden, statt in zwei getrennten Bedienelementen.
 
 Vor Beginn von AP09:
 

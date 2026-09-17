@@ -1,4 +1,8 @@
 {
+    "kopf-darstellung": {
+        "type": "header",
+        "description": "Darstellung"
+    },
     "font-size": {
         "type": "spinbutton",
         "default": 14,
@@ -8,7 +12,6 @@
         "units": "px",
         "description": "Schriftgröße"
     },
-
     "font-weight": {
         "type": "combobox",
         "default": "600",
@@ -20,7 +23,6 @@
             "Fett": "700"
         }
     },
-
     "refresh-interval": {
         "type": "spinbutton",
         "default": 3,
@@ -29,5 +31,101 @@
         "step": 1,
         "units": "Sekunden",
         "description": "Aktualisierungsintervall"
+    },
+    "kopf-messwerte": {
+        "type": "header",
+        "description": "Angezeigte Messwerte"
+    },
+    "kopf-mw-hardware": {
+        "type": "header",
+        "description": "Hardware"
+    },
+    "show-cpu-temp": {
+        "type": "switch",
+        "default": true,
+        "description": "CPU  (°C)"
+    },
+    "show-cpu-load": {
+        "type": "switch",
+        "default": true,
+        "description": "LOAD  (%)"
+    },
+    "show-ram-load": {
+        "type": "switch",
+        "default": true,
+        "description": "RAM  (%)"
+    },
+    "show-storage-temp": {
+        "type": "switch",
+        "default": true,
+        "description": "SSD  (°C)"
+    },
+    "show-storage-free": {
+        "type": "switch",
+        "default": true,
+        "description": "FREE  (GB)"
+    },
+    "show-fan-speed": {
+        "type": "switch",
+        "default": true,
+        "description": "FAN  (rpm)"
+    },
+    "show-battery-charge": {
+        "type": "switch",
+        "default": true,
+        "description": "BATT  (%)"
+    },
+    "show-psu-state": {
+        "type": "switch",
+        "default": true,
+        "description": "STATUS"
+    },
+    "kopf-mw-netzwerk": {
+        "type": "header",
+        "description": "Netzwerk"
+    },
+    "show-net-down": {
+        "type": "switch",
+        "default": true,
+        "description": "DOWN  (KB/s)"
+    },
+    "show-net-up": {
+        "type": "switch",
+        "default": true,
+        "description": "UP  (KB/s)"
+    },
+    "kopf-mw-internet": {
+        "type": "header",
+        "description": "Internet-Speedtest"
+    },
+    "show-speed-down": {
+        "type": "switch",
+        "default": true,
+        "description": "SPEED ↓  (MBit/s)"
+    },
+    "show-speed-up": {
+        "type": "switch",
+        "default": true,
+        "description": "SPEED ↑  (MBit/s)"
+    },
+    "show-ping": {
+        "type": "switch",
+        "default": true,
+        "description": "PING  (ms)"
+    },
+    "show-jitter": {
+        "type": "switch",
+        "default": true,
+        "description": "JITTER  (ms)"
+    },
+    "kopf-zuruecksetzen": {
+        "type": "header",
+        "description": "Zurücksetzen"
+    },
+    "btn-standardwerte": {
+        "type": "button",
+        "description": "Auf Standardwerte zurücksetzen",
+        "callback": "on_standardwerte_zuruecksetzen",
+        "tooltip": "Setzt Darstellung, Aktualisierungsintervall und die Auswahl der angezeigten Messwerte auf die Auslieferungswerte zurück."
     }
 }
