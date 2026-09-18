@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 18.09.2026 (AP17)  
+Stand: 18.09.2026 (AP18)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP17-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP16-END`
+Aktueller Referenzstand: `0.1.0-dev_AP18-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP17-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -84,6 +84,7 @@ Tags:
 - `0.1.0-dev_AP15-END` – Entwicklungsstand nach Abschluss von AP15
 - `0.1.0-dev_AP16-END` – Entwicklungsstand nach Abschluss von AP16
 - `0.1.0-dev_AP17-END` – Entwicklungsstand nach Abschluss von AP17
+- `0.1.0-dev_AP18-END` – Entwicklungsstand nach Abschluss von AP18
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -818,6 +819,66 @@ Auf Wunsch des Nutzers verwenden alle sichtbaren deutschen Texte Umlaute und ß:
 - Suchlauf über alle sichtbaren Texte auf verbliebene Umschreibungen; Probebericht mit `cjs`
 - Funktionstest durch den Nutzer in Applet und Desklet mit USB-Stick, einschließlich Esc, Anzeigedauer und Umlauten in neu erzeugten Berichten
 
+### AP18 – Warnschwellen mit Farbwechsel
+
+Abgeschlossen.
+
+Dateien:
+
+- gemeinsame Module `metrics.js` (Schwellen, Bewertung) und `measurement.js` (freier Platz in Prozent)
+- `desklet.js`, `applet.js`, beide `settings-schema.json`, `Desklet/stylesheet.css`
+
+#### Funktion
+
+Ein Messwert färbt Wert und Einheit orange (Warnung, `#FFA726`) bzw. rot (kritisch, `#FF5252`), sobald er eine Schwelle erreicht. Die Beschriftung bleibt weiß.
+
+| Messwert | Warnung | Kritisch | Richtung |
+|---|---|---|---|
+| CPU-Temperatur | 80 °C | 90 °C | ab Schwelle |
+| Speicher-Temperatur | 70 °C | 80 °C | ab Schwelle |
+| CPU-Auslastung | 85 % | 95 % | ab Schwelle |
+| RAM-Auslastung | 85 % | 95 % | ab Schwelle |
+| Freier Speicherplatz | 10 % | 5 % | unter Schwelle, in Prozent des gewählten Laufwerks |
+| Akku-Ladezustand | 20 % | 10 % | unter Schwelle, nur im Akkubetrieb |
+
+Begründung der Vorgaben: Die Referenz-CPU meldet kritisch bei 100 °C (`coretemp temp1_crit`), die Referenz-SSD Warnung bei 89 und kritisch bei 94 °C (`nvme temp1_max`, `temp1_crit`). Die SSD-Vorgabe lag zunächst bei 60/70 °C und wurde auf 70/80 °C angehoben, da NVMe-SSDs beim Kopieren großer Dateien leicht 60–70 °C erreichen. Der Speicherplatz wird in Prozent bewertet, weil Laufwerke sehr verschieden groß sind; dafür liefert `readStorageFreeAnteil()` den Anteil aus `filesystem::free` und `filesystem::size`.
+
+Lüfter, Netzwerk und Speedtest erhalten keine Schwellen.
+
+#### Bewertung (`metrics.js`)
+
+- `WARNSCHWELLEN`: Vorgaben und Richtung („hoch“, „tief“) je Messwert
+- `bewerteStufe()`: „normal“, „warnung“ oder „kritisch“. Puffer gegen Flackern (`WARN_PUFFER = 2`): Eine erreichte Stufe gilt weiter, bis der Wert die Schwelle um 2 wieder verlassen hat. Nicht auswertbare Werte wie `--` gelten als normal.
+- `ordneWarnschwellen()`: bereinigt die eingestellte Liste. Unbekannte, beschädigte und doppelte Einträge werden verworfen, fehlende erhalten die Vorgabe; vertauschte Eingaben werden so geordnet, dass die strengere Schwelle als kritisch gilt.
+
+Die Komponenten bewerten bei jedem Takt und setzen den Stil nur bei einem Stufenwechsel neu. Der Grundstil von Wert und Einheit wird in `wertStil`/`einheitStil` gehalten; die Farbe wird angehängt und hat damit Vorrang, auch vor dem `color: white` im Stil der Hover-Anzeige. Beim Neuaufbau und bei Größenänderungen bleibt die Farbe erhalten.
+
+#### Einstellungen
+
+Abschnitt „Warnschwellen“ je Komponente (getrennt, Entscheidung vom 18.09.2026): Schalter „Warnfarben anzeigen“, Hinweistext und Liste mit Messwert, Warnung, Kritisch, Aktiv. Hinweistext und Liste hängen über `dependency` am Schalter und klappen bei ausgeschaltetem Schalter ein. In der Liste sind Hinzufügen, Entfernen und die Pfeile ausgeblendet, da die Reihenfolge dort keine Wirkung hat (Wunsch des Nutzers); bearbeitet wird über Doppelklick oder Stift. „Zurücksetzen“ stellt Schalter und Vorgaben wieder her.
+
+#### Fehlende Zeilen ergänzen
+
+Fehlt in einer gespeicherten Liste eine Zeile, wurde der Messwert zwar mit der Vorgabe angezeigt bzw. bewertet, erschien aber nicht in der Liste und war nicht einstellbar. `_vervollstaendigeListen()` ergänzt beim Start fehlende Messwerte mit ihrer Vorgabe am Ende, für Messwertliste und Warnschwellen. Vorhandene Einträge bleiben unverändert. Das greift auch, wenn ein Update neue Messwerte bringt. Gespeicherte Werte werden nie durch geänderte Vorgaben überschrieben; neue Vorgaben gelten nach „Zurücksetzen“.
+
+#### Lesbarkeit im Desklet
+
+Das Desklet hatte weiße Schrift ohne Schatten und Hintergrund; auf hellem Hintergrundbild waren Schrift und Warnfarben schlecht lesbar. `stylesheet.css` gibt Beschriftung, Wert und Einheit nun `text-shadow: 0px 0px 6px rgba(0,0,0,0.9)` (Entscheidung vom 18.09.2026). Auf hellem Hintergrund noch praktisch zu prüfen.
+
+Ein zusätzliches Zeichen für Farbenblinde wurde vorerst nicht umgesetzt (Entscheidung vom 18.09.2026).
+
+#### Fehler während der Umsetzung
+
+- **Applet stürzte beim Laden ab:** Die Bewertung verwendete die Namen `cpu` und `ssd` aus dem Desklet; im Applet heißen die Werte `hardware.cpu` und `hardware.ssd`. Die Syntaxprüfung mit `cjs` erkennt undefinierte Namen nicht. Regel seit AP18: Vor jeder Installation prüfen, dass alle neu verwendeten Namen in der jeweiligen Datei definiert oder importiert sind.
+- **Testwerte in den Einstellungen des Nutzers:** Beim Selbsttest wurden gebundene Eigenschaften (`warnListe`, `warnAktiv`) direkt gesetzt. Cinnamon speichert solche Zuweisungen sofort in die Einstellungsdatei; die Testschwellen erschienen danach in den Einstellungen. Behoben durch „Zurücksetzen“. Regel seit AP18: Gebundene Werte im Test nicht direkt setzen; wenn nötig, Einstellungsdatei vorher sichern und danach die gespeicherten Werte vergleichen. Ein Vergleich der Prüfsumme der ganzen Datei ist ungeeignet, da beim Laden die Auswahlfelder mit aktuellen Messwerten neu geschrieben werden.
+
+#### Prüfung
+
+- Syntaxprüfung mit `cjs`, Prüfsummen der vier gemeinsamen Module, Namensprüfung
+- Bewertung mit `cjs`: Folgen für Temperatur, pendelnde Auslastung, Speicherplatz, Akku ohne Wert, vertauschte und beschädigte Listen
+- In Cinnamon: Einfärbung in beiden Komponenten, Schalter aus, Aktiv aus, Akku im Netzbetrieb, Schriftschatten gemessen; Ergänzen fehlender Zeilen mit Sicherung und Vergleich der gespeicherten Werte
+- Funktionstest durch den Nutzer in Applet und Desklet, einschließlich Akku im Akkubetrieb
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1018,7 +1079,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_16-41-08` (AP16).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_19-41-07` (AP17).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -1083,13 +1144,13 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP17 sind abgeschlossen.
+AP01 bis AP18 sind abgeschlossen.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**Als AP18 vorgesehen:** Warnschwellen mit Farbwechsel (OPTIONAL 1.0, Roadmap Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen. AP17 wurde für die Korrektur des Neu-Öffnens aus AP16 eingeschoben.
+**Als AP19 vorgesehen: Zwischenprüfung** von Applet und Desklet (siehe `ROADMAP_V2.md`, Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen. Offen aus AP18: Lesbarkeit des Desklets mit Schriftschatten auf hellem Hintergrund praktisch prüfen.
 
-Danach laut Roadmap: **AP19 – Zwischenprüfung** von Applet und Desklet (aufgenommen am 18.09.2026, siehe `ROADMAP_V2.md`, Abschnitt 24), anschließend Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
+Danach laut Roadmap: Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
 
 Weitere bekannte offene Punkte:
 
@@ -1103,13 +1164,13 @@ Weitere bekannte offene Punkte:
 - Tooltips an Schaltflächen im Einstellungsschema werden von Cinnamon nicht angezeigt (siehe AP17). Bei Gelegenheit entfernen oder durch Hinweistexte ersetzen.
 - Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP18:
+Vor Beginn von AP19:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP18 schriftlich festlegen
+5. Ziel und Akzeptanzkriterien für AP19 schriftlich festlegen
 6. erst danach Code ändern
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
@@ -1143,13 +1204,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP17:
+Erwarteter Ausgangspunkt nach AP18:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP17-END`
-- AP17 abgeschlossen
-- AP18 vorgesehen (Warnschwellen mit Farbwechsel), Akzeptanzkriterien noch schriftlich zu vereinbaren
+- Referenz-Tag: `0.1.0-dev_AP18-END`
+- AP18 abgeschlossen
+- AP19 vorgesehen (Zwischenprüfung), Akzeptanzkriterien noch schriftlich zu vereinbaren
 
 ---
 

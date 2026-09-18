@@ -312,6 +312,32 @@ var MeasurementProvider = class MeasurementProvider {
         return this._freierPlatz(this._laufwerk().pfad);
     }
 
+    /*
+     * Freier Speicherplatz des gemessenen Laufwerks in Prozent seiner
+     * Groesse, fuer die Warnschwellen (AP18). null, wenn nicht
+     * ermittelbar.
+     */
+    readStorageFreeAnteil() {
+        try {
+            const info = Gio.File.new_for_path(this._laufwerk().pfad)
+                .query_filesystem_info(
+                    "filesystem::free,filesystem::size",
+                    null
+                );
+
+            const frei = info.get_attribute_uint64("filesystem::free");
+            const gesamt = info.get_attribute_uint64("filesystem::size");
+
+            if (!Number.isFinite(frei) || !(gesamt > 0))
+                return null;
+
+            return frei / gesamt * 100;
+
+        } catch (e) {
+            return null;
+        }
+    }
+
     _freierPlatz(pfad) {
         try {
             const file = Gio.File.new_for_path(pfad);

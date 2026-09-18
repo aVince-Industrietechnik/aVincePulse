@@ -1674,7 +1674,7 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 2. AP15 – Messtakt an der Systemuhr, Einstellungsfenster nur einmal öffnen (abgeschlossen)
 3. AP16 – Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar, VERBINDLICH 1.0 (abgeschlossen)
 4. AP17 – eingeschoben: Rückfrage vor dem Neu-Öffnen, Meldungen, Umlaute (abgeschlossen)
-5. AP18 – Warnschwellen mit Farbwechsel
+5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
 6. AP19 – Zwischenprüfung
 7. Übersetzung Deutsch/Englisch
 

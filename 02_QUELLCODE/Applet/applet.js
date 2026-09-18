@@ -41,6 +41,10 @@ const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
 const standardMesswertListe = Metrics.standardMesswertListe;
 const ordneMesswerte = Metrics.ordneMesswerte;
+const WARNFARBEN = Metrics.WARNFARBEN;
+const standardWarnListe = Metrics.standardWarnListe;
+const ordneWarnschwellen = Metrics.ordneWarnschwellen;
+const bewerteStufe = Metrics.bewerteStufe;
 
 // Einstellungsschluessel der Sensorauswahl je Sensorart
 // (siehe SENSOR_ARTEN in hardwareDetection.js).
@@ -169,6 +173,26 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             "messwertListe",
             this._baueZeilenNeu.bind(this)
         );
+
+        // Warnschwellen (AP18). Eine Aenderung baut die Zeilen neu auf
+        // und loest damit sofort eine neue Bewertung aus.
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "warnschwellen-aktiv",
+            "warnAktiv",
+            this._baueZeilenNeu.bind(this)
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "warnschwellen-liste",
+            "warnListe",
+            this._baueZeilenNeu.bind(this)
+        );
+
+        // Fehlende Zeilen in den gespeicherten Listen ergaenzen, damit
+        // jeder Messwert in den Einstellungen einstellbar ist.
+        this._vervollstaendigeListen();
 
         this._applyPanelSymbol();
 
@@ -960,6 +984,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.laufwerkWahl = "auto";
         this._uebernehmeQuellenAuswahl();
 
+        // Warnschwellen: eingeschaltet, Vorgaben.
+        const warnListe = standardWarnListe();
+
+        this.settings.setValue("warnschwellen-aktiv", true);
+        this.settings.setValue("warnschwellen-liste", warnListe);
+        this.warnAktiv = true;
+        this.warnListe = warnListe;
+
         this._detector.setzeAuswahl(this._sensorAuswahl());
         this._aktualisiereSensorOptionen();
 
@@ -1286,17 +1318,17 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
             this._setzeBeschriftung(item, fontSize);
 
-            item.value.set_style(
+            item.wertStil =
                 commonStyle +
                 "width: " + valueWidth + "px;" +
-                "text-align: right;"
-            );
+                "text-align: right;";
 
-            item.unit.set_style(
+            item.einheitStil =
                 commonStyle +
                 "width: " + unitWidth + "px;" +
-                "text-align: left;"
-            );
+                "text-align: left;";
+
+            this._wendeStufeAn(item);
         }
 
         global.log(
@@ -1305,6 +1337,91 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             Math.round(anteil * 100) + "% of " +
             monitor.width + "x" + monitor.height
         );
+    }
+
+    /*
+     * Ergaenzt fehlende Messwerte in den gespeicherten Listen, jeweils
+     * mit der Vorgabe am Ende. Vorhandene Eintraege bleiben unveraendert.
+     *
+     * Fehlt eine Zeile, wird der Messwert zwar mit der Vorgabe
+     * angezeigt bzw. bewertet, erscheint aber nicht in der Liste und
+     * laesst sich nicht einstellen. Das betrifft etwa Messwerte, die
+     * ein Update neu hinzufuegt.
+     */
+    _vervollstaendigeListen() {
+        const ergaenze = (schluessel, eigenschaft, standard) => {
+            const liste = Array.isArray(this[eigenschaft])
+                ? this[eigenschaft]
+                : [];
+
+            const vorhanden = new Set(
+                liste
+                    .filter(e => e && typeof e === "object")
+                    .map(e => e.messwert)
+            );
+
+            const fehlend = standard.filter(e => !vorhanden.has(e.messwert));
+
+            if (fehlend.length === 0)
+                return;
+
+            const neu = liste.concat(fehlend);
+
+            // setValue schreibt nur die Datei, die gebundene Eigenschaft
+            // wird deshalb zusaetzlich gesetzt (siehe AP09).
+            this.settings.setValue(schluessel, neu);
+            this[eigenschaft] = neu;
+
+            global.log(
+                "aVincePulse AP18: " + schluessel + " ergaenzt um " +
+                fehlend.map(e => e.messwert).join(", ")
+            );
+        };
+
+        ergaenze("messwert-liste", "messwertListe", standardMesswertListe());
+        ergaenze("warnschwellen-liste", "warnListe", standardWarnListe());
+    }
+
+    /*
+     * Bewertet die Messwerte mit Warnschwellen und faerbt Wert und
+     * Einheit ein. Nur bei einem Stufenwechsel wird der Stil neu
+     * gesetzt.
+     */
+    _bewerteWarnschwellen(werte) {
+        const schwellen = ordneWarnschwellen(this.warnListe);
+
+        for (const id in werte) {
+            const item = this._rows[id];
+
+            if (!item)
+                continue;
+
+            const stufe = this.warnAktiv === false
+                ? "normal"
+                : bewerteStufe(werte[id], schwellen[id], item.stufe);
+
+            if (stufe !== item.stufe) {
+                item.stufe = stufe;
+                this._wendeStufeAn(item);
+            }
+        }
+    }
+
+    /*
+     * Setzt Wert und Einheit auf ihren Grundstil, bei einer Warnstufe
+     * mit angehaengter Farbe. Die spaeter angehaengte Farbe hat Vorrang
+     * vor einer Farbe im Grundstil.
+     */
+    _wendeStufeAn(item) {
+        if (!item || item.wertStil === undefined)
+            return;
+
+        const farbe = WARNFARBEN[item.stufe]
+            ? "color: " + WARNFARBEN[item.stufe] + ";"
+            : "";
+
+        item.value.set_style(item.wertStil + farbe);
+        item.unit.set_style(item.einheitStil + farbe);
     }
 
     _setValue(id, value) {
@@ -1463,6 +1580,18 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._setValue("battery_charge", hardware.batteryCharge);
         this._setUnit("psu_state", hardware.psuState);
+
+        // Warnschwellen: Akku nur im Akkubetrieb, Speicherplatz in
+        // Prozent des gemessenen Laufwerks.
+        this._bewerteWarnschwellen({
+            cpu_temp: hardware.cpu,
+            storage_temp: hardware.ssd,
+            cpu_load: load,
+            ram_load: ram,
+            storage_free: this._measurement.readStorageFreeAnteil(),
+            battery_charge:
+                hardware.psuState === "OFF" ? hardware.batteryCharge : null
+        });
 
         this._setValue("net_down", down.value);
         this._setUnit("net_down", down.unit);

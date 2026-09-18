@@ -221,6 +221,112 @@
             "Automatisch": "auto"
         }
     },
+    "kopf-warnschwellen": {
+        "type": "header",
+        "description": "Warnschwellen"
+    },
+    "warnschwellen-aktiv": {
+        "type": "switch",
+        "default": true,
+        "description": "Warnfarben anzeigen"
+    },
+    "hinweis-warnschwellen": {
+        "type": "label",
+        "dependency": "warnschwellen-aktiv",
+        "description": "Orange = Warnung, rot = kritisch; eingefärbt werden Wert und Einheit. Temperaturen und Auslastung warnen ab der Schwelle, freier Speicherplatz und Akku darunter. Der Akku wird nur im Akkubetrieb bewertet, der Speicherplatz in Prozent des gewählten Laufwerks. Die Farbe geht erst zurück, wenn der Wert die Schwelle um 2 wieder verlassen hat. Ändern: Doppelklick auf die Zeile oder Zeile wählen und Stift."
+    },
+    "warnschwellen-liste": {
+        "type": "list",
+        "dependency": "warnschwellen-aktiv",
+        "description": "Warnschwellen",
+        "height": 230,
+        "hidden-buttons": [
+            "+",
+            "-",
+            "up",
+            "down"
+        ],
+        "columns": [
+            {
+                "id": "messwert",
+                "title": "Messwert",
+                "type": "string",
+                "options": {
+                    "CPU-Temperatur  (°C, Warnung ab Schwelle)": "cpu_temp",
+                    "Speicher-Temperatur  (°C, Warnung ab Schwelle)": "storage_temp",
+                    "CPU-Auslastung  (%, Warnung ab Schwelle)": "cpu_load",
+                    "RAM-Auslastung  (%, Warnung ab Schwelle)": "ram_load",
+                    "Freier Speicherplatz  (% frei, Warnung unter Schwelle)": "storage_free",
+                    "Akku-Ladezustand  (%, Warnung unter Schwelle, nur Akkubetrieb)": "battery_charge"
+                }
+            },
+            {
+                "id": "warnung",
+                "title": "Warnung",
+                "type": "integer",
+                "min": 0,
+                "max": 150,
+                "step": 1,
+                "default": 0,
+                "align": 0.5
+            },
+            {
+                "id": "kritisch",
+                "title": "Kritisch",
+                "type": "integer",
+                "min": 0,
+                "max": 150,
+                "step": 1,
+                "default": 0,
+                "align": 0.5
+            },
+            {
+                "id": "aktiv",
+                "title": "Aktiv",
+                "type": "boolean",
+                "default": true,
+                "align": 0.5
+            }
+        ],
+        "default": [
+            {
+                "messwert": "cpu_temp",
+                "warnung": 80,
+                "kritisch": 90,
+                "aktiv": true
+            },
+            {
+                "messwert": "storage_temp",
+                "warnung": 70,
+                "kritisch": 80,
+                "aktiv": true
+            },
+            {
+                "messwert": "cpu_load",
+                "warnung": 85,
+                "kritisch": 95,
+                "aktiv": true
+            },
+            {
+                "messwert": "ram_load",
+                "warnung": 85,
+                "kritisch": 95,
+                "aktiv": true
+            },
+            {
+                "messwert": "storage_free",
+                "warnung": 10,
+                "kritisch": 5,
+                "aktiv": true
+            },
+            {
+                "messwert": "battery_charge",
+                "warnung": 20,
+                "kritisch": 10,
+                "aktiv": true
+            }
+        ]
+    },
     "kopf-speedtest": {
         "type": "header",
         "description": "Internet-Speedtest"

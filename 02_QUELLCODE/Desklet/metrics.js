@@ -257,3 +257,152 @@ function ordneMesswerte(liste) {
 
     return ergebnis;
 }
+
+/*
+ * Warnschwellen (AP18).
+ *
+ * richtung "hoch": Warnung, sobald der Wert die Schwelle erreicht
+ * oder ueberschreitet. richtung "tief": sobald er sie erreicht oder
+ * unterschreitet. Die Vorgaben sind uebliche Richtwerte und in den
+ * Einstellungen jeder Komponente aenderbar.
+ *
+ * Speicher-Temperatur: NVMe-SSDs erreichen beim Kopieren grosser
+ * Dateien leicht 60-70 degC. Die Referenz-SSD meldet selbst Warnung
+ * bei 89 und kritisch bei 94 degC (hwmon temp1_max/temp1_crit).
+ *
+ * Der freie Speicherplatz wird in Prozent des Laufwerks bewertet, da
+ * Laufwerke sehr verschieden gross sind. Der Akku wird nur im
+ * Akkubetrieb bewertet; die Komponente uebergibt sonst keinen Wert.
+ */
+var WARNSCHWELLEN = {
+    cpu_temp:       { richtung: "hoch", warnung: 80, kritisch: 90 },
+    storage_temp:   { richtung: "hoch", warnung: 70, kritisch: 80 },
+    cpu_load:       { richtung: "hoch", warnung: 85, kritisch: 95 },
+    ram_load:       { richtung: "hoch", warnung: 85, kritisch: 95 },
+    storage_free:   { richtung: "tief", warnung: 10, kritisch: 5 },
+    battery_charge: { richtung: "tief", warnung: 20, kritisch: 10 }
+};
+
+// Farben der Stufen. Auf der abgedunkelten Flaeche der Hover-Anzeige
+// und mit Schriftschatten auch auf hellem Hintergrund lesbar.
+var WARNFARBEN = {
+    warnung: "#FFA726",
+    kritisch: "#FF5252"
+};
+
+/*
+ * Puffer gegen Flackern: Eine erreichte Stufe gilt weiter, bis der
+ * Wert die Schwelle um diesen Betrag wieder verlassen hat. Pendelt
+ * die CPU-Last zwischen 84 und 86 %, wechselt die Farbe sonst bei
+ * jedem Takt.
+ */
+var WARN_PUFFER = 2;
+
+const WARN_RANG = { normal: 0, warnung: 1, kritisch: 2 };
+
+function standardWarnListe() {
+    return Object.keys(WARNSCHWELLEN).map(id => ({
+        messwert: id,
+        warnung: WARNSCHWELLEN[id].warnung,
+        kritisch: WARNSCHWELLEN[id].kritisch,
+        aktiv: true
+    }));
+}
+
+/*
+ * Bereinigt die eingestellte Liste der Warnschwellen.
+ *
+ * Unbekannte, beschaedigte und doppelte Eintraege werden verworfen,
+ * fehlende Messwerte erhalten die Vorgaben. Sind Warnung und kritisch
+ * vertauscht eingegeben, gilt die strengere Schwelle als kritisch.
+ *
+ * Liefert { Messwert-ID: { richtung, warnung, kritisch, aktiv } }.
+ */
+function ordneWarnschwellen(liste) {
+    const ergebnis = {};
+
+    for (const id in WARNSCHWELLEN) {
+        ergebnis[id] = {
+            richtung: WARNSCHWELLEN[id].richtung,
+            warnung: WARNSCHWELLEN[id].warnung,
+            kritisch: WARNSCHWELLEN[id].kritisch,
+            aktiv: true
+        };
+    }
+
+    const vorhanden = {};
+
+    for (const eintrag of Array.isArray(liste) ? liste : []) {
+        if (!eintrag || typeof eintrag !== "object")
+            continue;
+
+        const id = eintrag.messwert;
+
+        if (!Object.prototype.hasOwnProperty.call(WARNSCHWELLEN, id) || vorhanden[id])
+            continue;
+
+        vorhanden[id] = true;
+
+        const schwelle = ergebnis[id];
+        const warnung = Number(eintrag.warnung);
+        const kritisch = Number(eintrag.kritisch);
+
+        if (eintrag.warnung !== null && eintrag.warnung !== "" && Number.isFinite(warnung))
+            schwelle.warnung = warnung;
+
+        if (eintrag.kritisch !== null && eintrag.kritisch !== "" && Number.isFinite(kritisch))
+            schwelle.kritisch = kritisch;
+
+        schwelle.aktiv = eintrag.aktiv !== false;
+
+        const a = schwelle.warnung;
+        const b = schwelle.kritisch;
+
+        if (schwelle.richtung === "hoch") {
+            schwelle.warnung = Math.min(a, b);
+            schwelle.kritisch = Math.max(a, b);
+        } else {
+            schwelle.warnung = Math.max(a, b);
+            schwelle.kritisch = Math.min(a, b);
+        }
+    }
+
+    return ergebnis;
+}
+
+/*
+ * Bewertet einen Messwert: "normal", "warnung" oder "kritisch".
+ *
+ * vorher ist die bisherige Stufe; sie bestimmt den Puffer gegen
+ * Flackern. Nicht auswertbare Werte wie "--" gelten als normal.
+ */
+function bewerteStufe(wert, schwelle, vorher) {
+    if (!schwelle || !schwelle.aktiv)
+        return "normal";
+
+    if (wert === null || wert === undefined || wert === "")
+        return "normal";
+
+    const zahl = Number(wert);
+
+    if (!Number.isFinite(zahl))
+        return "normal";
+
+    const bisher = WARN_RANG[vorher] || 0;
+
+    // Abstand jenseits der Schwelle, in Richtung "schlechter" positiv.
+    const jenseits = grenze =>
+        schwelle.richtung === "hoch" ? zahl - grenze : grenze - zahl;
+
+    const erreicht = (grenze, stufe) =>
+        jenseits(grenze) >= 0 ||
+        (bisher >= WARN_RANG[stufe] && jenseits(grenze) > -WARN_PUFFER);
+
+    if (erreicht(schwelle.kritisch, "kritisch"))
+        return "kritisch";
+
+    if (erreicht(schwelle.warnung, "warnung"))
+        return "warnung";
+
+    return "normal";
+}
