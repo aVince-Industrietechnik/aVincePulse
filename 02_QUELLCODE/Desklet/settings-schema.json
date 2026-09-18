@@ -164,6 +164,38 @@
             }
         ]
     },
+    "kopf-sensoren": {
+        "type": "header",
+        "description": "Sensoren"
+    },
+    "hinweis-sensoren": {
+        "type": "label",
+        "description": "„Automatisch“ wählt den passenden Sensor selbst. Die Auswahl zeigt alle Sensoren dieses Geräts mit dem Wert zum Zeitpunkt der Erkennung. Nach „Hardware neu erkennen“ erscheinen neue Sensoren erst, wenn dieses Fenster geschlossen und wieder geöffnet wurde."
+    },
+    "sensor-cpu": {
+        "type": "combobox",
+        "default": "auto",
+        "description": "CPU-Temperatur",
+        "options": {
+            "Automatisch": "auto"
+        }
+    },
+    "sensor-storage": {
+        "type": "combobox",
+        "default": "auto",
+        "description": "Speicher-Temperatur",
+        "options": {
+            "Automatisch": "auto"
+        }
+    },
+    "sensor-fan": {
+        "type": "combobox",
+        "default": "auto",
+        "description": "Lüfter",
+        "options": {
+            "Automatisch": "auto"
+        }
+    },
     "kopf-speedtest": {
         "type": "header",
         "description": "Internet-Speedtest"

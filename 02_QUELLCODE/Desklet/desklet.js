@@ -37,6 +37,14 @@ const METRIC_ORDER = Metrics.METRIC_ORDER;
 const standardMesswertListe = Metrics.standardMesswertListe;
 const ordneMesswerte = Metrics.ordneMesswerte;
 
+// Einstellungsschluessel der Sensorauswahl je Sensorart
+// (siehe SENSOR_ARTEN in hardwareDetection.js).
+const SENSOR_SCHLUESSEL = {
+    cpu: "sensor-cpu",
+    storage: "sensor-storage",
+    fan: "sensor-fan"
+};
+
 
 class AVinceHWMonitor extends Desklet.Desklet {
     constructor(metadata, desklet_id) {
@@ -58,8 +66,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._speedtest.setzeQuelle("aVincePulse Desklet");
         this._statusAnzeige = new StatusAnzeige();
 
+        this._detector = new HardwareDetector();
+
         this._measurement = new MeasurementProvider(
-            new HardwareDetector(),
+            this._detector,
             this._speedtest
         );
 
@@ -96,6 +106,8 @@ class AVinceHWMonitor extends Desklet.Desklet {
             "messwertListe",
             this._baueZeilenNeu.bind(this)
         );
+
+        this._bindeSensorAuswahl();
 
         this._container = new St.BoxLayout({
             vertical: true,
@@ -540,6 +552,68 @@ class AVinceHWMonitor extends Desklet.Desklet {
      */
 
     /*
+     * Bindet die Sensorauswahl der Einstellungen und uebergibt sie
+     * der Hardwareerkennung. Anschliessend werden die Auswahlfelder
+     * mit den auf diesem Geraet gefundenen Sensoren gefuellt.
+     */
+    _bindeSensorAuswahl() {
+        for (const art in SENSOR_SCHLUESSEL) {
+            this.settings.bindProperty(
+                Settings.BindingDirection.IN,
+                SENSOR_SCHLUESSEL[art],
+                "sensorwahl_" + art,
+                this._sensorAuswahlGeaendert.bind(this)
+            );
+        }
+
+        this._detector.setzeAuswahl(this._sensorAuswahl());
+        this._aktualisiereSensorOptionen();
+    }
+
+    _sensorAuswahl() {
+        const auswahl = {};
+
+        for (const art in SENSOR_SCHLUESSEL)
+            auswahl[art] = this["sensorwahl_" + art];
+
+        return auswahl;
+    }
+
+    /*
+     * Die Auswahlfelder koennen nicht im Schema stehen, da die
+     * Sensoren von Geraet zu Geraet verschieden sind. setOptions()
+     * schreibt sie in die Einstellungsdatei. Ein bereits geoeffnetes
+     * Einstellungsfenster zeigt sie erst nach erneutem Oeffnen.
+     */
+    _aktualisiereSensorOptionen() {
+        for (const art in SENSOR_SCHLUESSEL) {
+            try {
+                this.settings.setOptions(
+                    SENSOR_SCHLUESSEL[art],
+                    this._detector.getSensorOptionen(
+                        art,
+                        this["sensorwahl_" + art]
+                    )
+                );
+            } catch (e) {
+                global.logError(e);
+            }
+        }
+    }
+
+    /*
+     * Eine geaenderte Sensorauswahl wirkt sofort. Ein Neuaufbau der
+     * Zeilen loest die naechste Messung ohne Wartezeit aus.
+     */
+    _sensorAuswahlGeaendert() {
+        if (!this._detector)
+            return;
+
+        this._detector.setzeAuswahl(this._sensorAuswahl());
+        this._baueZeilenNeu();
+    }
+
+    /*
      * Fuehrt die Hardware- und Sensorerkennung erneut durch und
      * baut die Anzeige danach neu auf.
      *
@@ -552,9 +626,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._statusAnzeige.zeige("Hardware wird neu erkannt \u2026");
 
         try {
-            const detector = new HardwareDetector();
+            // Die Sensorauswahl des Benutzers bleibt erhalten.
+            const detector = new HardwareDetector(this._sensorAuswahl());
 
+            this._detector = detector;
             this._measurement.setHardwareDetector(detector);
+            this._aktualisiereSensorOptionen();
 
             const verfuegbar = detector.getAvailability();
 
@@ -589,7 +666,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
                 (pfad
                     ? "\n\nBericht abgelegt \u2013 zu finden über die " +
                       "Einstellungen unter „Hardware-Berichte öffnen“"
-                    : "");
+                    : "") +
+                "\n\nNeu erkannte Sensoren erscheinen in der Auswahl, " +
+                "nachdem du das Einstellungsfenster geschlossen und " +
+                "wieder geöffnet hast.";
 
             this._statusAnzeige.zeige(meldung);
             this._statusAnzeige.verbergeNach(10);
@@ -720,6 +800,17 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         this.settings.setValue("messwert-liste", liste);
         this.messwertListe = liste;
+
+        // Sensorauswahl: ueberall wieder automatisch. Da beide
+        // Komponenten dieselbe automatische Auswahl verwenden, zeigen
+        // sie danach dieselben Sensoren.
+        for (const art in SENSOR_SCHLUESSEL) {
+            this.settings.setValue(SENSOR_SCHLUESSEL[art], "auto");
+            this["sensorwahl_" + art] = "auto";
+        }
+
+        this._detector.setzeAuswahl(this._sensorAuswahl());
+        this._aktualisiereSensorOptionen();
 
         this.fontSize = schriftgroesse;
         this.fontWeight = schriftstaerke;

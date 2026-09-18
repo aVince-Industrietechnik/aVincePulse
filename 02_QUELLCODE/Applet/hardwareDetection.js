@@ -13,14 +13,34 @@
  *
  * Zusaetzlich wird der Systemakku ueber /sys/class/power_supply erkannt.
  * Akkus von Peripheriegeraeten werden dabei ausgeschlossen.
+ *
+ * Der Sensor fuer CPU-Temperatur, Speicher-Temperatur und Luefter
+ * kann vom Benutzer vorgegeben werden. Ohne Vorgabe, mit "auto" oder
+ * wenn der vorgegebene Sensor fehlt, gilt die automatische Auswahl
+ * ueber das Punktesystem.
+ *
+ * Jeder Sensor traegt eine Kennung aus Chip, Geraet und Sensornummer,
+ * zum Beispiel "dell_smm|dell_smm_hwmon|temp3". Die hwmonN-Nummer ist
+ * bewusst nicht enthalten, da sie sich nach einem Neustart aendern
+ * kann. Chip und Bezeichnung allein reichen nicht: dell_smm meldet
+ * sechs Temperaturen ohne Bezeichnung, zwei NVMe-SSDs heissen beide
+ * "nvme / Composite".
  */
 
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ByteArray = imports.byteArray;
 
+// Messwerte, deren Sensor waehlbar ist, und die zugehoerige Sensorart.
+var SENSOR_ARTEN = ["cpu", "storage", "fan"];
+
 var HardwareDetector = class HardwareDetector {
-    constructor() {
+    /*
+     * auswahl: optional { cpu, storage, fan } mit je einer
+     * Sensorkennung oder "auto".
+     */
+    constructor(auswahl) {
+        this._auswahl = this._normalisiereAuswahl(auswahl);
         this._mapping = this.detect();
 
         global.log(
@@ -47,7 +67,12 @@ var HardwareDetector = class HardwareDetector {
     detect() {
         const sensors = this._scanHwmon();
 
-        return {
+        // Alle gefundenen Sensoren bleiben erhalten, damit sie zur
+        // Auswahl angeboten und ohne neuen Suchlauf gewechselt
+        // werden koennen.
+        this._sensoren = sensors;
+
+        this._automatisch = {
             cpu: this._selectBest(
                 sensors.temperatures,
                 sensor => this._scoreCpu(sensor)
@@ -61,10 +86,177 @@ var HardwareDetector = class HardwareDetector {
             fan: this._selectBest(
                 sensors.fans,
                 sensor => this._scoreFan(sensor)
-            ),
+            )
+        };
 
+        this._quelle = {};
+
+        const mapping = {
             battery: this._detectBattery()
         };
+
+        for (const art of SENSOR_ARTEN)
+            mapping[art] = this._waehleSensor(art);
+
+        return mapping;
+    }
+
+    /*
+     * Uebernimmt eine neue Sensorauswahl ohne erneuten Suchlauf.
+     * Die Aenderung wirkt ab dem naechsten readValues().
+     */
+    setzeAuswahl(auswahl) {
+        this._auswahl = this._normalisiereAuswahl(auswahl);
+
+        for (const art of SENSOR_ARTEN) {
+            this._mapping[art] = this._waehleSensor(art);
+
+            global.log(
+                "aVincePulse AP14: " + art + " sensor (" +
+                this._quelle[art] + ") -> " +
+                this._describe(this._mapping[art])
+            );
+        }
+    }
+
+    /*
+     * Bietet die Sensoren einer Art zur Auswahl an.
+     *
+     * Rueckgabe: Objekt { Anzeigetext: Kennung } in der Form, die
+     * Cinnamon fuer die Optionen eines Auswahlfeldes erwartet.
+     * Der erste Eintrag ist immer "Automatisch" mit dem Sensor, den
+     * die automatische Auswahl gerade verwendet.
+     *
+     * Ist ein gespeicherter Sensor nicht mehr vorhanden, erscheint er
+     * als "Nicht gefunden", damit das Auswahlfeld nicht leer wirkt und
+     * die Wahl erhalten bleibt, bis der Sensor zurueckkehrt.
+     */
+    getSensorOptionen(art, aktuelleWahl) {
+        const optionen = {};
+        const auto = this._automatisch[art];
+
+        optionen[
+            "Automatisch (" +
+            (auto ? this._anzeigeName(auto, art) : "kein Sensor gefunden") +
+            ")"
+        ] = "auto";
+
+        const kandidaten = this._kandidaten(art).slice().sort(
+            (a, b) =>
+                a.chip.localeCompare(b.chip) ||
+                a.geraet.localeCompare(b.geraet) ||
+                a.index - b.index
+        );
+
+        for (const sensor of kandidaten) {
+            const wert = art === "fan"
+                ? this._readFan(sensor) + " rpm"
+                : this._readTemperature(sensor) + " \u00b0C";
+
+            let text = this._anzeigeName(sensor, art) + "  \u00b7  " + wert;
+
+            // Anzeigetexte muessen eindeutig sein, da sie als
+            // Schluessel dienen.
+            while (text in optionen)
+                text += " ";
+
+            optionen[text] = sensor.key;
+        }
+
+        if (
+            aktuelleWahl &&
+            aktuelleWahl !== "auto" &&
+            !kandidaten.some(sensor => sensor.key === aktuelleWahl)
+        )
+            optionen["Nicht gefunden: " + aktuelleWahl] = aktuelleWahl;
+
+        return optionen;
+    }
+
+    _normalisiereAuswahl(auswahl) {
+        const ergebnis = {};
+
+        for (const art of SENSOR_ARTEN) {
+            const wert = auswahl ? auswahl[art] : null;
+
+            ergebnis[art] =
+                typeof wert === "string" && wert !== ""
+                    ? wert
+                    : "auto";
+        }
+
+        return ergebnis;
+    }
+
+    _kandidaten(art) {
+        if (!this._sensoren)
+            return [];
+
+        return art === "fan"
+            ? this._sensoren.fans
+            : this._sensoren.temperatures;
+    }
+
+    /*
+     * Liefert den vom Benutzer gewaehlten Sensor, sonst den
+     * automatisch ermittelten. Vermerkt die Herkunft fuer Protokoll
+     * und Hardwarebericht.
+     */
+    _waehleSensor(art) {
+        const gewuenscht = this._auswahl[art];
+        const auto = this._automatisch[art];
+
+        if (gewuenscht === "auto") {
+            this._quelle[art] = "automatisch";
+            return auto;
+        }
+
+        const sensor = this._kandidaten(art)
+            .find(kandidat => kandidat.key === gewuenscht);
+
+        if (sensor) {
+            this._quelle[art] = "manuell gewaehlt";
+            return sensor;
+        }
+
+        this._quelle[art] =
+            "automatisch - gewaehlter Sensor " + gewuenscht + " nicht gefunden";
+        return auto;
+    }
+
+    /*
+     * Lesbarer Name eines Sensors, zum Beispiel "coretemp - Core 0".
+     * Sensoren ohne Bezeichnung werden durchnummeriert. Melden mehrere
+     * Geraete denselben Chip, etwa zwei NVMe-SSDs, wird das Geraet
+     * angehaengt.
+     */
+    _anzeigeName(sensor, art) {
+        const bezeichnung = sensor.label ||
+            (art === "fan" ? "L\u00fcfter " : "Temperatur ") + sensor.index;
+
+        const geraete = new Set(
+            this._kandidaten(art)
+                .filter(kandidat => kandidat.chip === sensor.chip)
+                .map(kandidat => kandidat.geraet)
+        );
+
+        return sensor.chip + " \u2013 " + bezeichnung +
+            (geraete.size > 1 ? " [" + sensor.geraet + "]" : "");
+    }
+
+    /*
+     * Geraet, an dem ein hwmon-Chip haengt, etwa "nvme0" oder
+     * "coretemp.0". Anders als die hwmonN-Nummer bleibt es nach
+     * einem Neustart gleich.
+     */
+    _geraetVon(basePath) {
+        try {
+            return GLib.path_get_basename(
+                GLib.file_read_link(basePath + "/device")
+            );
+        } catch (e) {
+            return "";
+        }
     }
 
     readValues() {
@@ -162,6 +354,8 @@ var HardwareDetector = class HardwareDetector {
     }
 
     _scanHwmonDirectory(basePath, chip, result) {
+        const geraet = this._geraetVon(basePath);
+
         try {
             const dir = Gio.File.new_for_path(basePath);
 
@@ -194,6 +388,8 @@ var HardwareDetector = class HardwareDetector {
                         chip: chip,
                         label: label,
                         index: index,
+                        geraet: geraet,
+                        key: chip + "|" + geraet + "|temp" + index,
                         path: basePath + "/" + name
                     });
 
@@ -218,6 +414,8 @@ var HardwareDetector = class HardwareDetector {
                         chip: chip,
                         label: label,
                         index: index,
+                        geraet: geraet,
+                        key: chip + "|" + geraet + "|fan" + index,
                         path: basePath + "/" + name
                     });
                 }
@@ -615,8 +813,11 @@ var HardwareDetector = class HardwareDetector {
         zeilen.push("Sensoren");
         zeilen.push("--------");
         zeilen.push("CPU-Temperatur     : " + this._describe(this._mapping.cpu));
+        zeilen.push("                     (" + this._quelle.cpu + ")");
         zeilen.push("Storage-Temperatur : " + this._describe(this._mapping.storage));
+        zeilen.push("                     (" + this._quelle.storage + ")");
         zeilen.push("Luefter            : " + this._describe(this._mapping.fan));
+        zeilen.push("                     (" + this._quelle.fan + ")");
         zeilen.push("Akku / Netzteil    : " + this._describeBattery(this._mapping.battery));
         zeilen.push("");
 
@@ -639,21 +840,70 @@ var HardwareDetector = class HardwareDetector {
         zeilen.push("Vollstaendige Sensorliste des Systems");
         zeilen.push("-------------------------------------");
 
+        /*
+         * Eine Zeile je Sensor mit festen Spalten, damit sich die
+         * Liste ohne seitliches Scrollen lesen laesst. Der hwmon-Pfad
+         * steht bewusst nicht darin: Er ist lang und aendert sich nach
+         * einem Neustart. Fuer die verwendeten Sensoren steht er oben.
+         */
         const alle = this._scanHwmon();
 
-        for (const s of alle.temperatures) {
-            zeilen.push(
-                "Temperatur  " + s.chip.padEnd(14) +
-                (s.label || "ohne Bezeichnung").padEnd(18) + s.path
-            );
+        const verwendung = {};
+        const zuordnung = [
+            ["cpu", "CPU"],
+            ["storage", "Speicher"],
+            ["fan", "Luefter"]
+        ];
+
+        for (const [art, name] of zuordnung) {
+            const sensor = this._mapping[art];
+
+            if (sensor)
+                verwendung[sensor.key] =
+                    (verwendung[sensor.key] ? verwendung[sensor.key] + "+" : "") +
+                    name;
         }
 
-        for (const s of alle.fans) {
-            zeilen.push(
-                "Luefter     " + s.chip.padEnd(14) +
-                (s.label || "ohne Bezeichnung").padEnd(18) + s.path
-            );
+        const sortiert = liste => liste.slice().sort(
+            (a, b) =>
+                a.chip.localeCompare(b.chip) ||
+                a.geraet.localeCompare(b.geraet) ||
+                a.index - b.index
+        );
+
+        const zeile = (art, chip, bezeichnung, wert, genutzt, kennung) =>
+            art.padEnd(12) + chip.padEnd(14) + bezeichnung.padEnd(18) +
+            wert.padStart(9) + "   " + genutzt.padEnd(14) + kennung;
+
+        zeilen.push(zeile("Art", "Chip", "Bezeichnung", "Wert", "Verwendet", "Kennung"));
+        zeilen.push(zeile("---", "----", "-----------", "----", "---------", "-------"));
+
+        for (const s of sortiert(alle.temperatures)) {
+            zeilen.push(zeile(
+                "Temperatur",
+                s.chip,
+                s.label || "Temperatur " + s.index,
+                this._readTemperature(s) + " °C",
+                verwendung[s.key] || "-",
+                s.key
+            ));
         }
+
+        for (const s of sortiert(alle.fans)) {
+            zeilen.push(zeile(
+                "Luefter",
+                s.chip,
+                s.label || "Luefter " + s.index,
+                this._readFan(s) + " rpm",
+                verwendung[s.key] || "-",
+                s.key
+            ));
+        }
+
+        zeilen.push("");
+        zeilen.push("Wert: gemessen bei Erstellung dieses Berichts.");
+        zeilen.push("Kennung: bleibt nach einem Neustart gleich und wird fuer");
+        zeilen.push("die Sensorauswahl in den Einstellungen gespeichert.");
 
         return zeilen.join("\n") + "\n";
     }

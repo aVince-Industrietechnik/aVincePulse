@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 18.09.2026 (AP13)  
+Stand: 18.09.2026 (AP14)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP13-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP12-END`
+Aktueller Referenzstand: `0.1.0-dev_AP14-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP13-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -80,6 +80,7 @@ Tags:
 - `0.1.0-dev_AP11-END` – Entwicklungsstand nach Abschluss von AP11
 - `0.1.0-dev_AP12-END` – Entwicklungsstand nach Abschluss von AP12
 - `0.1.0-dev_AP13-END` – Entwicklungsstand nach Abschluss von AP13
+- `0.1.0-dev_AP14-END` – Entwicklungsstand nach Abschluss von AP14
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -613,6 +614,60 @@ Beim Test aufgefallen, kein Fehler von aVincePulse:
 - `ordneMesswerte()` mit sechs Fällen geprüft: Standardliste, fehlend, kein Array, leer, doppelt und unbekannt, umsortiert; Ergebnis stets genau 15 Messwerte ohne Doppelte
 - Funktionstest in Applet und Desklet durch den Nutzer: Sichtbarkeit, Reihenfolge, eigene Bezeichnung, absichtlich doppelter Messwert, Zurücksetzen, Symbole bei Schriftgröße 10 und 30
 
+### AP14 – Sensorauswahl
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Desklet/hardwareDetection.js` und `02_QUELLCODE/Applet/hardwareDetection.js`
+- `desklet.js`, `applet.js`, beide `settings-schema.json`
+
+AP14 ist der zweite Teil der Variante A. Für CPU-Temperatur, Speicher-Temperatur und Lüfter kann der Sensor von Hand gewählt werden. Vorgabe ist „Automatisch“, also das Punktesystem aus AP05.
+
+#### Stabile Sensorkennung
+
+Jeder Sensor trägt eine Kennung aus Chip, Gerät und Sensornummer, zum Beispiel `dell_smm|dell_smm_hwmon|temp3` oder `nvme|nvme0|temp1`. Das Gerät stammt aus dem Verweis `hwmonN/device`.
+
+Die in AP14 zunächst geplante Kennung aus Chip und Bezeichnung reicht nicht aus: `dell_smm` meldet auf dem Referenzgerät sechs Temperaturen ohne Bezeichnung, und zwei NVMe-SSDs würden beide `nvme / Composite` heißen.
+
+Die `hwmonN`-Nummer ist bewusst nicht Teil der Kennung. Am 18.09.2026 hat sie sich auf dem Referenzgerät bei drei aufeinanderfolgenden Starts jedes Mal verschoben (coretemp hwmon5 → hwmon5 → hwmon7, dell_smm hwmon7 → hwmon6 → hwmon6, iwlwifi hwmon6 → hwmon7 → hwmon5). Die von Hand gewählte Auswahl wurde jedes Mal richtig wiedergefunden.
+
+#### Auswahlfelder
+
+Beide Komponenten besitzen unter der Messwertliste den Abschnitt „Sensoren“ mit drei Auswahlfeldern (`sensor-cpu`, `sensor-storage`, `sensor-fan`). Gespeichert wird die Kennung oder `auto`.
+
+Die angebotenen Sensoren sind von Gerät zu Gerät verschieden und können deshalb nicht im Schema stehen. `HardwareDetector.getSensorOptionen()` liefert sie, `settings.setOptions()` schreibt sie beim Laden und nach „Hardware neu erkennen“ in die Einstellungsdatei:
+
+- erster Eintrag „Automatisch (…)“ mit dem Sensor, den die automatische Auswahl gerade verwendet
+- danach alle Sensoren der Art, sortiert nach Chip, mit lesbarem Namen und dem Wert zum Zeitpunkt der Erkennung, etwa „dell_smm – Temperatur 3 · 41 °C“
+- für die beiden Temperaturen werden bewusst alle Temperatursensoren angeboten, damit die Wahl wirklich frei ist
+- Sensoren ohne Bezeichnung werden durchnummeriert; melden mehrere Geräte denselben Chip, wird das Gerät angehängt
+
+Ein bereits geöffnetes Einstellungsfenster zeigt neu gesetzte Optionen erst nach Schließen und erneutem Öffnen. Die Rückmeldung nach „Hardware neu erkennen“ und ein Hinweistext in den Einstellungen weisen darauf hin.
+
+#### Verhalten
+
+- Eine geänderte Auswahl wirkt sofort. `HardwareDetector.setzeAuswahl()` wechselt den Sensor ohne neuen Suchlauf.
+- „Hardware neu erkennen“ übergibt die bestehende Auswahl an die neue Erkennung, sie bleibt also erhalten.
+- Fehlt ein gewählter Sensor, gilt die automatische Auswahl. Die Wahl bleibt gespeichert und greift wieder, sobald der Sensor zurückkehrt. Im Auswahlfeld erscheint sie als „Nicht gefunden: …“.
+- „Zurücksetzen“ stellt alle drei Felder auf „Automatisch“. Da beide Komponenten dieselbe automatische Auswahl verwenden, zeigen sie danach dieselben Sensoren. Zurückgesetzt wird nur die Komponente, in der die Schaltfläche gedrückt wurde (Entscheidung vom 18.09.2026, Grundsatz EIGENSTÄNDIG).
+- Die Sensorauswahl wird je Komponente getrennt eingestellt, wie alle übrigen Einstellungen seit AP10 (Entscheidung vom 18.09.2026).
+
+#### Hardwarebericht
+
+- vermerkt je Messwert die Herkunft: „automatisch“, „manuell gewaehlt“ oder „automatisch – gewaehlter Sensor … nicht gefunden“
+- die vollständige Sensorliste ist auf Wunsch des Nutzers als Tabelle mit festen Spalten gestaltet: Art, Chip, Bezeichnung, Wert, Verwendet, Kennung; eine Zeile je Sensor, ohne seitliches Scrollen lesbar
+- der `hwmon`-Pfad steht nicht in der Tabelle, da er lang ist und sich nach einem Neustart ändert; für die verwendeten Sensoren steht er weiter oben
+
+Ein Bericht ist eine Momentaufnahme und wird nachträglich nicht geändert. Eine spätere Umstellung der Auswahl erscheint erst im nächsten Bericht.
+
+#### Prüfung
+
+- Syntaxprüfung mit `cjs`, Prüfsummen der vier gemeinsamen Module
+- Test der Erkennung mit `cjs` außerhalb von Cinnamon: Optionen aller drei Arten, Wahl von Hand, nicht vorhandener Sensor, fehlerhafte Auswahl, Auswahl im Konstruktor
+- Funktionstest in Applet und Desklet durch den Nutzer, einschließlich zweier Neustarts mit von Hand gewähltem CPU-Sensor
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -801,7 +856,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-17_21-06-55` (AP12).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_10-26-51` (AP13).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -866,14 +921,20 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP13 sind abgeschlossen.
+AP01 bis AP14 sind abgeschlossen.
 
-**AP14 ist festgelegt (Entscheidung vom 18.09.2026, Variante A, zweiter Teil):** Auswahl des Sensors für CPU-Temperatur, Speicher-Temperatur und Lüfter. Vorgabe ist „Automatisch“, also das bisherige Punktesystem. Die Auswahl erfolgt über eigene Auswahlfelder unter der Messwertliste, deren Inhalt zur Laufzeit über `setOptions()` gefüllt wird; eine Spalte innerhalb der Liste ist dafür technisch nicht geeignet, da Spaltenoptionen im Schema fest stehen. Der gewählte Sensor wird über Chip und Bezeichnung wiedererkannt, nicht über die wechselnde `hwmonN`-Nummer. Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
+Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-Für ein kleines Arbeitspaket nach AP14 vorgemerkt:
+**Als AP15 vorgesehen – kleines Paket:**
 
 - Taktausrichtung: Applet und Desklet richten ihren Messtakt an der Systemuhr aus (volle Vielfache des Intervalls), damit beide im selben Moment messen, ohne voneinander abzuhängen. Bisher laufen die Zeitgeber um bis zu ein Intervall versetzt.
 - Einstellungsfenster nur einmal öffnen: Der Cinnamon-Menüeintrag „Konfigurieren …“ startet bei jedem Klick ein weiteres Fenster. aVincePulse soll vorher prüfen, ob sein Einstellungsfenster bereits offen ist, und es dann nach vorne holen (Entscheidung vom 18.09.2026).
+
+Ziel und Akzeptanzkriterien für AP15 sind vor Beginn schriftlich festzulegen.
+
+Danach laut Roadmap: Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar, Warnschwellen mit Farbwechsel, Übersetzung Deutsch/Englisch.
+
+**Beobachtung vom 18.09.2026 – Herunterfahren hängt:** Zweimal blieb das Herunterfahren des Referenzgeräts stehen und musste durch Ausschalten beendet werden. In beiden Fällen meldet das Systemprotokoll, dass `/mnt/LX-NAS-linux` nicht ausgehängt werden konnte („das Ziel wird gerade benutzt“), kurz bevor das WLAN abgeschaltet wurde. Das Projektverzeichnis liegt auf diesem NAS-Laufwerk; zum Zeitpunkt der Prüfung belegte es ausschließlich die Claude-App mit ihrem Arbeitsverzeichnis. Die App läuft nach dem Schließen des Fensters über das Leistensymbol weiter. Vorschlag: vor einem Neustart die App über das Leistensymbol beenden. Hängt das Herunterfahren trotzdem, ist die Einbindung des NAS zu prüfen; das ist eine Systemeinstellung, die der Nutzer selbst vornimmt. Kein Zusammenhang mit aVincePulse.
 
 Weitere bekannte offene Punkte:
 
@@ -886,13 +947,13 @@ Weitere bekannte offene Punkte:
 - Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen.
 - Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP14:
+Vor Beginn von AP15:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP14 schriftlich festlegen
+5. Ziel und Akzeptanzkriterien für AP15 schriftlich festlegen
 6. erst danach Code ändern
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
@@ -926,13 +987,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP13:
+Erwarteter Ausgangspunkt nach AP14:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP13-END`
-- AP13 abgeschlossen
-- AP14 festgelegt (Sensorauswahl), Akzeptanzkriterien noch schriftlich zu vereinbaren
+- Referenz-Tag: `0.1.0-dev_AP14-END`
+- AP14 abgeschlossen
+- AP15 vorgesehen (Taktausrichtung, Einstellungsfenster nur einmal öffnen), Akzeptanzkriterien noch schriftlich zu vereinbaren
 
 ---
 
