@@ -215,12 +215,12 @@ var HardwareDetector = class HardwareDetector {
             .find(kandidat => kandidat.key === gewuenscht);
 
         if (sensor) {
-            this._quelle[art] = "manuell gewaehlt";
+            this._quelle[art] = "manuell gewählt";
             return sensor;
         }
 
         this._quelle[art] =
-            "automatisch - gewaehlter Sensor " + gewuenscht + " nicht gefunden";
+            "automatisch – gewählter Sensor " + gewuenscht + " nicht gefunden";
         return auto;
     }
 
@@ -816,15 +816,15 @@ var HardwareDetector = class HardwareDetector {
         zeilen.push("                     (" + this._quelle.cpu + ")");
         zeilen.push("Storage-Temperatur : " + this._describe(this._mapping.storage));
         zeilen.push("                     (" + this._quelle.storage + ")");
-        zeilen.push("Luefter            : " + this._describe(this._mapping.fan));
+        zeilen.push("Lüfter             : " + this._describe(this._mapping.fan));
         zeilen.push("                     (" + this._quelle.fan + ")");
         zeilen.push("Akku / Netzteil    : " + this._describeBattery(this._mapping.battery));
         zeilen.push("");
 
         const verfuegbar = this.getAvailability();
 
-        zeilen.push("Verfuegbare Messwerte");
-        zeilen.push("---------------------");
+        zeilen.push("Verfügbare Messwerte");
+        zeilen.push("--------------------");
 
         for (const id of Object.keys(verfuegbar)) {
             zeilen.push(
@@ -834,11 +834,11 @@ var HardwareDetector = class HardwareDetector {
         }
 
         zeilen.push("");
-        zeilen.push("Alle uebrigen Messwerte haengen nicht von einem");
-        zeilen.push("Sensor ab und sind immer verfuegbar.");
+        zeilen.push("Alle übrigen Messwerte hängen nicht von einem");
+        zeilen.push("Sensor ab und sind immer verfügbar.");
         zeilen.push("");
-        zeilen.push("Vollstaendige Sensorliste des Systems");
-        zeilen.push("-------------------------------------");
+        zeilen.push("Vollständige Sensorliste des Systems");
+        zeilen.push("------------------------------------");
 
         /*
          * Eine Zeile je Sensor mit festen Spalten, damit sich die
@@ -852,7 +852,7 @@ var HardwareDetector = class HardwareDetector {
         const zuordnung = [
             ["cpu", "CPU"],
             ["storage", "Speicher"],
-            ["fan", "Luefter"]
+            ["fan", "Lüfter"]
         ];
 
         for (const [art, name] of zuordnung) {
@@ -891,9 +891,9 @@ var HardwareDetector = class HardwareDetector {
 
         for (const s of sortiert(alle.fans)) {
             zeilen.push(zeile(
-                "Luefter",
+                "Lüfter",
                 s.chip,
-                s.label || "Luefter " + s.index,
+                s.label || "Lüfter " + s.index,
                 this._readFan(s) + " rpm",
                 verwendung[s.key] || "-",
                 s.key
@@ -902,7 +902,7 @@ var HardwareDetector = class HardwareDetector {
 
         zeilen.push("");
         zeilen.push("Wert: gemessen bei Erstellung dieses Berichts.");
-        zeilen.push("Kennung: bleibt nach einem Neustart gleich und wird fuer");
+        zeilen.push("Kennung: bleibt nach einem Neustart gleich und wird für");
         zeilen.push("die Sensorauswahl in den Einstellungen gespeichert.");
 
         return zeilen.join("\n") + "\n";

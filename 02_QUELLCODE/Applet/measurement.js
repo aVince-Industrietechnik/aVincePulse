@@ -750,8 +750,8 @@ var MeasurementProvider = class MeasurementProvider {
             auswahl === "auto"
                 ? "automatisch"
                 : gefunden
-                    ? "manuell gewaehlt"
-                    : "automatisch - gewaehlt war " + auswahl + ", nicht vorhanden";
+                    ? "manuell gewählt"
+                    : "automatisch – gewählt war " + auswahl + ", nicht vorhanden";
 
         zeilen.push("");
         zeilen.push("Netzwerkschnittstellen");
@@ -780,8 +780,8 @@ var MeasurementProvider = class MeasurementProvider {
         const laufwerk = this._laufwerk();
 
         zeilen.push("");
-        zeilen.push("Laufwerke (lokal eingehaengt)");
-        zeilen.push("-----------------------------");
+        zeilen.push("Laufwerke (lokal eingehängt)");
+        zeilen.push("----------------------------");
         zeilen.push(
             "Gemessen: " + laufwerk.pfad + "  (" +
             herkunft(this._laufwerkAuswahl, laufwerk.kennung === this._laufwerkAuswahl) +
@@ -793,8 +793,8 @@ var MeasurementProvider = class MeasurementProvider {
             pfad.padEnd(20) + geraet.padEnd(14) + typ.padEnd(8) +
             frei.padStart(14) + "   " + genutzt.padEnd(11) + kennung;
 
-        zeilen.push(lw("Einhaengeort", "Geraet", "Typ", "Frei", "Verwendet", "Kennung"));
-        zeilen.push(lw("------------", "------", "---", "----", "---------", "-------"));
+        zeilen.push(lw("Einhängeort", "Gerät", "Typ", "Frei", "Verwendet", "Kennung"));
+        zeilen.push(lw("-----------", "-----", "---", "----", "---------", "-------"));
 
         for (const l of this._laufwerke()) {
             zeilen.push(lw(
@@ -809,8 +809,8 @@ var MeasurementProvider = class MeasurementProvider {
 
         zeilen.push("");
         zeilen.push("Netzlaufwerke werden bewusst nicht angeboten: Die Abfrage");
-        zeilen.push("laeuft bei jedem Takt, ein nicht erreichbares Netzlaufwerk");
-        zeilen.push("koennte die Oberflaeche blockieren.");
+        zeilen.push("läuft bei jedem Takt, ein nicht erreichbares Netzlaufwerk");
+        zeilen.push("könnte die Oberfläche blockieren.");
 
         return zeilen.join("\n") + "\n";
     }

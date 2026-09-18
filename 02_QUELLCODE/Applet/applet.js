@@ -18,6 +18,8 @@
 
 const Applet = imports.ui.applet;
 const Settings = imports.ui.settings;
+const ModalDialog = imports.ui.modalDialog;
+const Dialog = imports.ui.dialog;
 const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
@@ -559,6 +561,84 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     /*
+     * Fragt, ob das offene Einstellungsfenster neu geoeffnet werden
+     * soll, damit seine Auswahlfelder die neu erkannte Hardware zeigen.
+     *
+     * Grundsatz: aVincePulse oeffnet oder schliesst Fenster nur nach
+     * einer Benutzeraktion und nur mit vorherigem Hinweis bzw. mit
+     * Rueckfrage. Bis zur Antwort bleibt das Fenster unveraendert.
+     * Esc wirkt wie "Nicht jetzt".
+     */
+    _frageNeuOeffnen(meldung) {
+        if (this._rueckfrage)
+            this._rueckfrage.close();
+
+        const dialog = new ModalDialog.ModalDialog();
+
+        dialog.contentLayout.add_child(new Dialog.MessageDialogContent({
+            title: this._einstellungsTitel + " \u2013 Hardware neu erkannt",
+            description:
+                "Es wurden neue oder entfernte Sensoren, Schnittstellen " +
+                "oder Laufwerke gefunden. Die Anzeige ist bereits aktuell.\n\n" +
+                "Damit auch die Auswahlfelder im Einstellungsfenster sie " +
+                "zeigen, muss das Fenster kurz geschlossen und an derselben " +
+                "Stelle neu geöffnet werden."
+        }));
+
+        let beantwortet = false;
+
+        const antworte = neuOeffnen => {
+            if (beantwortet)
+                return;
+
+            beantwortet = true;
+            this._rueckfrage = null;
+
+            // Erst weitermachen, wenn der Dialog ganz ausgeblendet ist.
+            // Sonst lagen Rueckfrage und Meldung kurz uebereinander in
+            // der Bildschirmmitte und waren beide nicht lesbar.
+            dialog.connect("closed", () => this._nachRueckfrage(neuOeffnen, meldung));
+            dialog.close();
+        };
+
+        dialog.setButtons([
+            {
+                label: "Nicht jetzt",
+                key: Clutter.KEY_Escape,
+                action: () => antworte(false)
+            },
+            {
+                label: "Jetzt neu öffnen",
+                action: () => antworte(true)
+            }
+        ]);
+
+        this._rueckfrage = dialog;
+        dialog.open();
+    }
+
+    /*
+     * Fuehrt die Antwort auf die Rueckfrage aus, nachdem der Dialog
+     * ausgeblendet ist.
+     */
+    _nachRueckfrage(neuOeffnen, meldung) {
+        if (!this._statusAnzeige)
+            return;
+
+        const geoeffnet = neuOeffnen && this._oeffneEinstellungenNeu();
+
+        this._statusAnzeige.zeige(
+            meldung +
+            (geoeffnet
+                ? "\n\nDas Einstellungsfenster wurde dafür neu geöffnet."
+                : "\n\nDie neuen Einträge erscheinen in der Auswahl, " +
+                  "sobald du das Einstellungsfenster schließt und " +
+                  "wieder öffnest.")
+        );
+        this._statusAnzeige.verbergeNachLesezeit();
+    }
+
+    /*
      * Schliesst das offene Einstellungsfenster und oeffnet es an
      * derselben Bildschirmposition neu, damit es die gerade neu
      * geschriebene Auswahl zeigt. Ein bereits geoeffnetes Fenster
@@ -660,8 +740,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * verfuegbar.
      */
     on_hardware_neu_erkennen() {
-        this._statusAnzeige.zeige("Hardware wird neu erkannt \u2026");
-
+        // Keine Meldung "Hardware wird neu erkannt ...": Die Erkennung
+        // dauert rund 115 ms und laeuft ohne Pause, die Meldung wurde
+        // dadurch nie gezeichnet (seit AP12, in AP17 nachgemessen).
         try {
             const kennzeichenVorher = this._geschriebeneAuswahl;
 
@@ -673,13 +754,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._aktualisiereSensorOptionen();
 
             // Nur wenn Sensoren, Schnittstellen oder Laufwerke
-            // hinzugekommen oder weggefallen sind, wird ein offenes
-            // Einstellungsfenster neu geoeffnet.
+            // hinzugekommen oder weggefallen sind und das
+            // Einstellungsfenster offen ist, muss es neu geoeffnet
+            // werden. Das geschieht nie ohne Rueckfrage.
             const auswahlNeu =
                 this._geschriebeneAuswahl !== kennzeichenVorher;
 
-            const fensterNeu =
-                auswahlNeu && this._oeffneEinstellungenNeu();
+            const fensterOffen =
+                auswahlNeu && this._findeEinstellungsfenster() !== null;
 
             const verfuegbar = detector.getAvailability();
 
@@ -707,7 +789,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                 "Hardware neu erkannt\n\n" +
                 gefunden.length + " von " +
                 Object.keys(verfuegbar).length +
-                " sensorabhaengigen Messwerten verfuegbar" +
+                " sensorabhängigen Messwerten verfügbar" +
                 (fehlend.length
                     ? "\nNicht gefunden: " + fehlend.join(", ")
                     : "") +
@@ -717,16 +799,21 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                     : "") +
                 (auswahlNeu
                     ? "\n\nNeue oder entfernte Sensoren, Schnittstellen " +
-                      "oder Laufwerke gefunden \u2013 die Auswahl wurde " +
-                      "aktualisiert" +
-                      (fensterNeu
-                          ? ". Das Einstellungsfenster wurde dafür neu geöffnet."
-                          : ".")
+                      "oder Laufwerke gefunden \u2013 die Anzeige ist " +
+                      "aktualisiert."
                     : "\n\nDie Auswahl an Sensoren, Schnittstellen und " +
                       "Laufwerken ist unverändert.");
 
+            if (fensterOffen) {
+                // Erst fragen, dann melden: Meldung und Rueckfrage
+                // stuenden sonst uebereinander in der Bildschirmmitte.
+                this._statusAnzeige.verberge();
+                this._frageNeuOeffnen(meldung);
+                return;
+            }
+
             this._statusAnzeige.zeige(meldung);
-            this._statusAnzeige.verbergeNach(10);
+            this._statusAnzeige.verbergeNachLesezeit();
 
         } catch (e) {
             global.logError(e);
@@ -894,7 +981,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._statusAnzeige.zeige(
             "Einstellungen auf Standardwerte zurückgesetzt");
-        this._statusAnzeige.verbergeNach(5);
+        this._statusAnzeige.verbergeNachLesezeit();
 
         global.log("aVincePulse AP12: settings reset to defaults");
     }
@@ -1311,7 +1398,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                           "Einstellungen unter „Speedtest-Berichte öffnen“"
                         : "")
                 );
-                this._statusAnzeige.verbergeNach(8);
+                this._statusAnzeige.verbergeNachLesezeit();
                 this._update();
             } else {
                 // Die Meldung bleibt kurz stehen, damit der Grund
@@ -1419,6 +1506,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     on_applet_removed_from_panel() {
+        if (this._rueckfrage) {
+            this._rueckfrage.close();
+            this._rueckfrage = null;
+        }
+
         if (this._fensterZeitgeber) {
             Mainloop.source_remove(this._fensterZeitgeber);
             this._fensterZeitgeber = null;

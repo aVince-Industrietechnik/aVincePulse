@@ -206,7 +206,7 @@ var SpeedtestRunner = class SpeedtestRunner {
                 "# TIMESTAMP ist der Messzeitpunkt in Sekunden seit 1970.\n" +
                 "#\n" +
                 "# Diese Datei wird von aVincePulse geschrieben.\n" +
-                "# Aenderungen von Hand werden beim naechsten Test ueberschrieben.\n" +
+                "# Änderungen von Hand werden beim nächsten Test überschrieben.\n" +
                 "\n" +
                 "SPEED_DOWN=" + werte.SPEED_DOWN + "\n" +
                 "SPEED_UP=" + werte.SPEED_UP + "\n" +
@@ -511,13 +511,23 @@ var StatusAnzeige = class StatusAnzeige {
             "padding: 24px 32px;" +
             "max-width: " + hoechstbreite + "px;";
 
-        if (!this._label) {
-            this._label = new St.Label({ text: text, style: stil });
-            Main.uiGroup.add_child(this._label);
-        } else {
-            this._label.set_text(text);
-            this._label.set_style(stil);
+        /*
+         * Die Flaeche wird fuer jede Meldung neu angelegt. Eine
+         * wiederverwendete Flaeche behielt die Groesse eines vorherigen
+         * kurzen Textes: Nach "Hardware wird neu erkannt ..." zeigte die
+         * folgende neunzeilige Meldung nur ihre erste Zeile (gemessen:
+         * 77 statt 367 Pixel Hoehe).
+         */
+        if (this._label) {
+            this._label.destroy();
+            this._label = null;
         }
+
+        // Zunaechst unsichtbar: Eine neue Flaeche steht anfangs oben
+        // links (0,0) und wird erst in die Mitte gesetzt, sobald ihre
+        // Groesse feststeht. Ohne das blitzte sie dort kurz auf.
+        this._label = new St.Label({ text: text, style: stil, opacity: 0 });
+        Main.uiGroup.add_child(this._label);
 
         // Lange Meldungen umbrechen statt ueber den Rand laufen lassen.
         try {
@@ -529,13 +539,19 @@ var StatusAnzeige = class StatusAnzeige {
 
         this._label.show();
 
-        // Die Groesse steht erst nach dem Zeichnen fest.
+        const label = this._label;
+
+        // Die Groesse steht erst nach dem Zeichnen fest. Erst dann wird
+        // die Flaeche mittig gesetzt und sichtbar gemacht. Gehoert die
+        // Flaeche inzwischen zu einer neueren Meldung, bleibt sie
+        // unangetastet.
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            if (this._label && this._label.visible) {
-                this._label.set_position(
-                    monitor.x + Math.round((monitor.width - this._label.width) / 2),
-                    monitor.y + Math.round((monitor.height - this._label.height) / 2)
+            if (label === this._label && label.visible) {
+                label.set_position(
+                    monitor.x + Math.round((monitor.width - label.width) / 2),
+                    monitor.y + Math.round((monitor.height - label.height) / 2)
                 );
+                label.opacity = 255;
             }
 
             return GLib.SOURCE_REMOVE;
@@ -557,6 +573,32 @@ var StatusAnzeige = class StatusAnzeige {
         this._entferneZeitgeber();
 
         this._timeout = Mainloop.timeout_add_seconds(sekunden, () => {
+            this._timeout = null;
+            this.verberge();
+            return false;
+        });
+    }
+
+    /*
+     * Blendet die Meldung nach einer Zeit aus, die sich nach ihrer
+     * Laenge richtet: 1 Sekunde plus 0,2 Sekunden je Wort, mindestens
+     * 2,5 und hoechstens 10 Sekunden. Kurze Hinweise verschwinden so
+     * rasch, lange bleiben lesbar.
+     *
+     * Fehlermeldungen verwenden weiterhin verbergeNach() mit fester
+     * Zeit, damit sie nicht uebersehen werden.
+     */
+    verbergeNachLesezeit() {
+        const text = this._label ? this._label.get_text() : "";
+        const woerter = text.split(/\s+/).filter(w => w !== "").length;
+
+        const millisekunden = Math.round(
+            Math.max(2500, Math.min(10000, 1000 + woerter * 200))
+        );
+
+        this._entferneZeitgeber();
+
+        this._timeout = Mainloop.timeout_add(millisekunden, () => {
             this._timeout = null;
             this.verberge();
             return false;

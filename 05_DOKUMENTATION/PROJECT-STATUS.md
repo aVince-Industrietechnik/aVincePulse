@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 18.09.2026 (AP16)  
+Stand: 18.09.2026 (AP17)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP16-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP15-END`
+Aktueller Referenzstand: `0.1.0-dev_AP17-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP16-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -83,6 +83,7 @@ Tags:
 - `0.1.0-dev_AP14-END` – Entwicklungsstand nach Abschluss von AP14
 - `0.1.0-dev_AP15-END` – Entwicklungsstand nach Abschluss von AP15
 - `0.1.0-dev_AP16-END` – Entwicklungsstand nach Abschluss von AP16
+- `0.1.0-dev_AP17-END` – Entwicklungsstand nach Abschluss von AP17
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -764,6 +765,59 @@ Lehre für künftige Tests: Abläufe über denselben Weg auslösen, den der Nutz
 - Neu-Öffnen in Cinnamon über `org.Cinnamon.Eval`: gleiche Position, Fenster der anderen Komponente unberührt, kein Neu-Öffnen ohne Änderung
 - Funktionstest durch den Nutzer in Applet und Desklet, einschließlich USB-Stick einstecken und abziehen
 
+### AP17 – Kein Neu-Öffnen ohne Rückfrage, Meldungen und Umlaute
+
+Abgeschlossen.
+
+Dateien:
+
+- `desklet.js`, `applet.js`, beide `settings-schema.json`
+- gemeinsame Module `speedtest.js`, `hardwareDetection.js`, `measurement.js` (Meldungsfläche, Berichtstexte)
+
+#### Anlass
+
+Seit AP16 schloss und öffnete sich das Einstellungsfenster nach „Hardware neu erkennen“ bei geänderter Hardware ohne vorherigen Hinweis. Der Nutzer hat dazu eine dauerhafte Regel festgelegt (siehe Abschnitt 8, „Fenster“).
+
+#### Hinweis und Rückfrage
+
+- Unter „Hardware neu erkennen“ steht ein dauerhafter Hinweis (`hinweis-hardware-neu`), dass bei geänderter Hardware eine Rückfrage kommt.
+- Findet die Erkennung eine Änderung und ist das Einstellungsfenster der Komponente offen, erscheint eine Rückfrage (`ModalDialog` aus `imports.ui.modalDialog`, Inhalt über `Dialog.MessageDialogContent`) mit „Nicht jetzt“ und „Jetzt neu öffnen“; Esc wirkt wie „Nicht jetzt“. Bis zur Antwort bleibt das Fenster unverändert.
+- Ohne Änderung oder bei geschlossenem Fenster gibt es keine Rückfrage.
+- Die Rückfrage betrifft nur die auslösende Komponente.
+- Die Antwort wird erst ausgeführt, wenn der Dialog vollständig ausgeblendet ist (Signal `closed`). Zuvor lagen Rückfrage und Ergebnismeldung kurz übereinander und waren beide nicht lesbar; durch Aufzeichnung der sichtbaren Flächen im 20-ms-Takt belegt.
+
+Entscheidungen des Nutzers vom 18.09.2026: Hinweis vorher und Rückfrage (Vorschläge A und B), keine Einstellung zum Abschalten (C verworfen). Meldungen in der Bildschirmmitte sind von der Fensterregel ausgenommen.
+
+#### Meldungsfläche (`StatusAnzeige` in `speedtest.js`)
+
+- **Anzeigedauer nach Textlänge:** `verbergeNachLesezeit()` blendet nach 1 Sekunde plus 0,2 Sekunden je Wort aus, mindestens 2,5 und höchstens 10 Sekunden. Kurze Hinweise wie „Einstellungen auf Standardwerte zurückgesetzt“ verschwinden nach 2,5 statt 5 Sekunden, lange bleiben 10 Sekunden. Fehlermeldungen behalten feste 8 Sekunden über `verbergeNach()`.
+- **Abgeschnittene Meldung behoben:** Die Fläche wurde wiederverwendet und behielt die Größe eines vorherigen kurzen Textes; die neunzeilige Ergebnismeldung zeigte beim ersten Mal nur ihre erste Zeile (gemessen: 77 statt 367 Pixel Höhe). Die Fläche wird nun für jede Meldung neu angelegt. Der Fehler bestand seit AP12 und wurde durch AP17 erstmals sichtbar.
+- **Kein Aufblitzen oben links:** Eine neu angelegte Fläche steht zunächst bei 0,0 und wird erst mittig gesetzt, sobald ihre Größe feststeht. Sie bleibt bis dahin unsichtbar (Deckkraft 0).
+- **Meldung „Hardware wird neu erkannt …“ entfernt:** Sie war seit AP12 vorgesehen, aber nie sichtbar, da die Erkennung rund 115 ms dauert und ohne Pause danach läuft (gemessen). Sichtbar gemacht wäre sie nur ein Aufblitzen.
+- Leerzeile vor dem abschließenden Satz der Ergebnismeldung, auf Wunsch des Nutzers.
+
+#### Umlaute
+
+Auf Wunsch des Nutzers verwenden alle sichtbaren deutschen Texte Umlaute und ß: Meldungen, Rückfrage, Einstellungen, Hardwarebericht und Kopf der Datei `speedtest-values`. Umgestellt wurden die Ergebnismeldung der Hardwareerkennung sowie Hardwarebericht und Dateikopf; Einstellungen, Menü und Rückfrage waren bereits richtig. Unterstreichungen im Bericht wurden an die kürzeren Wörter angepasst. Code-Kommentare und Protokollzeilen bleiben bewusst in der Umschreibung (Entscheidung des Nutzers), da sie nicht sichtbar sind.
+
+#### Befunde
+
+- **Tooltips an Schaltflächen werden nie angezeigt:** `XLETSettingsButton` in `/usr/share/cinnamon/cinnamon-settings/xlet-settings.py` übernimmt nur Beschriftung und Rückruf, nicht `tooltip`. Die seit AP11 hinterlegten Tooltips an den Schaltflächen für Speedtest, Berichte und Hardware bleiben daher unsichtbar. Hinweise für Schaltflächen gehören in ein `label` darunter. Die vorhandenen Tooltips schaden nicht und wurden nicht entfernt.
+- **Lüfter „0 rpm“:** Der Dell-Lüfter steht bei niedriger Temperatur still (bei 57 °C 0 U/min, bei 64 °C 5641 U/min; mit `sensors` bestätigt). Kein Fehler.
+
+#### Lehren für Tests
+
+- Nicht nur den Inhalt einer Anzeige prüfen, sondern ihre sichtbare Größe und Position: Der Text der abgeschnittenen Meldung war vollständig vorhanden.
+- Kurzlebige Überlagerungen lassen sich über eine Aufzeichnung der sichtbaren Flächen in `Main.uiGroup` im 20-ms-Takt nachweisen (über `org.Cinnamon.Eval`).
+- Nach Änderungen an gemeinsamen Modulen ist ein Cinnamon-Neustart nötig; Berichte, die vorher entstanden sind, zeigen noch den alten Stand.
+
+#### Prüfung
+
+- Syntaxprüfung mit `cjs`, Prüfsummen der vier gemeinsamen Module
+- Ablauf in Cinnamon über `org.Cinnamon.Eval`: Rückfrage mit und ohne Änderung, bei offenem und geschlossenem Fenster, beide Antworten, nur auslösende Komponente; Höhe der Meldungsfläche beim ersten und zweiten Durchlauf; Aufzeichnung der sichtbaren Flächen
+- Suchlauf über alle sichtbaren Texte auf verbliebene Umschreibungen; Probebericht mit `cjs`
+- Funktionstest durch den Nutzer in Applet und Desklet mit USB-Stick, einschließlich Esc, Anzeigedauer und Umlauten in neu erzeugten Berichten
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -831,6 +885,14 @@ cjs /tmp/syntaxcheck.js && echo "SYNTAX OK"
 ```
 
 Diese Prüfung ersetzt keinen Funktionstest im laufenden Cinnamon.
+
+### Fenster
+
+Festgelegt vom Nutzer am 18.09.2026: aVincePulse öffnet oder schließt Fenster nur nach einer Benutzeraktion und nur mit vorherigem Hinweis bzw. Rückfrage. Meldungen in der Bildschirmmitte (`StatusAnzeige`) sind davon ausgenommen. Die Regel gilt auch für künftige Funktionen, etwa den zeitgesteuerten Speedtest oder Benachrichtigungen.
+
+### Sichtbare Texte
+
+Sichtbare deutsche Texte verwenden Umlaute und ß (Meldungen, Dialoge, Einstellungen, Berichte, Dateiköpfe). Code-Kommentare und Protokollzeilen bleiben in der Umschreibung (ae, oe, ue, ss). Festgelegt vom Nutzer am 18.09.2026.
 
 ### Symbole in der Anzeige
 
@@ -956,7 +1018,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_13-15-13` (AP15).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_16-41-08` (AP16).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -1021,11 +1083,11 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP16 sind abgeschlossen.
+AP01 bis AP17 sind abgeschlossen.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**Als AP17 vorgesehen:** Warnschwellen mit Farbwechsel (OPTIONAL 1.0, Roadmap Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
+**Als AP18 vorgesehen:** Warnschwellen mit Farbwechsel (OPTIONAL 1.0, Roadmap Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen. AP17 wurde für die Korrektur des Neu-Öffnens aus AP16 eingeschoben.
 
 Danach laut Roadmap: Übersetzung Deutsch/Englisch.
 
@@ -1037,16 +1099,17 @@ Weitere bekannte offene Punkte:
 - Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
-- Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen.
+- Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen. Dabei auch die englischen Reste im Hardwarebericht übersetzen („unlabeled“, „NOT FOUND“, „none“; Entscheidung vom 18.09.2026). Der Titelvergleich des Einstellungsfensters (AP15) ist dann anzupassen.
+- Tooltips an Schaltflächen im Einstellungsschema werden von Cinnamon nicht angezeigt (siehe AP17). Bei Gelegenheit entfernen oder durch Hinweistexte ersetzen.
 - Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP17:
+Vor Beginn von AP18:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP17 schriftlich festlegen
+5. Ziel und Akzeptanzkriterien für AP18 schriftlich festlegen
 6. erst danach Code ändern
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
@@ -1080,13 +1143,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP16:
+Erwarteter Ausgangspunkt nach AP17:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP16-END`
-- AP16 abgeschlossen
-- AP17 vorgesehen (Warnschwellen mit Farbwechsel), Akzeptanzkriterien noch schriftlich zu vereinbaren
+- Referenz-Tag: `0.1.0-dev_AP17-END`
+- AP17 abgeschlossen
+- AP18 vorgesehen (Warnschwellen mit Farbwechsel), Akzeptanzkriterien noch schriftlich zu vereinbaren
 
 ---
 
