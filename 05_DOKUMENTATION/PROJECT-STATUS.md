@@ -1089,7 +1089,7 @@ Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24
 
 **Als AP18 vorgesehen:** Warnschwellen mit Farbwechsel (OPTIONAL 1.0, Roadmap Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen. AP17 wurde für die Korrektur des Neu-Öffnens aus AP16 eingeschoben.
 
-Danach laut Roadmap: Übersetzung Deutsch/Englisch.
+Danach laut Roadmap: **AP19 – Zwischenprüfung** von Applet und Desklet (aufgenommen am 18.09.2026, siehe `ROADMAP_V2.md`, Abschnitt 24), anschließend Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
 
 Weitere bekannte offene Punkte:
 

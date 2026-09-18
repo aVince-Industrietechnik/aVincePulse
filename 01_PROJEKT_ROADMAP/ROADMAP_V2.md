@@ -1668,15 +1668,35 @@ Vorschlag: bleibt SPÄTERE VERSION wie in Abschnitt 23 („Diagramme und histori
 
 ### Vorgesehene Reihenfolge
 
-Festgelegt am 18.09.2026:
+Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 
-1. AP14 – Sensorauswahl
-2. kleines Paket: Messtakt an der Systemuhr ausrichten, Einstellungsfenster nur einmal öffnen
-3. Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar (VERBINDLICH 1.0)
-4. Warnschwellen mit Farbwechsel
-5. Übersetzung Deutsch/Englisch
+1. AP14 – Sensorauswahl (abgeschlossen)
+2. AP15 – Messtakt an der Systemuhr, Einstellungsfenster nur einmal öffnen (abgeschlossen)
+3. AP16 – Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar, VERBINDLICH 1.0 (abgeschlossen)
+4. AP17 – eingeschoben: Rückfrage vor dem Neu-Öffnen, Meldungen, Umlaute (abgeschlossen)
+5. AP18 – Warnschwellen mit Farbwechsel
+6. AP19 – Zwischenprüfung
+7. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
+
+### Zwischenprüfung (AP19)
+
+Aufgenommen am 18.09.2026. Nach AP18 und vor der Übersetzung werden Applet und Desklet vollständig geprüft. Begründung: Seit AP12 sind mehrere Arbeitspakete hinzugekommen; in AP16 und AP17 fielen Fehler erst im Test auf, einer davon bestand unbemerkt seit AP12. Nach der Übersetzung existiert jeder sichtbare Text doppelt, Korrekturen werden dann aufwendiger.
+
+Umfang:
+
+- vollständige Durchsicht des Quellcodes, zusätzlich durch einen unabhängigen Prüfer ohne Kenntnis der bisherigen Annahmen
+- Funktionstest jeder Einstellung, Schaltfläche und Meldung im laufenden Cinnamon
+- Robustheit: beschädigte Einstellungsdatei, fehlende Sensoren, fehlendes Speedtest-Programm, abgezogene Laufwerke
+- Langzeitverhalten: Speicher- und CPU-Verbrauch über mehrere Stunden
+- Übereinstimmung von Applet und Desklet
+
+Gefundene Fehler werden behoben; größere Änderungen werden als eigenes Arbeitspaket vorgeschlagen. Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
+
+### Abschlussprüfung vor der Veröffentlichung
+
+Vor dem Einreichen bei Cinnamon Spices (Abschnitt 12) erfolgt eine Abschlussprüfung: Umfang wie AP19, zusätzlich Installation und Deinstallation, Prüfung gegen die dann gültigen Spices-Vorgaben sowie Tests des Nutzers auf weiteren Geräten (Desktop-PC, AMD- bzw. NVIDIA-Grafik, weitere Notebooks), die nicht vom Entwicklungsrechner aus geprüft werden können.
 
 ### Kostenmodell
 
