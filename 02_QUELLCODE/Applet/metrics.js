@@ -111,9 +111,14 @@ var METRICS = {
         dynamicUnit: true
     },
 
+    // Die Pfeile sitzen von Haus aus auf Hoehe der Grossbuchstaben
+    // und werden deshalb nicht angehoben. Als Symbol gefuehrt bleiben
+    // sie auch bei einer eigenen Bezeichnung erhalten.
     speed_down: {
         id: "speed_down",
-        label: "SPEED ↓",
+        label: "SPEED",
+        symbol: "↓",
+        symbolAnhebung: 0,
         type: "speedtest",
         unit: "MBit/s",
         defaultValue: "--"
@@ -121,7 +126,9 @@ var METRICS = {
 
     speed_up: {
         id: "speed_up",
-        label: "SPEED ↑",
+        label: "SPEED",
+        symbol: "↑",
+        symbolAnhebung: 0,
         type: "speedtest",
         unit: "MBit/s",
         defaultValue: "--"
@@ -172,3 +179,81 @@ var METRIC_ORDER = [
     "jitter",
     "speed_age"
 ];
+
+/*
+ * Auslieferungsfassung der Messwertliste in den Einstellungen.
+ *
+ * Jeder Eintrag enthaelt die Messwert-ID, eine eigene Bezeichnung
+ * (leer bedeutet: Vorgabe aus METRICS) und die Sichtbarkeit.
+ * Die Reihenfolge entspricht METRIC_ORDER.
+ */
+function standardMesswertListe() {
+    return METRIC_ORDER.map(id => ({
+        messwert: id,
+        bezeichnung: "",
+        sichtbar: true
+    }));
+}
+
+/*
+ * Bereinigt die vom Benutzer eingestellte Messwertliste.
+ *
+ * Das Bearbeitungsfenster von Cinnamon zeigt immer alle Spalten,
+ * also auch den Messwert selbst. Er laesst sich dort versehentlich
+ * umstellen. Die Anzeige darf dadurch weder Luecken noch doppelte
+ * Zeilen bekommen:
+ *
+ * - unbekannte oder beschaedigte Eintraege werden verworfen
+ * - von doppelten Eintraegen gilt nur der erste
+ * - fehlende Messwerte werden sichtbar am Ende ergaenzt
+ *
+ * Liefert eine Liste von { id, bezeichnung, sichtbar } in der
+ * vom Benutzer gewaehlten Reihenfolge.
+ */
+function ordneMesswerte(liste) {
+    const ergebnis = [];
+    const vorhanden = {};
+    const eintraege = Array.isArray(liste) ? liste : [];
+
+    for (const eintrag of eintraege) {
+        if (!eintrag || typeof eintrag !== "object")
+            continue;
+
+        const id = eintrag.messwert;
+
+        if (!Object.prototype.hasOwnProperty.call(METRICS, id))
+            continue;
+
+        if (vorhanden[id])
+            continue;
+
+        vorhanden[id] = true;
+
+        ergebnis.push({
+            id: id,
+            // Eigene Bezeichnungen erscheinen immer in Grossbuchstaben,
+            // passend zu den Vorgaben. Das Eingabefeld von Cinnamon
+            // laesst sich nicht einschraenken, daher wird hier
+            // umgewandelt.
+            bezeichnung:
+                typeof eintrag.bezeichnung === "string"
+                    ? eintrag.bezeichnung.trim().toUpperCase()
+                    : "",
+            // Nur ein ausdrueckliches false blendet aus.
+            sichtbar: eintrag.sichtbar !== false
+        });
+    }
+
+    for (const id of METRIC_ORDER) {
+        if (vorhanden[id])
+            continue;
+
+        ergebnis.push({
+            id: id,
+            bezeichnung: "",
+            sichtbar: true
+        });
+    }
+
+    return ergebnis;
+}

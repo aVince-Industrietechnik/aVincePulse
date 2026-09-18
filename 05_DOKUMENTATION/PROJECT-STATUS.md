@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 17.09.2026 (AP12)  
+Stand: 18.09.2026 (AP13)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP12-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP11-END`
+Aktueller Referenzstand: `0.1.0-dev_AP13-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP12-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -79,6 +79,7 @@ Tags:
 - `0.1.0-dev_AP10-END` – Entwicklungsstand nach Abschluss von AP10
 - `0.1.0-dev_AP11-END` – Entwicklungsstand nach Abschluss von AP11
 - `0.1.0-dev_AP12-END` – Entwicklungsstand nach Abschluss von AP12
+- `0.1.0-dev_AP13-END` – Entwicklungsstand nach Abschluss von AP13
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -415,6 +416,8 @@ Dateien:
 
 #### Auswahl der Messwerte
 
+Hinweis: Die Schalter wurden in AP13 durch die Messwertliste ersetzt; siehe dort.
+
 Beide Komponenten besitzen je einen Schalter pro Messwert, gegliedert in Hardware, Netzwerk und Internet-Speedtest. Der Schlüssel ergibt sich aus der Messwert-ID: `cpu_temp` wird zu `show-cpu-temp`, da Cinnamon für Einstellungen Bindestriche verwendet.
 
 `_buildRows()` überspringt abgewählte Messwerte. Nur ein ausdrückliches `false` blendet aus; fehlt die Einstellung, bleibt der Messwert sichtbar.
@@ -543,6 +546,72 @@ Je eine Schaltfläche unter Speedtest und unter Geräte öffnet gezielt den jewe
 #### Nebenbefund
 
 Cinnamon übersetzt bekannte englische Begriffe in den Einstellungen selbsttätig über die eigenen Übersetzungsdateien; aus der Überschrift `Hardware` wird so `Geräte`. Eigene Formulierungen bleiben unübersetzt, bis das Projekt eigene Übersetzungsdateien mitliefert.
+
+### AP13 – Messwertliste: Bezeichnung, Sichtbarkeit und Reihenfolge
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Desklet/metrics.js` und `02_QUELLCODE/Applet/metrics.js`
+- `desklet.js`, `applet.js`, beide `settings-schema.json`
+
+AP13 ist der erste Teil der Variante A: zuerst die Messwertliste, in AP14 die Auswahl des Sensors je Messwert.
+
+#### Eine Liste statt 15 Schalter
+
+Die 15 Einzelschalter aus AP10 und ihre drei Zwischenüberschriften wurden in beiden Komponenten durch eine einzige Einstellung `messwert-liste` vom Cinnamon-Typ `list` ersetzt. Spalten:
+
+| Spalte | Inhalt | Bedienung |
+|---|---|---|
+| Messwert | lesbarer Name mit Vorgabe, z. B. „CPU-Temperatur (Vorgabe: CPU)“ | fest |
+| Eigene Bezeichnung | leer bedeutet Vorgabe aus `metrics.js` | Doppelklick öffnet das Bearbeitungsfenster |
+| Sichtbar | Kontrollkästchen | direkt anklickbar |
+
+Die Reihenfolge wird mit den Pfeiltasten unter der Liste geändert. Die Schaltflächen „Hinzufügen“ und „Entfernen“ sind über `hidden-buttons` ausgeblendet. Die Spalten „Eigene Bezeichnung“ und „Sichtbar“ sind über `align: 0.5` zentriert; feste Spaltenbreiten lässt Cinnamon nicht zu.
+
+Applet und Desklet werden weiterhin getrennt eingestellt, wie in AP10 festgelegt.
+
+Die Auswahl aus den alten Schaltern wurde bewusst nicht übernommen (Entscheidung vom 18.09.2026): Es handelt sich um eine Entwicklungsversion ohne weitere Nutzer, und Cinnamon entfernt beim Laden Schlüssel, die nicht mehr im Schema stehen. Nach der Umstellung sind alle Messwerte sichtbar.
+
+#### Bereinigung der Liste
+
+Das Bearbeitungsfenster von Cinnamon zeigt immer alle Spalten, also auch den Messwert selbst. Er lässt sich dort versehentlich umstellen, sperren lässt sich das Feld nicht.
+
+`ordneMesswerte()` in `metrics.js` fängt das ab:
+
+- unbekannte oder beschädigte Einträge werden verworfen
+- von doppelten Einträgen gilt nur der erste
+- fehlende Messwerte werden sichtbar am Ende ergänzt
+
+Die Anzeige enthält dadurch immer jeden Messwert höchstens einmal, auch wenn die Liste in den Einstellungen fehlerhaft ist. `standardMesswertListe()` liefert die Auslieferungsfassung in der Reihenfolge von `METRIC_ORDER` und wird von „Zurücksetzen“ verwendet.
+
+Beide Funktionen liegen im gemeinsamen Modul, damit die Logik nur einmal existiert. `METRIC_ORDER` bestimmt weiterhin die Vorgabereihenfolge; ein neuer Messwert erscheint ohne Änderung an `desklet.js` oder `applet.js` automatisch am Ende der Liste.
+
+#### Eigene Bezeichnungen
+
+- ersetzen nur den Text; das Symbol bleibt erhalten, da es getrennt geführt wird
+- werden in der Anzeige immer in Großbuchstaben dargestellt, passend zu den Vorgaben; das Eingabefeld von Cinnamon lässt sich nicht einschränken, in der Liste bleibt die Eingabe wie getippt stehen
+- fließen in die Berechnung der Spaltenbreite ein, die sich dadurch anpasst
+
+Die Pfeile von `SPEED ↓` und `SPEED ↑` waren bis dahin Teil der Beschriftung und verschwanden bei einer eigenen Bezeichnung. Sie werden nun wie `⛁` und `◷` als `symbol` geführt, mit `symbolAnhebung: 0`, da sie von Haus aus auf Höhe der Großbuchstaben sitzen. Mit der Vorgabe ist die Anzeige unverändert.
+
+#### Messwerte ohne Sensor
+
+Sie bleiben unabhängig vom Häkchen ausgeblendet. Die Liste zeigt sie trotzdem an, damit die Einstellung bei einem Hardwarewechsel oder nach „Hardware neu erkennen“ greift.
+
+#### Verhalten der Cinnamon-Liste
+
+Beim Test aufgefallen, kein Fehler von aVincePulse:
+
+- Wird eine Zeile an ausgeblendeten Zeilen vorbei verschoben, ändert sich die Liste, die Anzeige aber nicht sichtbar.
+- Die Pfeiltasten werden erst aktiv, wenn sich die Auswahl ändert. Ist beim Öffnen bereits die erste Zeile markiert, hilft ein Klick auf eine andere Zeile.
+
+#### Prüfung
+
+- Syntaxprüfung mit `cjs` für alle geänderten Dateien
+- `ordneMesswerte()` mit sechs Fällen geprüft: Standardliste, fehlend, kein Array, leer, doppelt und unbekannt, umsortiert; Ergebnis stets genau 15 Messwerte ohne Doppelte
+- Funktionstest in Applet und Desklet durch den Nutzer: Sichtbarkeit, Reihenfolge, eigene Bezeichnung, absichtlich doppelter Messwert, Zurücksetzen, Symbole bei Schriftgröße 10 und 30
 
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
@@ -732,7 +801,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-17_15-39-17` (AP11).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-17_21-06-55` (AP12).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -797,11 +866,16 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP12 sind abgeschlossen.
+AP01 bis AP13 sind abgeschlossen.
 
-**AP13 ist noch nicht verbindlich definiert.**
+**AP14 ist festgelegt (Entscheidung vom 18.09.2026, Variante A, zweiter Teil):** Auswahl des Sensors für CPU-Temperatur, Speicher-Temperatur und Lüfter. Vorgabe ist „Automatisch“, also das bisherige Punktesystem. Die Auswahl erfolgt über eigene Auswahlfelder unter der Messwertliste, deren Inhalt zur Laufzeit über `setOptions()` gefüllt wird; eine Spalte innerhalb der Liste ist dafür technisch nicht geeignet, da Spaltenoptionen im Schema fest stehen. Der gewählte Sensor wird über Chip und Bezeichnung wiedererkannt, nicht über die wechselnde `hwmonN`-Nummer. Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
 
-Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die Festlegung dienen können:
+Für ein kleines Arbeitspaket nach AP14 vorgemerkt:
+
+- Taktausrichtung: Applet und Desklet richten ihren Messtakt an der Systemuhr aus (volle Vielfache des Intervalls), damit beide im selben Moment messen, ohne voneinander abzuhängen. Bisher laufen die Zeitgeber um bis zu ein Intervall versetzt.
+- Einstellungsfenster nur einmal öffnen: Der Cinnamon-Menüeintrag „Konfigurieren …“ startet bei jedem Klick ein weiteres Fenster. aVincePulse soll vorher prüfen, ob sein Einstellungsfenster bereits offen ist, und es dann nach vorne holen (Entscheidung vom 18.09.2026).
+
+Weitere bekannte offene Punkte:
 
 - Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Sobald das alte Applet `avince-hwpopup@angelo` nicht mehr verwendet wird, liest diese Datei niemand mehr und das Schreiben kann entfallen.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
@@ -809,18 +883,19 @@ Aus der bisherigen Prüfung bekannte offene Punkte, die als Grundlage für die F
 - Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
-- Eine benutzerdefinierte Reihenfolge der Messwerte ist noch nicht möglich. Sie soll gemeinsam mit dem Umbenennen der Sensoren in einer einzigen Liste umgesetzt werden, statt in zwei getrennten Bedienelementen.
+- Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen.
+- Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP13:
+Vor Beginn von AP14:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP13 definieren
+5. Ziel und Akzeptanzkriterien für AP14 schriftlich festlegen
 6. erst danach Code ändern
 
-Keine neue AP13-Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
+Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
 ## 15. Hinweise für KI-Assistenten
 
@@ -851,13 +926,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP12:
+Erwarteter Ausgangspunkt nach AP13:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP12-END`
-- AP12 abgeschlossen
-- AP13 noch zu definieren
+- Referenz-Tag: `0.1.0-dev_AP13-END`
+- AP13 abgeschlossen
+- AP14 festgelegt (Sensorauswahl), Akzeptanzkriterien noch schriftlich zu vereinbaren
 
 ---
 

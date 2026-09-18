@@ -37,6 +37,8 @@ const StatusAnzeige = Speedtest.StatusAnzeige;
 
 const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
+const standardMesswertListe = Metrics.standardMesswertListe;
+const ordneMesswerte = Metrics.ordneMesswerte;
 
 /*
  * Vorgabewerte.
@@ -144,7 +146,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._applyPanelSymbol.bind(this)
         );
 
-        this._bindeSichtbarkeit();
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "messwert-liste",
+            "messwertListe",
+            this._baueZeilenNeu.bind(this)
+        );
+
         this._applyPanelSymbol();
 
         // Zuordnung Messwert-ID -> Anzeigezeile.
@@ -183,8 +191,12 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     /*
-     * Erzeugt für jeden in METRIC_ORDER aufgeführten Messwert
-     * genau eine Anzeigezeile.
+     * Erzeugt für jeden Messwert der Messwertliste genau eine
+     * Anzeigezeile, in der vom Benutzer gewählten Reihenfolge.
+     *
+     * ordneMesswerte() stellt sicher, dass jeder Messwert aus
+     * metrics.js genau einmal vorkommt, auch wenn die Liste in den
+     * Einstellungen beschädigt oder unvollständig ist.
      *
      * Messwerte, für die auf diesem Gerät kein Sensor gefunden
      * wurde, erhalten keine Zeile.
@@ -193,21 +205,15 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         const availability =
             this._measurement.getMetricAvailability();
 
-        for (const id of METRIC_ORDER) {
+        for (const eintrag of ordneMesswerte(this.messwertListe)) {
+            const id = eintrag.id;
             const metric = METRICS[id];
 
-            if (!metric) {
-                global.logError(
-                    "aVincePulse: METRIC_ORDER verweist auf einen " +
-                    "in METRICS nicht definierten Messwert: " + id
-                );
-                continue;
-            }
-
             // Vom Benutzer abgewaehlte Messwerte erhalten keine Zeile.
-            if (!this._istSichtbar(id))
+            if (!eintrag.sichtbar)
                 continue;
 
+            // Ohne Sensor keine Zeile, unabhaengig von der Einstellung.
             if (availability[id] === false) {
                 global.log(
                     "aVincePulse AP08: metric hidden, no sensor -> " + id
@@ -215,8 +221,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                 continue;
             }
 
+            // Eine eigene Bezeichnung ersetzt nur den Text. Das Symbol
+            // bleibt erhalten, da es getrennt gefuehrt wird.
             const row = this._makeRow(
-                metric.label,
+                eintrag.bezeichnung || metric.label,
                 metric.defaultValue,
                 metric.unit,
                 metric.symbol,
@@ -499,13 +507,12 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.settings.setValue("popup-opacity", deckkraft);
         this.settings.setValue("panel-symbol", symbol);
 
-        // Alle Messwerte wieder einblenden.
-        for (const id of METRIC_ORDER) {
-            const schluessel = this._sichtbarkeitsSchluessel(id);
+        // Messwertliste: alle sichtbar, Reihenfolge und
+        // Bezeichnungen wie ausgeliefert.
+        const liste = standardMesswertListe();
 
-            this.settings.setValue(schluessel, true);
-            this["zeige_" + id] = true;
-        }
+        this.settings.setValue("messwert-liste", liste);
+        this.messwertListe = liste;
 
         /*
          * setValue schreibt ausschliesslich die Einstellungsdatei.
@@ -589,40 +596,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
 
     /*
-     * Schluessel der Sichtbarkeitseinstellung eines Messwertes.
-     * Die Messwert-ID verwendet Unterstriche, die Einstellungen
-     * nach Cinnamon-Konvention Bindestriche.
-     */
-    _sichtbarkeitsSchluessel(id) {
-        return "show-" + id.replace(/_/g, "-");
-    }
-
-    /*
-     * Bindet fuer jeden Messwert den zugehoerigen Schalter.
-     * Aendert sich einer, werden die Anzeigezeilen neu aufgebaut.
-     */
-    _bindeSichtbarkeit() {
-        for (const id of METRIC_ORDER) {
-            this.settings.bindProperty(
-                Settings.BindingDirection.IN,
-                this._sichtbarkeitsSchluessel(id),
-                "zeige_" + id,
-                this._baueZeilenNeu.bind(this)
-            );
-        }
-    }
-
-    /*
-     * Meldet, ob ein Messwert angezeigt werden soll.
-     * Nur ein ausdrueckliches false blendet aus; fehlt die
-     * Einstellung, bleibt der Messwert sichtbar.
-     */
-    _istSichtbar(id) {
-        return this["zeige_" + id] !== false;
-    }
-
-    /*
-     * Baut die Anzeigezeilen nach einer Aenderung der Auswahl neu auf.
+     * Baut die Anzeigezeilen nach einer Aenderung der Messwertliste neu auf.
      */
     _baueZeilenNeu() {
         if (!this._popup)
@@ -771,14 +745,18 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         let maxEinheit = 0;
 
         for (const id of METRIC_ORDER) {
-            if (!this._rows[id])
+            const item = this._rows[id];
+
+            if (!item)
                 continue;
 
             const metric = METRICS[id];
 
+            // Massgeblich ist der angezeigte Text, also gegebenenfalls
+            // die eigene Bezeichnung aus der Messwertliste.
             const beschriftung =
-                String(metric.label) +
-                (metric.symbol ? " " + metric.symbol : "");
+                String(item.nameText) +
+                (item.symbol ? " " + item.symbol : "");
 
             maxLabel = Math.max(maxLabel, beschriftung.length);
             maxEinheit = Math.max(maxEinheit, String(metric.unit).length);

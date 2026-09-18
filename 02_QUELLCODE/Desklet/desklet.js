@@ -5,8 +5,9 @@
  * Entwicklungsstand: 0.1.0-dev
  *
  * Die Anzeigezeilen werden zentral aus metrics.js erzeugt.
- * METRIC_ORDER bestimmt Reihenfolge und Umfang der Anzeige,
- * METRICS liefert Beschriftung, Einheit und Startwert.
+ * Reihenfolge, Sichtbarkeit und eigene Bezeichnungen stammen aus
+ * der Messwertliste der Einstellungen, METRICS liefert Vorgabe-
+ * Beschriftung, Einheit und Startwert.
  *
  * Messwerterfassung liegt in measurement.js,
  * Hardware-/Sensorerkennung in hardwareDetection.js.
@@ -33,6 +34,8 @@ const StatusAnzeige = Speedtest.StatusAnzeige;
 
 const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
+const standardMesswertListe = Metrics.standardMesswertListe;
+const ordneMesswerte = Metrics.ordneMesswerte;
 
 
 class AVinceHWMonitor extends Desklet.Desklet {
@@ -87,7 +90,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
             null
         );
 
-        this._bindeSichtbarkeit();
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "messwert-liste",
+            "messwertListe",
+            this._baueZeilenNeu.bind(this)
+        );
 
         this._container = new St.BoxLayout({
             vertical: true,
@@ -118,11 +126,14 @@ class AVinceHWMonitor extends Desklet.Desklet {
     }
 
     /*
-     * Erzeugt fuer jeden in METRIC_ORDER aufgefuehrten Messwert
-     * genau eine Anzeigezeile.
+     * Erzeugt fuer jeden Messwert der Messwertliste genau eine
+     * Anzeigezeile, in der vom Benutzer gewaehlten Reihenfolge.
      *
-     * Ein neuer Messwert erfordert dadurch nur noch einen Eintrag
-     * in metrics.js und keine Aenderung an dieser Datei.
+     * ordneMesswerte() stellt sicher, dass jeder Messwert aus
+     * metrics.js genau einmal vorkommt, auch wenn die Liste in den
+     * Einstellungen beschaedigt oder unvollstaendig ist. Ein neuer
+     * Messwert erfordert dadurch weiterhin nur einen Eintrag in
+     * metrics.js und keine Aenderung an dieser Datei.
      *
      * Messwerte, fuer die auf diesem Geraet kein Sensor gefunden
      * wurde, erhalten keine Zeile. Ein fehlender Sensor fuehrt
@@ -132,24 +143,17 @@ class AVinceHWMonitor extends Desklet.Desklet {
         const availability =
             this._measurement.getMetricAvailability();
 
-        for (const id of METRIC_ORDER) {
+        for (const eintrag of ordneMesswerte(this.messwertListe)) {
+            const id = eintrag.id;
             const metric = METRICS[id];
 
-            if (!metric) {
-                global.logError(
-                    "aVincePulse: METRIC_ORDER verweist auf einen " +
-                    "in METRICS nicht definierten Messwert: " + id
-                );
-                continue;
-            }
-
-            // Messwerte ohne passenden Sensor werden nicht angezeigt.
-            // Nur ausdruecklich als nicht verfuegbar gemeldete Werte
-            // entfallen; alle uebrigen bleiben sichtbar.
             // Vom Benutzer abgewaehlte Messwerte erhalten keine Zeile.
-            if (!this._istSichtbar(id))
+            if (!eintrag.sichtbar)
                 continue;
 
+            // Messwerte ohne passenden Sensor werden nicht angezeigt,
+            // unabhaengig von der Einstellung. Nur ausdruecklich als
+            // nicht verfuegbar gemeldete Werte entfallen.
             if (availability[id] === false) {
                 global.log(
                     "aVincePulse AP07: metric hidden, no sensor -> " + id
@@ -157,8 +161,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
                 continue;
             }
 
+            // Eine eigene Bezeichnung ersetzt nur den Text. Das Symbol
+            // bleibt erhalten, da es getrennt gefuehrt wird.
             const row = this._makeRow(
-                metric.label,
+                eintrag.bezeichnung || metric.label,
                 metric.defaultValue,
                 metric.unit,
                 metric.symbol,
@@ -172,40 +178,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
 
     /*
-     * Schluessel der Sichtbarkeitseinstellung eines Messwertes.
-     * Die Messwert-ID verwendet Unterstriche, die Einstellungen
-     * nach Cinnamon-Konvention Bindestriche.
-     */
-    _sichtbarkeitsSchluessel(id) {
-        return "show-" + id.replace(/_/g, "-");
-    }
-
-    /*
-     * Bindet fuer jeden Messwert den zugehoerigen Schalter.
-     * Aendert sich einer, werden die Anzeigezeilen neu aufgebaut.
-     */
-    _bindeSichtbarkeit() {
-        for (const id of METRIC_ORDER) {
-            this.settings.bindProperty(
-                Settings.BindingDirection.IN,
-                this._sichtbarkeitsSchluessel(id),
-                "zeige_" + id,
-                this._baueZeilenNeu.bind(this)
-            );
-        }
-    }
-
-    /*
-     * Meldet, ob ein Messwert angezeigt werden soll.
-     * Nur ein ausdrueckliches false blendet aus; fehlt die
-     * Einstellung, bleibt der Messwert sichtbar.
-     */
-    _istSichtbar(id) {
-        return this["zeige_" + id] !== false;
-    }
-
-    /*
-     * Baut die Anzeigezeilen nach einer Aenderung der Auswahl neu auf.
+     * Baut die Anzeigezeilen nach einer Aenderung der Messwertliste neu auf.
      */
     _baueZeilenNeu() {
         if (!this._container)
@@ -385,14 +358,18 @@ class AVinceHWMonitor extends Desklet.Desklet {
         let maxEinheit = 0;
 
         for (const id of METRIC_ORDER) {
-            if (!this._rows[id])
+            const item = this._rows[id];
+
+            if (!item)
                 continue;
 
             const metric = METRICS[id];
 
+            // Massgeblich ist der angezeigte Text, also gegebenenfalls
+            // die eigene Bezeichnung aus der Messwertliste.
             const beschriftung =
-                String(metric.label) +
-                (metric.symbol ? " " + metric.symbol : "");
+                String(item.nameText) +
+                (item.symbol ? " " + item.symbol : "");
 
             maxLabel = Math.max(maxLabel, beschriftung.length);
             maxEinheit = Math.max(maxEinheit, String(metric.unit).length);
@@ -737,13 +714,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this.settings.setValue("font-weight", schriftstaerke);
         this.settings.setValue("refresh-interval", intervall);
 
-        // Alle Messwerte wieder einblenden.
-        for (const id of METRIC_ORDER) {
-            const schluessel = this._sichtbarkeitsSchluessel(id);
+        // Messwertliste: alle sichtbar, Reihenfolge und
+        // Bezeichnungen wie ausgeliefert.
+        const liste = standardMesswertListe();
 
-            this.settings.setValue(schluessel, true);
-            this["zeige_" + id] = true;
-        }
+        this.settings.setValue("messwert-liste", liste);
+        this.messwertListe = liste;
 
         this.fontSize = schriftgroesse;
         this.fontWeight = schriftstaerke;

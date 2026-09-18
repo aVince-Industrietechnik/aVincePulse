@@ -55,92 +55,133 @@
         "type": "header",
         "description": "Angezeigte Messwerte"
     },
-    "kopf-mw-hardware": {
-        "type": "header",
-        "description": "Hardware"
+    "hinweis-messwerte": {
+        "type": "label",
+        "description": "Sichtbar: Häkchen setzen oder entfernen. Reihenfolge: Zeile wählen und mit den Pfeilen verschieben. Eigene Bezeichnung: Doppelklick auf die Zeile; leer lassen für die Vorgabe. Messwerte ohne Sensor werden auf diesem Gerät nicht angezeigt."
     },
-    "show-cpu-temp": {
-        "type": "switch",
-        "default": true,
-        "description": "CPU  (°C)"
-    },
-    "show-cpu-load": {
-        "type": "switch",
-        "default": true,
-        "description": "LOAD  (%)"
-    },
-    "show-ram-load": {
-        "type": "switch",
-        "default": true,
-        "description": "RAM  (%)"
-    },
-    "show-storage-temp": {
-        "type": "switch",
-        "default": true,
-        "description": "SSD  (°C)"
-    },
-    "show-storage-free": {
-        "type": "switch",
-        "default": true,
-        "description": "FREE  (GB)"
-    },
-    "show-fan-speed": {
-        "type": "switch",
-        "default": true,
-        "description": "FAN  (rpm)"
-    },
-    "show-battery-charge": {
-        "type": "switch",
-        "default": true,
-        "description": "BATT  (%)"
-    },
-    "show-psu-state": {
-        "type": "switch",
-        "default": true,
-        "description": "STATUS"
-    },
-    "kopf-mw-netzwerk": {
-        "type": "header",
-        "description": "Netzwerk"
-    },
-    "show-net-down": {
-        "type": "switch",
-        "default": true,
-        "description": "DOWN  (KB/s)"
-    },
-    "show-net-up": {
-        "type": "switch",
-        "default": true,
-        "description": "UP  (KB/s)"
-    },
-    "kopf-mw-internet": {
-        "type": "header",
-        "description": "Internet-Speedtest"
-    },
-    "show-speed-down": {
-        "type": "switch",
-        "default": true,
-        "description": "SPEED ↓  (MBit/s)"
-    },
-    "show-speed-up": {
-        "type": "switch",
-        "default": true,
-        "description": "SPEED ↑  (MBit/s)"
-    },
-    "show-ping": {
-        "type": "switch",
-        "default": true,
-        "description": "PING  (ms)"
-    },
-    "show-jitter": {
-        "type": "switch",
-        "default": true,
-        "description": "JITTER  (ms)"
-    },
-    "show-speed-age": {
-        "type": "switch",
-        "default": true,
-        "description": "LAST  (Alter des Speedtests)"
+    "messwert-liste": {
+        "type": "list",
+        "description": "Messwerte",
+        "height": 430,
+        "hidden-buttons": [
+            "+",
+            "-"
+        ],
+        "columns": [
+            {
+                "id": "messwert",
+                "title": "Messwert",
+                "type": "string",
+                "options": {
+                    "CPU-Temperatur  (Vorgabe: CPU)": "cpu_temp",
+                    "CPU-Auslastung  (Vorgabe: LOAD)": "cpu_load",
+                    "RAM-Auslastung  (Vorgabe: RAM)": "ram_load",
+                    "Speicher-Temperatur  (Vorgabe: SSD)": "storage_temp",
+                    "Freier Speicherplatz  (Vorgabe: FREE ⛁)": "storage_free",
+                    "Lüfterdrehzahl  (Vorgabe: FAN)": "fan_speed",
+                    "Akku-Ladezustand  (Vorgabe: BATT)": "battery_charge",
+                    "Netzteil  (Vorgabe: STATUS)": "psu_state",
+                    "Netzwerk Download  (Vorgabe: DOWN)": "net_down",
+                    "Netzwerk Upload  (Vorgabe: UP)": "net_up",
+                    "Speedtest Download  (Vorgabe: SPEED ↓)": "speed_down",
+                    "Speedtest Upload  (Vorgabe: SPEED ↑)": "speed_up",
+                    "Ping  (Vorgabe: PING)": "ping",
+                    "Jitter  (Vorgabe: JITTER)": "jitter",
+                    "Alter des Speedtests  (Vorgabe: LAST ◷)": "speed_age"
+                }
+            },
+            {
+                "id": "bezeichnung",
+                "title": "Eigene Bezeichnung",
+                "type": "string",
+                "default": "",
+                "align": 0.5
+            },
+            {
+                "id": "sichtbar",
+                "title": "Sichtbar",
+                "type": "boolean",
+                "default": true,
+                "align": 0.5
+            }
+        ],
+        "default": [
+            {
+                "messwert": "cpu_temp",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "cpu_load",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "ram_load",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "storage_temp",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "storage_free",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "fan_speed",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "battery_charge",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "psu_state",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "net_down",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "net_up",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "speed_down",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "speed_up",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "ping",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "jitter",
+                "bezeichnung": "",
+                "sichtbar": true
+            },
+            {
+                "messwert": "speed_age",
+                "bezeichnung": "",
+                "sichtbar": true
+            }
+        ]
     },
     "kopf-speedtest": {
         "type": "header",
