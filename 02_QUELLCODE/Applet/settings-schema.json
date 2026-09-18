@@ -189,7 +189,7 @@
     },
     "hinweis-sensoren": {
         "type": "label",
-        "description": "„Automatisch“ wählt den passenden Sensor selbst. Die Auswahl zeigt alle Sensoren dieses Geräts mit dem Wert zum Zeitpunkt der Erkennung. Nach „Hardware neu erkennen“ erscheinen neue Sensoren erst, wenn dieses Fenster geschlossen und wieder geöffnet wurde."
+        "description": "„Automatisch“ wählt den passenden Sensor selbst. Die Auswahl zeigt alle Sensoren dieses Geräts mit dem Wert zum Zeitpunkt der Erkennung. Nach „Hardware neu erkennen“ wird die Auswahl aktualisiert; kommen Sensoren hinzu oder fallen weg, öffnet sich dieses Fenster dafür kurz neu."
     },
     "sensor-cpu": {
         "type": "combobox",
@@ -211,6 +211,30 @@
         "type": "combobox",
         "default": "auto",
         "description": "Lüfter",
+        "options": {
+            "Automatisch": "auto"
+        }
+    },
+    "kopf-quellen": {
+        "type": "header",
+        "description": "Netzwerk und Speicherplatz"
+    },
+    "hinweis-quellen": {
+        "type": "label",
+        "description": "Bestimmt, welche Netzwerkschnittstelle DOWN/UP und welches Laufwerk FREE anzeigt. Angeboten werden nur lokale Laufwerke; Netzlaufwerke nicht, da ein nicht erreichbares Netzlaufwerk die Oberfläche blockieren könnte. Ein neu eingesteckter USB-Stick erscheint nach „Hardware neu erkennen“."
+    },
+    "netz-schnittstelle": {
+        "type": "combobox",
+        "default": "auto",
+        "description": "Netzwerkschnittstelle",
+        "options": {
+            "Automatisch": "auto"
+        }
+    },
+    "laufwerk-free": {
+        "type": "combobox",
+        "default": "auto",
+        "description": "Laufwerk für FREE",
         "options": {
             "Automatisch": "auto"
         }

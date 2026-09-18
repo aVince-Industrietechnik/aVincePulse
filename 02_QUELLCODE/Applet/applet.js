@@ -364,8 +364,42 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             );
         }
 
+        // Netzwerkschnittstelle und Laufwerk fuer FREE (AP16).
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "netz-schnittstelle",
+            "netzWahl",
+            this._quellenAuswahlGeaendert.bind(this)
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "laufwerk-free",
+            "laufwerkWahl",
+            this._quellenAuswahlGeaendert.bind(this)
+        );
+
+        this._uebernehmeQuellenAuswahl();
         this._detector.setzeAuswahl(this._sensorAuswahl());
         this._aktualisiereSensorOptionen();
+    }
+
+    _uebernehmeQuellenAuswahl() {
+        this._measurement.setzeNetzwerkAuswahl(this.netzWahl);
+        this._measurement.setzeLaufwerkAuswahl(this.laufwerkWahl);
+    }
+
+    /*
+     * Eine geaenderte Schnittstelle oder ein anderes Laufwerk wirkt
+     * sofort. Die erste Netzwerkmessung danach zeigt 0, da fuer die
+     * neue Schnittstelle noch kein Vergleichswert vorliegt.
+     */
+    _quellenAuswahlGeaendert() {
+        if (!this._measurement)
+            return;
+
+        this._uebernehmeQuellenAuswahl();
+        this._baueZeilenNeu();
     }
 
     _sensorAuswahl() {
@@ -384,19 +418,35 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * Einstellungsfenster zeigt sie erst nach erneutem Oeffnen.
      */
     _aktualisiereSensorOptionen() {
+        const angebote = {};
+
         for (const art in SENSOR_SCHLUESSEL) {
-            try {
-                this.settings.setOptions(
-                    SENSOR_SCHLUESSEL[art],
-                    this._detector.getSensorOptionen(
-                        art,
-                        this["sensorwahl_" + art]
-                    )
+            angebote[SENSOR_SCHLUESSEL[art]] = () =>
+                this._detector.getSensorOptionen(
+                    art,
+                    this["sensorwahl_" + art]
                 );
+        }
+
+        angebote["netz-schnittstelle"] = () =>
+            this._measurement.getNetzwerkOptionen(this.netzWahl);
+
+        angebote["laufwerk-free"] = () =>
+            this._measurement.getLaufwerkOptionen(this.laufwerkWahl);
+
+        const geschrieben = {};
+
+        for (const schluessel in angebote) {
+            try {
+                geschrieben[schluessel] = angebote[schluessel]();
+                this.settings.setOptions(schluessel, geschrieben[schluessel]);
             } catch (e) {
                 global.logError(e);
             }
         }
+
+        // Merkt sich, was das Einstellungsfenster jetzt anbietet.
+        this._geschriebeneAuswahl = this._auswahlKennzeichen(geschrieben);
     }
 
     /*
@@ -434,35 +484,170 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
     _holeEinstellungsfensterNachVorne() {
         try {
-            for (const actor of global.get_window_actors()) {
-                const fenster = actor.get_meta_window();
+            const fenster = this._findeEinstellungsfenster();
 
-                if (
-                    !fenster ||
-                    String(fenster.get_wm_class()).toLowerCase() !==
-                        EINSTELLUNGEN_FENSTERKLASSE ||
-                    fenster.get_title() !== this._einstellungsTitel
-                )
-                    continue;
+            if (!fenster)
+                return false;
 
-                // Liegt das Fenster auf einem anderen Arbeitsbereich,
-                // wird dorthin gewechselt. Minimierte Fenster werden
-                // dabei wiederhergestellt.
-                const bereich = fenster.get_workspace();
+            // Liegt das Fenster auf einem anderen Arbeitsbereich,
+            // wird dorthin gewechselt. Minimierte Fenster werden
+            // dabei wiederhergestellt.
+            const bereich = fenster.get_workspace();
 
-                Main.activateWindow(
-                    fenster,
-                    global.get_current_time(),
-                    bereich ? bereich.index() : undefined
-                );
+            Main.activateWindow(
+                fenster,
+                global.get_current_time(),
+                bereich ? bereich.index() : undefined
+            );
 
-                return true;
-            }
+            return true;
+
         } catch (e) {
             global.logError(e);
         }
 
         return false;
+    }
+
+    /*
+     * Das eigene, derzeit offene Einstellungsfenster oder null.
+     * ausser: ein Fenster, das dabei nicht in Frage kommt, etwa das
+     * gerade geschlossene.
+     */
+    _findeEinstellungsfenster(ausser) {
+        for (const actor of global.get_window_actors()) {
+            const fenster = actor.get_meta_window();
+
+            if (
+                fenster &&
+                fenster !== ausser &&
+                String(fenster.get_wm_class()).toLowerCase() ===
+                    EINSTELLUNGEN_FENSTERKLASSE &&
+                fenster.get_title() === this._einstellungsTitel
+            )
+                return fenster;
+        }
+
+        return null;
+    }
+
+    /*
+     * Kennzeichen einer geschriebenen Auswahl: alle Sensoren,
+     * Schnittstellen und Laufwerke, ohne die mitangezeigten Werte.
+     *
+     * Verglichen wird mit dem zuletzt in die Einstellungen
+     * geschriebenen Stand, also mit dem, was ein offenes
+     * Einstellungsfenster anzeigt. Ein Vergleich mit einer frischen
+     * Abfrage vor der Erkennung genuegt nicht: Laufwerke und
+     * Schnittstellen werden live gelesen, ein eingesteckter
+     * USB-Stick waere dann schon im Vorher enthalten.
+     *
+     * Eintraege "Nicht gefunden" zaehlen nicht mit; kehrt ein
+     * gewaehlter Sensor zurueck, aendert sich dadurch das Kennzeichen.
+     */
+    _auswahlKennzeichen(geschrieben) {
+        return Object.keys(geschrieben).sort().map(schluessel => {
+            const optionen = geschrieben[schluessel];
+
+            const werte = Object.keys(optionen)
+                .filter(text => !text.startsWith("Nicht "))
+                .map(text => optionen[text])
+                .sort();
+
+            return schluessel + ":" + werte.join(",");
+        }).join("|");
+    }
+
+    /*
+     * Schliesst das offene Einstellungsfenster und oeffnet es an
+     * derselben Bildschirmposition neu, damit es die gerade neu
+     * geschriebene Auswahl zeigt. Ein bereits geoeffnetes Fenster
+     * liest die Optionen sonst nicht erneut ein.
+     *
+     * Rueckgabe: true, wenn ein Fenster offen war.
+     */
+    _oeffneEinstellungenNeu() {
+        const altesFenster = this._findeEinstellungsfenster();
+
+        if (!altesFenster)
+            return false;
+
+        const rahmen = altesFenster.get_frame_rect();
+        const x = rahmen.x;
+        const y = rahmen.y;
+
+        let geoeffnet = false;
+
+        const oeffnen = () => {
+            if (geoeffnet)
+                return;
+
+            geoeffnet = true;
+
+            // Direkt die Cinnamon-Funktion, damit nicht das noch
+            // verschwindende alte Fenster nach vorne geholt wird.
+            super.configureApplet();
+            this._setzeFensterPosition(x, y, altesFenster);
+        };
+
+        // Erst oeffnen, wenn das alte Fenster geschlossen ist.
+        // Die Zeitgrenze sichert ab, falls das Signal ausbleibt.
+        const signal = altesFenster.connect("unmanaged", () => {
+            altesFenster.disconnect(signal);
+            oeffnen();
+        });
+
+        this._fensterZeitgeber = Mainloop.timeout_add(2000, () => {
+            this._fensterZeitgeber = null;
+            oeffnen();
+            return false;
+        });
+
+        altesFenster.delete(global.get_current_time());
+
+        return true;
+    }
+
+    /*
+     * Wartet bis zu fuenf Sekunden auf das neue Einstellungsfenster
+     * und setzt es an die Position des alten.
+     *
+     * Die Fensterverwaltung legt die Position erst beim Anzeigen fest
+     * und ueberschreibt dabei eine zu frueh gesetzte. Die Position wird
+     * deshalb so lange nachgesetzt, bis sie bei drei aufeinander
+     * folgenden Pruefungen stimmt.
+     */
+    _setzeFensterPosition(x, y, altesFenster) {
+        let versuche = 50;
+        let stabil = 0;
+
+        if (this._fensterZeitgeber)
+            Mainloop.source_remove(this._fensterZeitgeber);
+
+        this._fensterZeitgeber = Mainloop.timeout_add(100, () => {
+            const fenster = this._findeEinstellungsfenster(altesFenster);
+
+            if (fenster) {
+                const rahmen = fenster.get_frame_rect();
+
+                if (rahmen.x === x && rahmen.y === y) {
+                    if (++stabil >= 3) {
+                        this._fensterZeitgeber = null;
+                        return false;
+                    }
+                } else {
+                    stabil = 0;
+                    fenster.move_frame(true, x, y);
+                }
+            }
+
+            if (--versuche <= 0) {
+                this._fensterZeitgeber = null;
+                return false;
+            }
+
+            return true;
+        });
     }
 
     /*
@@ -478,12 +663,23 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._statusAnzeige.zeige("Hardware wird neu erkannt \u2026");
 
         try {
+            const kennzeichenVorher = this._geschriebeneAuswahl;
+
             // Die Sensorauswahl des Benutzers bleibt erhalten.
             const detector = new HardwareDetector(this._sensorAuswahl());
 
             this._detector = detector;
             this._measurement.setHardwareDetector(detector);
             this._aktualisiereSensorOptionen();
+
+            // Nur wenn Sensoren, Schnittstellen oder Laufwerke
+            // hinzugekommen oder weggefallen sind, wird ein offenes
+            // Einstellungsfenster neu geoeffnet.
+            const auswahlNeu =
+                this._geschriebeneAuswahl !== kennzeichenVorher;
+
+            const fensterNeu =
+                auswahlNeu && this._oeffneEinstellungenNeu();
 
             const verfuegbar = detector.getAvailability();
 
@@ -519,9 +715,15 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                     ? "\n\nBericht abgelegt \u2013 zu finden über die " +
                       "Einstellungen unter „Hardware-Berichte öffnen“"
                     : "") +
-                "\n\nNeu erkannte Sensoren erscheinen in der Auswahl, " +
-                "nachdem du das Einstellungsfenster geschlossen und " +
-                "wieder geöffnet hast.";
+                (auswahlNeu
+                    ? "\n\nNeue oder entfernte Sensoren, Schnittstellen " +
+                      "oder Laufwerke gefunden \u2013 die Auswahl wurde " +
+                      "aktualisiert" +
+                      (fensterNeu
+                          ? ". Das Einstellungsfenster wurde dafür neu geöffnet."
+                          : ".")
+                    : "\n\nDie Auswahl an Sensoren, Schnittstellen und " +
+                      "Laufwerken ist unverändert.");
 
             this._statusAnzeige.zeige(meldung);
             this._statusAnzeige.verbergeNach(10);
@@ -567,7 +769,8 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
             GLib.file_set_contents(
                 pfad,
-                detector.berichtText("aVincePulse Applet")
+                detector.berichtText("aVincePulse Applet") +
+                    this._measurement.berichtText()
             );
 
             return pfad;
@@ -662,6 +865,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this.settings.setValue(SENSOR_SCHLUESSEL[art], "auto");
             this["sensorwahl_" + art] = "auto";
         }
+
+        // Netzwerkschnittstelle und Laufwerk ebenfalls automatisch.
+        this.settings.setValue("netz-schnittstelle", "auto");
+        this.settings.setValue("laufwerk-free", "auto");
+        this.netzWahl = "auto";
+        this.laufwerkWahl = "auto";
+        this._uebernehmeQuellenAuswahl();
 
         this._detector.setzeAuswahl(this._sensorAuswahl());
         this._aktualisiereSensorOptionen();
@@ -1209,6 +1419,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     on_applet_removed_from_panel() {
+        if (this._fensterZeitgeber) {
+            Mainloop.source_remove(this._fensterZeitgeber);
+            this._fensterZeitgeber = null;
+        }
+
         if (this.settings) {
             this.settings.finalize();
             this.settings = null;

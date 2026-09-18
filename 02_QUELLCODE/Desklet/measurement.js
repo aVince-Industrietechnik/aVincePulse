@@ -14,7 +14,16 @@
  * Desklet getrennte Pakete mit eigener UUID; ein fest verdrahteter
  * Importpfad würde die beiden Kopien dieser Datei auseinanderlaufen
  * lassen. Der Pfad steht deshalb nur in desklet.js und applet.js.
+ *
+ * Netzwerkschnittstelle und Laufwerk fuer den freien Speicherplatz
+ * koennen vom Benutzer gewaehlt werden. Ohne Wahl, mit "auto" oder wenn
+ * die Wahl nicht vorhanden ist, gilt die Schnittstelle der
+ * Standardverbindung bzw. die Systempartition "/".
  */
+
+// Dateisystemtypen, die trotz eines Geraets unter /dev kein
+// sinnvolles Laufwerk fuer den freien Speicherplatz sind.
+const KEIN_LAUFWERK_TYPEN = ["squashfs"];
 
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
@@ -32,6 +41,33 @@ var MeasurementProvider = class MeasurementProvider {
 
         this._lastCpuTotal = null;
         this._lastCpuIdle = null;
+
+        // Auswahl des Benutzers; "auto" verhaelt sich wie bisher.
+        this._netzAuswahl = "auto";
+        this._laufwerkAuswahl = "auto";
+    }
+
+    /*
+     * Uebernimmt die gewaehlte Netzwerkschnittstelle (Name wie
+     * "wlp2s0") oder "auto". Wirkt ab der naechsten Messung.
+     */
+    setzeNetzwerkAuswahl(name) {
+        this._netzAuswahl =
+            typeof name === "string" && /^[A-Za-z0-9_.:@-]+$/.test(name) &&
+            name !== "." && name !== ".."
+                ? name
+                : "auto";
+    }
+
+    /*
+     * Uebernimmt das gewaehlte Laufwerk (Kennung wie "uuid:...")
+     * oder "auto". Wirkt ab der naechsten Messung.
+     */
+    setzeLaufwerkAuswahl(kennung) {
+        this._laufwerkAuswahl =
+            typeof kennung === "string" && kennung !== ""
+                ? kennung
+                : "auto";
     }
 
     readCpuLoad() {
@@ -168,7 +204,7 @@ var MeasurementProvider = class MeasurementProvider {
     }
 
     readNetworkSpeed() {
-        const iface = this._getDefaultInterface();
+        const iface = this._aktiveSchnittstelle();
 
         if (!iface)
             return { down: 0, up: 0 };
@@ -262,17 +298,23 @@ var MeasurementProvider = class MeasurementProvider {
     }
 
     /*
-     * Freier Speicherplatz der Systempartition.
+     * Freier Speicherplatz des gewaehlten Laufwerks, sonst der
+     * Systempartition.
      *
      * Die Abfrage erfolgt ueber GIO und damit ausschliesslich fuer das
-     * Dateisystem, in dem "/" liegt. Eingehaengte Netzlaufwerke,
-     * tmpfs und efivarfs werden dadurch nicht mit erfasst.
+     * Dateisystem, in dem der Pfad liegt. Netzlaufwerke werden bewusst
+     * nicht angeboten: Die Abfrage laeuft bei jedem Takt, und ein nicht
+     * erreichbares Netzlaufwerk koennte die Oberflaeche blockieren.
      *
      * Rueckgabe in Byte, oder null wenn der Wert nicht ermittelbar ist.
      */
     readStorageFree() {
+        return this._freierPlatz(this._laufwerk().pfad);
+    }
+
+    _freierPlatz(pfad) {
         try {
-            const file = Gio.File.new_for_path("/");
+            const file = Gio.File.new_for_path(pfad);
 
             const info = file.query_filesystem_info(
                 "filesystem::free",
@@ -346,23 +388,431 @@ var MeasurementProvider = class MeasurementProvider {
         }
     }
 
+    /*
+     * Schnittstelle der Standardverbindung ins Internet.
+     *
+     * Gelesen aus /proc/net/route statt ueber "ip route": Bisher wurde
+     * dafuer bei jedem Takt ein eigenes Programm gestartet. Gibt es
+     * mehrere Standardrouten, gilt die mit der kleinsten Metrik, wie
+     * bei "ip route".
+     */
     _getDefaultInterface() {
+        const text = this._readFile("/proc/net/route");
+
+        if (!text)
+            return null;
+
+        let beste = null;
+        let besteMetrik = Infinity;
+
+        for (const zeile of text.split("\n").slice(1)) {
+            const teile = zeile.trim().split(/\s+/);
+
+            if (teile.length < 8)
+                continue;
+
+            const ziel = teile[1];
+            const flags = parseInt(teile[3], 16);
+            const metrik = Number(teile[6]);
+            const maske = teile[7];
+
+            // Standardroute: Ziel und Maske 0, Route aktiv (RTF_UP).
+            if (ziel !== "00000000" || maske !== "00000000" || !(flags & 0x1))
+                continue;
+
+            if (metrik < besteMetrik) {
+                beste = teile[0];
+                besteMetrik = metrik;
+            }
+        }
+
+        return beste;
+    }
+
+    /*
+     * Gemessene Schnittstelle: die gewaehlte, sofern vorhanden,
+     * sonst die der Standardverbindung.
+     */
+    _aktiveSchnittstelle() {
+        if (
+            this._netzAuswahl !== "auto" &&
+            GLib.file_test(
+                "/sys/class/net/" + this._netzAuswahl,
+                GLib.FileTest.EXISTS
+            )
+        )
+            return this._netzAuswahl;
+
+        return this._getDefaultInterface();
+    }
+
+    /*
+     * Alle Netzwerkschnittstellen ausser der internen (lo), mit Art
+     * und Zustand. Virtuelle Schnittstellen werden mit aufgefuehrt,
+     * da darunter auch VPN-Verbindungen fallen.
+     */
+    _schnittstellen() {
+        const liste = [];
+
         try {
-            const result = GLib.spawn_command_line_sync(
-                "sh -c \"ip route show default | awk 'NR==1 {print $5}'\""
+            const verzeichnis = Gio.File.new_for_path("/sys/class/net");
+            const enumerator = verzeichnis.enumerate_children(
+                "standard::name",
+                Gio.FileQueryInfoFlags.NONE,
+                null
             );
 
-            if (!result[0])
-                return null;
+            let info;
 
-            const iface =
-                ByteArray.toString(result[1]).trim();
+            while ((info = enumerator.next_file(null)) !== null) {
+                const name = info.get_name();
 
-            return iface || null;
+                if (name === "lo")
+                    continue;
+
+                const basis = "/sys/class/net/" + name;
+
+                liste.push({
+                    name: name,
+                    art: this._schnittstellenArt(name, basis),
+                    verbunden: this._istVerbunden(basis)
+                });
+            }
+
+            enumerator.close(null);
 
         } catch (e) {
-            return null;
+            global.logError(e);
         }
+
+        return liste.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    _schnittstellenArt(name, basis) {
+        const vorhanden = pfad =>
+            GLib.file_test(basis + pfad, GLib.FileTest.EXISTS);
+
+        const uevent = this._readFile(basis + "/uevent") || "";
+
+        if (vorhanden("/wireless") || vorhanden("/phy80211"))
+            return "WLAN";
+
+        if (/DEVTYPE=wwan/.test(uevent) || name.startsWith("ww"))
+            return "Mobilfunk";
+
+        if (
+            this._readFile(basis + "/type") === "65534" ||
+            /DEVTYPE=wireguard/.test(uevent) ||
+            /^(tun|tap|wg|ppp|vpn)/.test(name)
+        )
+            return "VPN";
+
+        // Ohne zugehoeriges Geraet ist die Schnittstelle rein virtuell,
+        // etwa eine Bruecke fuer virtuelle Maschinen oder Docker.
+        if (!vorhanden("/device"))
+            return "virtuell";
+
+        return "LAN";
+    }
+
+    /*
+     * VPN-Schnittstellen melden als Zustand haeufig "unknown", auch
+     * wenn sie aktiv sind. Dann entscheiden die Flags UP und RUNNING.
+     */
+    _istVerbunden(basis) {
+        const zustand = this._readFile(basis + "/operstate");
+
+        if (zustand === "up")
+            return true;
+
+        if (zustand !== "unknown")
+            return false;
+
+        const flags = parseInt(this._readFile(basis + "/flags") || "0", 16);
+
+        return (flags & 0x41) === 0x41;
+    }
+
+    /*
+     * Angebot fuer das Auswahlfeld der Netzwerkschnittstelle in der
+     * Form { Anzeigetext: Name }, wie Cinnamon sie erwartet.
+     */
+    getNetzwerkOptionen(aktuelleWahl) {
+        const optionen = {};
+        const liste = this._schnittstellen();
+        const standard = this._getDefaultInterface();
+        const beschreibe = s => s.name + " – " + s.art;
+
+        const std = liste.find(s => s.name === standard);
+
+        optionen[
+            "Automatisch (" +
+            (std ? beschreibe(std) : "derzeit keine Verbindung") +
+            ")"
+        ] = "auto";
+
+        for (const s of liste) {
+            let text = beschreibe(s) + "  ·  " +
+                (s.verbunden ? "verbunden" : "getrennt");
+
+            while (text in optionen)
+                text += " ";
+
+            optionen[text] = s.name;
+        }
+
+        if (
+            aktuelleWahl &&
+            aktuelleWahl !== "auto" &&
+            !liste.some(s => s.name === aktuelleWahl)
+        )
+            optionen["Nicht gefunden: " + aktuelleWahl] = aktuelleWahl;
+
+        return optionen;
+    }
+
+    /*
+     * Alle lokal eingehaengten Laufwerke.
+     *
+     * Beruecksichtigt werden nur Dateisysteme auf einem Geraet unter
+     * /dev. Netzlaufwerke, tmpfs, proc und aehnliche fallen dadurch
+     * heraus, ebenso eingehaengte Programmpakete (squashfs auf
+     * /dev/loop).
+     *
+     * Kennung ist die UUID des Dateisystems. Ein USB-Stick wird so
+     * wiedererkannt, auch wenn er beim naechsten Mal an anderer
+     * Stelle eingehaengt wird. Ist mehrfach dasselbe Dateisystem
+     * eingehaengt, zaehlt der erste Einhaengeort.
+     */
+    _laufwerke() {
+        const text = this._readFile("/proc/self/mounts") || "";
+        const uuids = this._uuidsNachGeraet();
+        const liste = [];
+        const vorhanden = {};
+
+        for (const zeile of text.split("\n")) {
+            const teile = zeile.split(" ");
+
+            if (teile.length < 3)
+                continue;
+
+            const geraet = this._entschluessele(teile[0]);
+            const pfad = this._entschluessele(teile[1]);
+            const typ = teile[2];
+
+            if (
+                !geraet.startsWith("/dev/") ||
+                geraet.startsWith("/dev/loop") ||
+                KEIN_LAUFWERK_TYPEN.includes(typ)
+            )
+                continue;
+
+            const kern = this._kernelName(geraet);
+            const kennung = uuids[kern]
+                ? "uuid:" + uuids[kern]
+                : "dev:" + kern;
+
+            if (vorhanden[kennung])
+                continue;
+
+            vorhanden[kennung] = true;
+
+            liste.push({
+                kennung: kennung,
+                pfad: pfad,
+                geraet: GLib.path_get_basename(geraet),
+                typ: typ
+            });
+        }
+
+        return liste;
+    }
+
+    /*
+     * Gemessenes Laufwerk: das gewaehlte, sofern eingehaengt,
+     * sonst die Systempartition.
+     */
+    _laufwerk() {
+        if (this._laufwerkAuswahl !== "auto") {
+            const gewaehlt = this._laufwerke()
+                .find(l => l.kennung === this._laufwerkAuswahl);
+
+            if (gewaehlt)
+                return gewaehlt;
+        }
+
+        return { kennung: "auto", pfad: "/" };
+    }
+
+    getLaufwerkOptionen(aktuelleWahl) {
+        const optionen = {};
+        const liste = this._laufwerke();
+        const beschreibe = l =>
+            l.pfad + " – " + l.geraet + "  ·  " + l.typ +
+            "  ·  " + this._platzText(l.pfad);
+
+        const system = liste.find(l => l.pfad === "/");
+
+        optionen[
+            "Automatisch (" +
+            (system ? "/ – " + system.geraet + ", " +
+                this._platzText("/") : "/") +
+            ")"
+        ] = "auto";
+
+        for (const l of liste) {
+            let text = beschreibe(l);
+
+            while (text in optionen)
+                text += " ";
+
+            optionen[text] = l.kennung;
+        }
+
+        if (
+            aktuelleWahl &&
+            aktuelleWahl !== "auto" &&
+            !liste.some(l => l.kennung === aktuelleWahl)
+        )
+            optionen["Nicht eingehängt: " + aktuelleWahl] = aktuelleWahl;
+
+        return optionen;
+    }
+
+    _platzText(pfad) {
+        const groesse = this.formatSize(this._freierPlatz(pfad));
+
+        return groesse.value.replace(".", ",") + " " + groesse.unit + " frei";
+    }
+
+    // Kernelname eines Geraets, etwa "dm-0" fuer /dev/mapper/...
+    _kernelName(geraet) {
+        try {
+            return GLib.path_get_basename(GLib.file_read_link(geraet));
+        } catch (e) {
+            return GLib.path_get_basename(geraet);
+        }
+    }
+
+    // Zuordnung Kernelname -> Dateisystem-UUID.
+    _uuidsNachGeraet() {
+        const zuordnung = {};
+
+        try {
+            const verzeichnis = Gio.File.new_for_path("/dev/disk/by-uuid");
+            const enumerator = verzeichnis.enumerate_children(
+                "standard::name",
+                Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
+                null
+            );
+
+            let info;
+
+            while ((info = enumerator.next_file(null)) !== null) {
+                const uuid = info.get_name();
+
+                try {
+                    const ziel = GLib.file_read_link(
+                        "/dev/disk/by-uuid/" + uuid
+                    );
+
+                    zuordnung[GLib.path_get_basename(ziel)] = uuid;
+                } catch (e) {
+                    // Eintrag ohne lesbares Ziel: uebergehen.
+                }
+            }
+
+            enumerator.close(null);
+
+        } catch (e) {
+            // Ohne by-uuid wird das Geraet selbst als Kennung verwendet.
+        }
+
+        return zuordnung;
+    }
+
+    // /proc/self/mounts schreibt Leerzeichen und aehnliches oktal (\040).
+    _entschluessele(text) {
+        return text.replace(
+            /\\([0-7]{3})/g,
+            (treffer, oktal) => String.fromCharCode(parseInt(oktal, 8))
+        );
+    }
+
+    /*
+     * Berichtsteil ueber Netzwerkschnittstellen und Laufwerke,
+     * angehaengt an den Hardwarebericht.
+     */
+    berichtText() {
+        const zeilen = [];
+        const aktiv = this._aktiveSchnittstelle();
+        const herkunft = (auswahl, gefunden) =>
+            auswahl === "auto"
+                ? "automatisch"
+                : gefunden
+                    ? "manuell gewaehlt"
+                    : "automatisch - gewaehlt war " + auswahl + ", nicht vorhanden";
+
+        zeilen.push("");
+        zeilen.push("Netzwerkschnittstellen");
+        zeilen.push("----------------------");
+        zeilen.push(
+            "Gemessen: " + (aktiv || "keine") + "  (" +
+            herkunft(this._netzAuswahl, aktiv === this._netzAuswahl) + ")"
+        );
+        zeilen.push("");
+
+        const netz = (name, art, zustand, genutzt) =>
+            name.padEnd(16) + art.padEnd(12) + zustand.padEnd(12) + genutzt;
+
+        zeilen.push(netz("Name", "Art", "Zustand", "Verwendet"));
+        zeilen.push(netz("----", "---", "-------", "---------"));
+
+        for (const s of this._schnittstellen()) {
+            zeilen.push(netz(
+                s.name,
+                s.art,
+                s.verbunden ? "verbunden" : "getrennt",
+                s.name === aktiv ? "DOWN/UP" : "-"
+            ));
+        }
+
+        const laufwerk = this._laufwerk();
+
+        zeilen.push("");
+        zeilen.push("Laufwerke (lokal eingehaengt)");
+        zeilen.push("-----------------------------");
+        zeilen.push(
+            "Gemessen: " + laufwerk.pfad + "  (" +
+            herkunft(this._laufwerkAuswahl, laufwerk.kennung === this._laufwerkAuswahl) +
+            ")"
+        );
+        zeilen.push("");
+
+        const lw = (pfad, geraet, typ, frei, genutzt, kennung) =>
+            pfad.padEnd(20) + geraet.padEnd(14) + typ.padEnd(8) +
+            frei.padStart(14) + "   " + genutzt.padEnd(11) + kennung;
+
+        zeilen.push(lw("Einhaengeort", "Geraet", "Typ", "Frei", "Verwendet", "Kennung"));
+        zeilen.push(lw("------------", "------", "---", "----", "---------", "-------"));
+
+        for (const l of this._laufwerke()) {
+            zeilen.push(lw(
+                l.pfad,
+                l.geraet,
+                l.typ,
+                this._platzText(l.pfad).replace(" frei", ""),
+                l.pfad === laufwerk.pfad ? "FREE" : "-",
+                l.kennung
+            ));
+        }
+
+        zeilen.push("");
+        zeilen.push("Netzlaufwerke werden bewusst nicht angeboten: Die Abfrage");
+        zeilen.push("laeuft bei jedem Takt, ein nicht erreichbares Netzlaufwerk");
+        zeilen.push("koennte die Oberflaeche blockieren.");
+
+        return zeilen.join("\n") + "\n";
     }
 };
 

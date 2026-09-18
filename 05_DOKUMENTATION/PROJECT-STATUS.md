@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 18.09.2026 (AP15)  
+Stand: 18.09.2026 (AP16)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP15-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP14-END`
+Aktueller Referenzstand: `0.1.0-dev_AP16-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP15-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -82,6 +82,7 @@ Tags:
 - `0.1.0-dev_AP13-END` – Entwicklungsstand nach Abschluss von AP13
 - `0.1.0-dev_AP14-END` – Entwicklungsstand nach Abschluss von AP14
 - `0.1.0-dev_AP15-END` – Entwicklungsstand nach Abschluss von AP15
+- `0.1.0-dev_AP16-END` – Entwicklungsstand nach Abschluss von AP16
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -645,7 +646,7 @@ Die angebotenen Sensoren sind von Gerät zu Gerät verschieden und können desha
 - für die beiden Temperaturen werden bewusst alle Temperatursensoren angeboten, damit die Wahl wirklich frei ist
 - Sensoren ohne Bezeichnung werden durchnummeriert; melden mehrere Geräte denselben Chip, wird das Gerät angehängt
 
-Ein bereits geöffnetes Einstellungsfenster zeigt neu gesetzte Optionen erst nach Schließen und erneutem Öffnen. Die Rückmeldung nach „Hardware neu erkennen“ und ein Hinweistext in den Einstellungen weisen darauf hin.
+Ein bereits geöffnetes Einstellungsfenster zeigt neu gesetzte Optionen erst nach Schließen und erneutem Öffnen. (Seit AP16 übernimmt aVincePulse das selbst, siehe dort.)
 
 #### Verhalten
 
@@ -713,6 +714,55 @@ Nicht beeinflussbar: Werden die Einstellungen über Systemeinstellungen → Desk
 - `msBisZumNaechstenTakt()` mit Beispielzeiten durchgerechnet: zwei zu verschiedenen Zeiten gestartete Komponenten treffen dieselbe Marke; kein Doppeltakt bei vorzeitigem Auslösen; ungültiges Intervall fällt auf 3 Sekunden zurück
 - Einstellungsfenster in Cinnamon selbst geprüft: über `org.Cinnamon.Eval` „Konfigurieren …“ ausgelöst und die offenen Fenster gezählt
 - Funktionstest durch den Nutzer: Gleichlauf bei 3 und 5 Sekunden, Gegenprobe mit unterschiedlichen Intervallen, Gleichlauf nach mehr als 30 Minuten; Einstellungsfenster einschließlich minimiert, anderer Arbeitsbereich und Unterscheidung Applet/Desklet
+
+### AP16 – Netzwerkschnittstelle und Laufwerk wählbar
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Desklet/measurement.js` und `02_QUELLCODE/Applet/measurement.js`
+- `desklet.js`, `applet.js`, beide `settings-schema.json`
+
+Pflichtumfang für 1.0 laut Roadmap. Für DOWN/UP und für FREE ⛁ ist wählbar, was gemessen wird. Vorgabe ist „Automatisch“: die Schnittstelle der Standardverbindung bzw. die Systempartition `/`.
+
+#### Auswahlfelder
+
+Neuer Abschnitt „Netzwerk und Speicherplatz“ unter „Sensoren“ mit den Einstellungen `netz-schnittstelle` und `laufwerk-free`. Gefüllt werden sie wie in AP14 über `setOptions()`, beim Laden und nach „Hardware neu erkennen“.
+
+- **Netzwerk:** alle Schnittstellen außer `lo`, mit Art (LAN, WLAN, Mobilfunk, VPN, virtuell) und Zustand (verbunden/getrennt). Virtuelle Schnittstellen werden auf Wunsch des Nutzers gekennzeichnet angeboten, da darunter auch VPN-Verbindungen fallen. VPN-Schnittstellen melden als Zustand häufig `unknown`; dann entscheiden die Flags UP und RUNNING. Gespeichert wird der Name; Namen werden vor der Verwendung in einem Pfad geprüft.
+- **Laufwerke:** alle Dateisysteme aus `/proc/self/mounts` auf einem Gerät unter `/dev`, ohne `/dev/loop` und `squashfs`. Gespeichert wird die Dateisystem-UUID (`uuid:…`), damit ein USB-Stick auch an anderem Einhängeort wiedererkannt wird; ohne UUID der Kernel-Gerätename (`dev:…`). Oktal geschriebene Zeichen im Einhängeort (`\040`) werden entschlüsselt.
+- **Netzlaufwerke werden bewusst nicht angeboten** (Entscheidung vom 18.09.2026): Der freie Platz wird bei jedem Takt abgefragt; ein nicht erreichbares Netzlaufwerk könnte die Oberfläche blockieren, und ein bei Bedarf eingehängtes NAS würde ständig wach gehalten.
+
+Fehlt die gewählte Schnittstelle oder ist das gewählte Laufwerk nicht eingehängt, gilt „Automatisch“. Die Wahl bleibt gespeichert und greift wieder, sobald Schnittstelle bzw. Laufwerk zurück ist; mit einem USB-Stick geprüft. „Zurücksetzen“ stellt beide Felder auf „Automatisch“.
+
+#### Aktive Schnittstelle ohne Programmstart
+
+Die Standardschnittstelle wurde bisher bei jedem Takt über `ip route` ermittelt, also alle drei Sekunden mit einem eigenen Programmstart. Sie wird nun aus `/proc/net/route` gelesen: Standardroute mit Ziel und Maske 0 und gesetztem RTF_UP; bei mehreren die mit der kleinsten Metrik, wie bei `ip route`. Ergebnis auf dem Referenzgerät identisch.
+
+#### Hardwarebericht
+
+`MeasurementProvider.berichtText()` wird an den Bericht der Hardwareerkennung angehängt: Tabellen der Netzwerkschnittstellen und der lokal eingehängten Laufwerke, jeweils mit „Verwendet“ und der Herkunft der Auswahl.
+
+#### Einstellungsfenster automatisch neu öffnen
+
+Auf Vorschlag des Nutzers: Ein geöffnetes Einstellungsfenster liest neu gesetzte Optionen nicht erneut ein. Bisher musste der Nutzer es nach „Hardware neu erkennen“ selbst schließen und wieder öffnen.
+
+Nun gilt: Sind nach der Erkennung Sensoren, Schnittstellen oder Laufwerke hinzugekommen oder weggefallen, schließt die Komponente ihr offenes Einstellungsfenster und öffnet es an derselben Bildschirmposition neu. Ohne Änderung bleibt es offen. Die Meldung nach der Erkennung sagt, ob die Auswahl aktualisiert wurde. Das Fenster der anderen Komponente bleibt unberührt. Das neue Fenster beginnt wieder oben; die Scrollposition lässt sich nicht übernehmen (vom Nutzer akzeptiert).
+
+Umsetzung und Fallstricke, beide erst im Test des Nutzers aufgefallen:
+
+- **Änderungserkennung:** Verglichen wird das Kennzeichen der zuletzt geschriebenen Optionen (`_geschriebeneAuswahl`, gesetzt in `_aktualisiereSensorOptionen()`) mit dem neu geschriebenen. Der erste Ansatz fragte die Auswahl unmittelbar vor und nach der Erkennung ab. Laufwerke und Schnittstellen werden aber live gelesen; ein frisch eingesteckter USB-Stick war dadurch schon im Vorher enthalten und die Änderung wurde nie erkannt. Mitangezeigte Werte wie Temperatur oder freier Platz zählen nicht mit, ebenso wenig Einträge „Nicht gefunden“.
+- **Position:** Das alte Fenster wird mit `Meta.Window.delete()` geschlossen; das neue wird erst nach dessen Signal `unmanaged` geöffnet (Sicherung nach 2 Sekunden), und zwar direkt über die Cinnamon-Funktion, damit nicht das verschwindende alte Fenster nach vorne geholt wird. Die Fensterverwaltung legt die Position erst beim Anzeigen fest und überschreibt eine zu früh gesetzte. Die Position wird deshalb alle 100 ms nachgesetzt, bis sie bei drei aufeinanderfolgenden Prüfungen stimmt, höchstens fünf Sekunden lang.
+
+Lehre für künftige Tests: Abläufe über denselben Weg auslösen, den der Nutzer geht, also über die echte Hardwareänderung und die Schaltfläche, nicht über den direkten Aufruf der inneren Funktion.
+
+#### Prüfung
+
+- Syntaxprüfung mit `cjs`, Prüfsummen der vier gemeinsamen Module
+- `measurement.js` mit `cjs` außerhalb von Cinnamon: Optionen, Wahl, nicht vorhandene Schnittstelle, nicht eingehängtes Laufwerk, abgewiesener Pfad `../../etc`, Bericht; Standardschnittstelle identisch mit `ip route`
+- Neu-Öffnen in Cinnamon über `org.Cinnamon.Eval`: gleiche Position, Fenster der anderen Komponente unberührt, kein Neu-Öffnen ohne Änderung
+- Funktionstest durch den Nutzer in Applet und Desklet, einschließlich USB-Stick einstecken und abziehen
 
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
@@ -906,7 +956,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_12-26-36` (AP14).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_13-15-13` (AP15).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -971,13 +1021,13 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP15 sind abgeschlossen.
+AP01 bis AP16 sind abgeschlossen.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**Als AP16 vorgesehen:** Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar (VERBINDLICH 1.0). Vorgabe jeweils „Automatisch“, also die bisherige Standardschnittstelle bzw. die Systempartition `/`. Technisch dasselbe Muster wie die Sensorauswahl aus AP14. Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
+**Als AP17 vorgesehen:** Warnschwellen mit Farbwechsel (OPTIONAL 1.0, Roadmap Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
 
-Danach laut Roadmap: Warnschwellen mit Farbwechsel, Übersetzung Deutsch/Englisch.
+Danach laut Roadmap: Übersetzung Deutsch/Englisch.
 
 Weitere bekannte offene Punkte:
 
@@ -990,13 +1040,13 @@ Weitere bekannte offene Punkte:
 - Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen.
 - Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP16:
+Vor Beginn von AP17:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP16 schriftlich festlegen
+5. Ziel und Akzeptanzkriterien für AP17 schriftlich festlegen
 6. erst danach Code ändern
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
@@ -1030,13 +1080,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP15:
+Erwarteter Ausgangspunkt nach AP16:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP15-END`
-- AP15 abgeschlossen
-- AP16 vorgesehen (Netzwerkschnittstelle und Laufwerk wählbar), Akzeptanzkriterien noch schriftlich zu vereinbaren
+- Referenz-Tag: `0.1.0-dev_AP16-END`
+- AP16 abgeschlossen
+- AP17 vorgesehen (Warnschwellen mit Farbwechsel), Akzeptanzkriterien noch schriftlich zu vereinbaren
 
 ---
 
