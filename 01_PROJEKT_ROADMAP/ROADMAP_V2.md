@@ -1603,3 +1603,91 @@ OPTIONALE 1.0-Funktionen dürfen auf eine spätere Version verschoben werden, oh
 
 Status:
 PRIORITÄTEN UND RELEASE-ABGRENZUNG 1.0 – FESTGELEGT
+
+## 24. Erweiterungen – Festlegung vom 18.09.2026
+
+Nach Abschluss von AP13 wurden folgende Funktionen zusätzlich in die Planung aufgenommen. Die Einordnung in die Prioritätsstufen aus Abschnitt 23 wurde am 18.09.2026 bestätigt.
+
+Grundsatz für alle Punkte: Jede Funktion ist abschaltbar oder wahlweise, sinnvoll voreingestellt und in Applet und Desklet unabhängig konfigurierbar, soweit sie beide Komponenten betrifft.
+
+### Warnschwellen mit Farbwechsel
+
+Ein Messwert wechselt die Farbe, sobald er eine Schwelle überschreitet bzw. unterschreitet, zum Beispiel:
+
+- CPU- oder Speicher-Temperatur zu hoch
+- freier Speicherplatz zu gering
+- Akku-Ladezustand zu gering
+
+Zwei Stufen (Warnung, kritisch), Schwellen einstellbar. Farben müssen auf hellem und dunklem Hintergrund lesbar bleiben.
+
+Vorschlag: OPTIONAL 1.0
+
+### Bis zu drei Werte im Panel
+
+Wahlweise bis zu drei Messwerte direkt neben dem Logo im Panel, zum Beispiel `52° 12%`. Auswahl und Reihenfolge durch den Benutzer, Warnfarben gelten auch hier.
+
+Vorschlag: OPTIONAL 1.0
+
+### Tastenkürzel für die Hover-Anzeige
+
+Die große Hover-Anzeige lässt sich über ein frei wählbares Tastenkürzel ein- und ausblenden, ohne Maus. Cinnamon stellt dafür den Einstellungstyp `keybinding` bereit.
+
+Vorschlag: OPTIONAL 1.0
+
+### Benachrichtigung bei kritischen Werten
+
+Wahlweise eine Systembenachrichtigung bei kritischen Werten, etwa Überhitzung oder fast leerem Akku. Einstellbar, ob sie immer erscheint oder nur, wenn weder Desklet noch Hover-Anzeige sichtbar sind. Wiederholungen werden begrenzt, damit eine anhaltende Überschreitung nicht zu einer Flut von Meldungen führt.
+
+Vorschlag: OPTIONAL 1.0
+
+### Zeitgesteuerter Speedtest
+
+Wahlweise Speedtest nach Zeitplan, zum Beispiel täglich um 3 Uhr. Standard: aus. Ergebnisse landen wie bisher in den Speedtest-Berichten und ergeben so einen Verlauf. Ergänzt die in Abschnitt 20 vorgesehene Option.
+
+Vorschlag: OPTIONAL 1.0 (Speedtest-Erweiterungen)
+
+### Systemüberwachung per Klick
+
+Ein Klick auf eine Zeile der Anzeige öffnet die Systemüberwachung des Systems, sofern installiert. Beim Desklet ist dabei zu beachten, dass ein Klick beim Verschieben nicht versehentlich auslöst (vgl. AP11).
+
+Vorschlag: OPTIONAL 1.0
+
+### Zusatzwerte
+
+- Systemlaufzeit
+- CPU-Takt
+- WLAN-Signalstärke, nur bei aktiver WLAN-Verbindung
+
+Vorschlag: OPTIONAL 1.0. Der CPU-Takt war in Abschnitt 23 unter SPÄTERE VERSION geführt und wird damit vorgezogen.
+
+### Verlaufsgrafik
+
+Kleine Verlaufskurve je Messwert, etwa über die letzten Minuten.
+
+Vorschlag: bleibt SPÄTERE VERSION wie in Abschnitt 23 („Diagramme und historische Messwertgrafiken“), da der Aufwand groß ist und die Fertigstellung von 1.0 nicht verzögern soll.
+
+### Vorgesehene Reihenfolge
+
+Festgelegt am 18.09.2026:
+
+1. AP14 – Sensorauswahl
+2. kleines Paket: Messtakt an der Systemuhr ausrichten, Einstellungsfenster nur einmal öffnen
+3. Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar (VERBINDLICH 1.0)
+4. Warnschwellen mit Farbwechsel
+5. Übersetzung Deutsch/Englisch
+
+Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
+
+### Kostenmodell
+
+Am 18.09.2026 bestätigt: aVincePulse bleibt vollständig kostenlos, ohne Bezahlversion und ohne gesperrte Funktionen. Vorgesehen ist ein dezenter, einmalig sichtbarer Unterstützen-Hinweis in den Einstellungen und im README (vgl. Abschnitt 10).
+
+Gründe gegen eine Bezahlversion:
+
+- lesbarer JavaScript-Quellcode, eine Freischaltung wäre ohne Aufwand zu umgehen
+- Cinnamon Spices ist auf freie Software ausgelegt; die zum Veröffentlichungszeitpunkt geltenden Regeln sind zu prüfen
+- unter der geprüften Lizenz GPL-3.0 dürfte eine freigeschaltete Fassung weitergegeben werden
+- Aufwand für Lizenzprüfung, zwei Fassungen und Bezahlabwicklung steht in keinem Verhältnis
+
+Status:
+ERWEITERUNGEN UND KOSTENMODELL – FESTGELEGT
