@@ -45,10 +45,18 @@ const SENSOR_SCHLUESSEL = {
     fan: "sensor-fan"
 };
 
+// Fensterklasse des Cinnamon-Einstellungsfensters fuer Applets und Desklets.
+// Cinnamon meldet sie ueber get_wm_class() als "Xlet-settings.py" mit
+// grossem X; verglichen wird deshalb ohne Ruecksicht auf die Schreibweise.
+const EINSTELLUNGEN_FENSTERKLASSE = "xlet-settings.py";
+
 
 class AVinceHWMonitor extends Desklet.Desklet {
     constructor(metadata, desklet_id) {
         super(metadata, desklet_id);
+
+        // Titel des eigenen Einstellungsfensters, siehe configureDesklet().
+        this._einstellungsTitel = metadata.name;
 
         this.actor.add_style_class_name("avince-hwmonitor");
 
@@ -97,7 +105,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
             Settings.BindingDirection.IN,
             "refresh-interval",
             "refreshInterval",
-            null
+            this._onRefreshIntervalChanged.bind(this)
         );
 
         this.settings.bindProperty(
@@ -535,10 +543,32 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         const seconds = Math.max(1, Number(this.refreshInterval) || 3);
 
-        this._timeout = Mainloop.timeout_add_seconds(seconds, () => {
-            this._update();
-            return false;
-        });
+        // Der naechste Takt liegt auf einer vollen Taktmarke der
+        // Systemuhr, damit Applet und Desklet im selben Moment messen.
+        this._timeout = Mainloop.timeout_add(
+            Measurement.msBisZumNaechstenTakt(seconds),
+            () => {
+                this._timeout = null;
+                this._update();
+                return false;
+            }
+        );
+    }
+
+    /*
+     * Setzt den Zeitgeber nach einer Aenderung des Intervalls
+     * sofort neu, damit die Aenderung ohne Wartezeit wirkt.
+     */
+    _onRefreshIntervalChanged() {
+        if (!this._container)
+            return;
+
+        if (this._timeout) {
+            Mainloop.source_remove(this._timeout);
+            this._timeout = null;
+        }
+
+        this._update();
     }
 
     /*
@@ -611,6 +641,60 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         this._detector.setzeAuswahl(this._sensorAuswahl());
         this._baueZeilenNeu();
+    }
+
+    /*
+     * Oeffnet die Einstellungen. Ist das Einstellungsfenster bereits
+     * offen, wird es nach vorne geholt, statt ein weiteres zu starten.
+     *
+     * Cinnamon startet bei jedem Aufruf von "Konfigurieren ..." ein
+     * neues Fenster. Erkannt wird das eigene Fenster an der
+     * Fensterklasse von xlet-settings und am Titel, den xlet-settings
+     * aus dem Namen in metadata.json bildet. Der Titel unterscheidet
+     * das Fenster des Applets von dem des Desklets.
+     *
+     * Oeffnet der Benutzer die Einstellungen ueber die Systemeinstellungen,
+     * startet Cinnamon das Fenster selbst; dieser Weg laesst sich von
+     * hier aus nicht beeinflussen.
+     */
+    configureDesklet(tab = 0) {
+        if (this._holeEinstellungsfensterNachVorne())
+            return;
+
+        super.configureDesklet(tab);
+    }
+
+    _holeEinstellungsfensterNachVorne() {
+        try {
+            for (const actor of global.get_window_actors()) {
+                const fenster = actor.get_meta_window();
+
+                if (
+                    !fenster ||
+                    String(fenster.get_wm_class()).toLowerCase() !==
+                        EINSTELLUNGEN_FENSTERKLASSE ||
+                    fenster.get_title() !== this._einstellungsTitel
+                )
+                    continue;
+
+                // Liegt das Fenster auf einem anderen Arbeitsbereich,
+                // wird dorthin gewechselt. Minimierte Fenster werden
+                // dabei wiederhergestellt.
+                const bereich = fenster.get_workspace();
+
+                Main.activateWindow(
+                    fenster,
+                    global.get_current_time(),
+                    bereich ? bereich.index() : undefined
+                );
+
+                return true;
+            }
+        } catch (e) {
+            global.logError(e);
+        }
+
+        return false;
     }
 
     /*

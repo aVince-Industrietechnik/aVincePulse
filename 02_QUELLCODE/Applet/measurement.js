@@ -365,3 +365,43 @@ var MeasurementProvider = class MeasurementProvider {
         }
     }
 };
+
+/*
+ * Mindestabstand zur naechsten Taktmarke in Millisekunden.
+ *
+ * Ein Zeitgeber kann einige Millisekunden vor der Marke ausloesen.
+ * Laege die naechste Marke dann nur wenige Millisekunden entfernt,
+ * folgte sofort ein zweiter Takt. Unterhalb dieses Abstands gilt
+ * deshalb die uebernaechste Marke.
+ */
+var TAKT_MINDESTABSTAND_MS = 200;
+
+/*
+ * Millisekunden bis zur naechsten Taktmarke auf der Systemuhr.
+ *
+ * Taktmarken sind die vollen Vielfachen des Intervalls, bei 3 Sekunden
+ * also :00, :03, :06 und so weiter. Applet und Desklet richten sich
+ * dadurch nach derselben Uhr und messen bei gleichem Intervall im
+ * selben Moment, ohne voneinander zu wissen. Bisher lief jeder Takt
+ * ab dem eigenen Startzeitpunkt, beide lagen bis zu ein Intervall
+ * auseinander.
+ *
+ * Die Marke wird bei jedem Takt neu berechnet. Verzoegerungen des
+ * Zeitgebers summieren sich dadurch nicht auf.
+ *
+ * jetztMs ist nur fuer Tests vorgesehen.
+ */
+function msBisZumNaechstenTakt(intervallSekunden, jetztMs) {
+    const intervall =
+        Math.max(1, Math.round(Number(intervallSekunden) || 3)) * 1000;
+
+    const jetzt =
+        jetztMs === undefined ? Date.now() : jetztMs;
+
+    let rest = intervall - (jetzt % intervall);
+
+    if (rest < TAKT_MINDESTABSTAND_MS)
+        rest += intervall;
+
+    return rest;
+}

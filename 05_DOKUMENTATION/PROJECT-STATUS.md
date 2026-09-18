@@ -1,11 +1,11 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 18.09.2026 (AP14)  
+Stand: 18.09.2026 (AP15)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP14-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP13-END`
+Aktueller Referenzstand: `0.1.0-dev_AP15-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP14-END`
 
 ## 1. Zweck dieses Dokuments
 
@@ -81,6 +81,7 @@ Tags:
 - `0.1.0-dev_AP12-END` – Entwicklungsstand nach Abschluss von AP12
 - `0.1.0-dev_AP13-END` – Entwicklungsstand nach Abschluss von AP13
 - `0.1.0-dev_AP14-END` – Entwicklungsstand nach Abschluss von AP14
+- `0.1.0-dev_AP15-END` – Entwicklungsstand nach Abschluss von AP15
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -342,7 +343,7 @@ Dass beide Komponenten bei gleichzeitigem Betrieb dieselben Sensoren lesen, ist 
 
 #### Hover-Anzeige
 
-- Aktualisierungsintervall auf 3 Sekunden gesetzt, entspricht dem Standard des Desklets. Vollständige Synchronität ist nicht erreichbar, da beide Komponenten eigenständig messen und ihre Zeitgeber versetzt laufen.
+- Aktualisierungsintervall auf 3 Sekunden gesetzt, entspricht dem Standard des Desklets. Vollständige Synchronität ist nicht erreichbar, da beide Komponenten eigenständig messen und ihre Zeitgeber versetzt laufen. (Seit AP15 überholt: Beide richten ihren Takt an der Systemuhr aus und messen bei gleichem Intervall im selben Moment.)
 - Schriftgröße und Spaltenbreiten werden aus Bildschirmhöhe und Zeilenzahl berechnet, statt fest bei 48 px zu liegen. Die Anzeige belegt dadurch etwa 70 Prozent der Bildschirmhöhe, unabhängig von Auflösung und Messwertanzahl. Neu berechnet wird bei jedem Öffnen, womit Monitor- und Auflösungswechsel berücksichtigt sind.
 - Die Beschriftung `SPEED ↓` wurde zuvor abgeschnitten; die Spaltenbreiten skalieren nun mit der Schriftgröße.
 - Hinter der Anzeige liegt eine abgedunkelte Fläche mit abgerundeten Ecken. Die Schrift bleibt dadurch auf jedem Bildschirminhalt lesbar, ohne Schrift- und Schattenfarbe je nach Hintergrund umzuschalten.
@@ -668,6 +669,51 @@ Ein Bericht ist eine Momentaufnahme und wird nachträglich nicht geändert. Eine
 - Test der Erkennung mit `cjs` außerhalb von Cinnamon: Optionen aller drei Arten, Wahl von Hand, nicht vorhandener Sensor, fehlerhafte Auswahl, Auswahl im Konstruktor
 - Funktionstest in Applet und Desklet durch den Nutzer, einschließlich zweier Neustarts mit von Hand gewähltem CPU-Sensor
 
+### AP15 – Messtakt an der Systemuhr und Einstellungsfenster nur einmal
+
+Abgeschlossen.
+
+Dateien:
+
+- `02_QUELLCODE/Desklet/measurement.js` und `02_QUELLCODE/Applet/measurement.js`
+- `desklet.js`, `applet.js`, beide `settings-schema.json`
+
+#### Messtakt
+
+Bisher setzte jede Komponente ihren Zeitgeber auf „Intervall ab jetzt“. Da Applet und Desklet zu verschiedenen Zeitpunkten starten, lagen ihre Takte bis zu ein Intervall auseinander; die Anzeigen wechselten sichtbar versetzt, und die CPU-Auslastung wich ab, weil beide über verschiedene Zeitfenster rechneten.
+
+`msBisZumNaechstenTakt()` in `measurement.js` berechnet die Zeit bis zur nächsten vollen Taktmarke der Systemuhr, also bei 3 Sekunden bis :00, :03, :06 und so weiter. Beide Komponenten setzen ihren Zeitgeber mit `Mainloop.timeout_add()` auf diese Marke und berechnen sie nach jedem Takt neu.
+
+- Beide richten sich nach derselben Uhr und messen bei gleichem Intervall im selben Moment, ohne voneinander zu wissen. Der Grundsatz EIGENSTÄNDIG bleibt gewahrt.
+- Da die Marke bei jedem Takt neu berechnet wird, summieren sich Verzögerungen nicht auf.
+- Liegt die nächste Marke weniger als `TAKT_MINDESTABSTAND_MS` (200 ms) entfernt, gilt die übernächste. Ein Zeitgeber, der einige Millisekunden vor der Marke auslöst, erzeugt dadurch keinen Doppeltakt.
+- Bei unterschiedlichen Intervallen treffen sich beide nur auf gemeinsamen Vielfachen. Ein Hinweis beim Aktualisierungsintervall in beiden Einstellungsfenstern weist darauf hin.
+- Direkt nach einer sofortigen Aktualisierung, etwa nach Änderung der Messwertliste, kann die CPU-Auslastung für einen Takt leicht abweichen, da diese Messung ein kürzeres Zeitfenster erfasst.
+
+Das Desklet übernimmt ein geändertes Intervall nun ebenfalls sofort (`_onRefreshIntervalChanged()`); bisher wirkte es dort erst nach dem nächsten Takt.
+
+#### Einstellungsfenster nur einmal
+
+Der Cinnamon-Menüeintrag „Konfigurieren …“ startet bei jedem Aufruf ein weiteres Einstellungsfenster. Beide Komponenten überschreiben deshalb `configureDesklet()` bzw. `configureApplet()`: Ist das eigene Einstellungsfenster bereits offen, wird es über `Main.activateWindow()` nach vorne geholt, bei Bedarf auf seinem Arbeitsbereich und aus dem minimierten Zustand. Sonst öffnet Cinnamon wie bisher ein neues.
+
+Erkannt wird das Fenster an zwei Merkmalen:
+
+- Fensterklasse `xlet-settings.py`
+- Titel gleich dem Namen aus `metadata.json` („aVincePulse Applet“ bzw. „aVincePulse Desklet“); dadurch werden die Fenster beider Komponenten nicht verwechselt
+
+Fallstrick: `Meta.Window.get_wm_class()` liefert `Xlet-settings.py` mit großem X, `xprop` zeigt beide Schreibweisen (`"xlet-settings.py", "Xlet-settings.py"`). Im ersten Anlauf wurde mit kleinem x verglichen, das Fenster nie gefunden und jedes Mal ein neues geöffnet. Verglichen wird jetzt ohne Rücksicht auf Groß- und Kleinschreibung. Bei künftigen Arbeiten mit Fenstern die Merkmale über `Meta.Window` selbst prüfen, nicht nur über `xprop`.
+
+Werden die Übersetzungen eingeführt, bildet xlet-settings den Titel aus dem übersetzten Namen. Der Vergleich ist dann anzupassen.
+
+Nicht beeinflussbar: Werden die Einstellungen über Systemeinstellungen → Desklets bzw. Applets → Zahnrad geöffnet, startet Cinnamon das Fenster selbst.
+
+#### Prüfung
+
+- Syntaxprüfung mit `cjs`, Prüfsummen der vier gemeinsamen Module
+- `msBisZumNaechstenTakt()` mit Beispielzeiten durchgerechnet: zwei zu verschiedenen Zeiten gestartete Komponenten treffen dieselbe Marke; kein Doppeltakt bei vorzeitigem Auslösen; ungültiges Intervall fällt auf 3 Sekunden zurück
+- Einstellungsfenster in Cinnamon selbst geprüft: über `org.Cinnamon.Eval` „Konfigurieren …“ ausgelöst und die offenen Fenster gezählt
+- Funktionstest durch den Nutzer: Gleichlauf bei 3 und 5 Sekunden, Gegenprobe mit unterschiedlichen Intervallen, Gleichlauf nach mehr als 30 Minuten; Einstellungsfenster einschließlich minimiert, anderer Arbeitsbereich und Unterscheidung Applet/Desklet
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -814,6 +860,10 @@ Festgelegt am 17.09.2026. Nach jedem abgeschlossenen und geprüften Arbeitspaket
 6. Wiederherstellungsprobe: Prüfsummen vergleichen, Bundle in ein temporäres Verzeichnis klonen, Quellcode gegen das Original vergleichen
 7. GitHub-Release zum Tag anlegen
 
+### Neustart des Referenzgeräts
+
+Vor einem Neustart die Claude-App über ihr Leistensymbol beenden (Rechtsklick → „Beenden“); das Schließen des Fensters genügt nicht. Das Projektverzeichnis liegt auf dem NAS-Laufwerk `/mnt/LX-NAS-linux`. Läuft die App noch, kann es beim Herunterfahren nicht ausgehängt werden; das System schaltet dann das WLAN ab und bleibt stehen. Am 18.09.2026 zweimal aufgetreten und durch Beenden der App bestätigt behoben.
+
 Für Schritt 7 wird die GitHub-CLI `gh` verwendet. Sie ist auf dem Referenzsystem eingerichtet; der Zugangstoken liegt im System-Schlüsselbund und ist auf das Repository `aVincePulse` mit den Rechten `Contents: Read and write` und `Metadata: Read-only` beschränkt.
 
 ## 10. Sicherungskonzept
@@ -856,7 +906,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_10-26-51` (AP13).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_12-26-36` (AP14).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -921,20 +971,13 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP14 sind abgeschlossen.
+AP01 bis AP15 sind abgeschlossen.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**Als AP15 vorgesehen – kleines Paket:**
+**Als AP16 vorgesehen:** Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar (VERBINDLICH 1.0). Vorgabe jeweils „Automatisch“, also die bisherige Standardschnittstelle bzw. die Systempartition `/`. Technisch dasselbe Muster wie die Sensorauswahl aus AP14. Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
 
-- Taktausrichtung: Applet und Desklet richten ihren Messtakt an der Systemuhr aus (volle Vielfache des Intervalls), damit beide im selben Moment messen, ohne voneinander abzuhängen. Bisher laufen die Zeitgeber um bis zu ein Intervall versetzt.
-- Einstellungsfenster nur einmal öffnen: Der Cinnamon-Menüeintrag „Konfigurieren …“ startet bei jedem Klick ein weiteres Fenster. aVincePulse soll vorher prüfen, ob sein Einstellungsfenster bereits offen ist, und es dann nach vorne holen (Entscheidung vom 18.09.2026).
-
-Ziel und Akzeptanzkriterien für AP15 sind vor Beginn schriftlich festzulegen.
-
-Danach laut Roadmap: Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar, Warnschwellen mit Farbwechsel, Übersetzung Deutsch/Englisch.
-
-**Beobachtung vom 18.09.2026 – Herunterfahren hängt:** Zweimal blieb das Herunterfahren des Referenzgeräts stehen und musste durch Ausschalten beendet werden. In beiden Fällen meldet das Systemprotokoll, dass `/mnt/LX-NAS-linux` nicht ausgehängt werden konnte („das Ziel wird gerade benutzt“), kurz bevor das WLAN abgeschaltet wurde. Das Projektverzeichnis liegt auf diesem NAS-Laufwerk; zum Zeitpunkt der Prüfung belegte es ausschließlich die Claude-App mit ihrem Arbeitsverzeichnis. Die App läuft nach dem Schließen des Fensters über das Leistensymbol weiter. Vorschlag: vor einem Neustart die App über das Leistensymbol beenden. Hängt das Herunterfahren trotzdem, ist die Einbindung des NAS zu prüfen; das ist eine Systemeinstellung, die der Nutzer selbst vornimmt. Kein Zusammenhang mit aVincePulse.
+Danach laut Roadmap: Warnschwellen mit Farbwechsel, Übersetzung Deutsch/Englisch.
 
 Weitere bekannte offene Punkte:
 
@@ -947,13 +990,13 @@ Weitere bekannte offene Punkte:
 - Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen.
 - Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP15:
+Vor Beginn von AP16:
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP15 schriftlich festlegen
+5. Ziel und Akzeptanzkriterien für AP16 schriftlich festlegen
 6. erst danach Code ändern
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
@@ -987,13 +1030,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP14:
+Erwarteter Ausgangspunkt nach AP15:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP14-END`
-- AP14 abgeschlossen
-- AP15 vorgesehen (Taktausrichtung, Einstellungsfenster nur einmal öffnen), Akzeptanzkriterien noch schriftlich zu vereinbaren
+- Referenz-Tag: `0.1.0-dev_AP15-END`
+- AP15 abgeschlossen
+- AP16 vorgesehen (Netzwerkschnittstelle und Laufwerk wählbar), Akzeptanzkriterien noch schriftlich zu vereinbaren
 
 ---
 

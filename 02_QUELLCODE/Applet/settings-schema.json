@@ -11,7 +11,7 @@
         "step": 1,
         "units": "Sekunden",
         "description": "Aktualisierungsintervall",
-        "tooltip": "Das Desklet verwendet standardmäßig ebenfalls 3 Sekunden. Gleiche Werte lassen beide Anzeigen im selben Takt messen."
+        "tooltip": "Der Takt richtet sich nach der Systemuhr. Stehen Applet und Desklet auf demselben Intervall, messen und aktualisieren beide im selben Moment."
     },
     "popup-height-ratio": {
         "type": "scale",
