@@ -1025,6 +1025,7 @@ Vor größeren oder riskanten Änderungen soll zusätzlich ein NAS-Snapshot erha
 
 Festgelegt am 17.09.2026. Nach jedem abgeschlossenen und geprüften Arbeitspaket erfolgt ohne weitere Rückfrage:
 
+0. Versionsnummer in `02_QUELLCODE/Applet/metadata.json` und `02_QUELLCODE/Desklet/metadata.json` auf `0.1.0-dev.xx` setzen (xx = Nummer des Arbeitspakets) und in beide Testinstallationen übertragen. Festgelegt am 18.09.2026, erstmals mit AP19; bis AP18 stand dort unverändert `0.1.0-dev`. Das Info-Fenster von Applet und Desklet zeigt dadurch, welcher Stand installiert ist.
 1. Snapshot unter `06_TESTVERSIONEN/0.1.0-dev_APxx-END/`
 2. Fortschreibung dieses Dokuments
 3. Commit und Push auf `main`
@@ -1032,6 +1033,17 @@ Festgelegt am 17.09.2026. Nach jedem abgeschlossenen und geprüften Arbeitspaket
 5. Vollbackup auf der NAS unter `aVincePulse_Backups/<Zeitstempel>/` mit `tar.gz`, Git-Bundle, `SHA256SUMS.txt` und `BACKUP-INFO.txt`
 6. Wiederherstellungsprobe: Prüfsummen vergleichen, Bundle in ein temporäres Verzeichnis klonen, Quellcode gegen das Original vergleichen
 7. GitHub-Release zum Tag anlegen
+
+### Arbeitsregeln für Tests
+
+Aus AP16 bis AP18 abgeleitet, verbindlich:
+
+- **Namensprüfung vor jeder Installation:** Alle neu verwendeten Namen müssen in der jeweiligen Datei definiert oder importiert sein. Die Syntaxprüfung mit `cjs` erkennt undefinierte Namen nicht (AP18: Applet-Absturz).
+- **Gebundene Einstellungen im Test nicht direkt setzen:** Cinnamon speichert Zuweisungen an gebundene Eigenschaften sofort in die Einstellungsdatei (AP18). Wenn ein Test Einstellungen verändern muss: Datei vorher sichern, danach wiederherstellen und die gespeicherten Werte (`value`) vergleichen. Die Prüfsumme der ganzen Datei ist ungeeignet, da beim Laden die Auswahlfelder mit aktuellen Messwerten neu geschrieben werden.
+- **Abläufe über denselben Weg auslösen wie der Nutzer:** über die Schaltfläche und eine echte bzw. realistisch nachgestellte Änderung, nicht durch direkten Aufruf innerer Funktionen (AP16).
+- **Sichtbares messen, nicht nur Inhalte:** Größe, Position und Deckkraft einer Anzeige prüfen; kurzlebige Überlagerungen durch Aufzeichnung der sichtbaren Flächen in `Main.uiGroup` (AP17).
+- **Nach Änderungen an gemeinsamen Modulen oder am Stylesheet** ist ein Cinnamon-Neustart nötig (`Alt+F2`, `r`); das Neuladen einer Komponente über `ReloadExtension` genügt nur für `desklet.js`/`applet.js` und die Schemata. Den Neustart löst der Nutzer aus.
+- **Werkzeuge:** `org.Cinnamon.Eval` (über `gdbus`) für Zugriff auf laufende Komponenten; Applet-Instanz über `imports.ui.appletManager.getRunningInstancesForUuid(uuid)[0]`, Desklet-Instanz über `imports.ui.main.deskletContainer.actor.get_children().map(a => a._delegate)`. `grep` ist auf dem Referenzsystem durch `ugrep` ersetzt; für verwickelte Suchmuster Python verwenden.
 
 ### Neustart des Referenzgeräts
 
@@ -1148,7 +1160,35 @@ AP01 bis AP18 sind abgeschlossen.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**Als AP19 vorgesehen: Zwischenprüfung** von Applet und Desklet (siehe `ROADMAP_V2.md`, Abschnitt 24). Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen. Offen aus AP18: Lesbarkeit des Desklets mit Schriftschatten auf hellem Hintergrund praktisch prüfen.
+**AP19 – Zwischenprüfung: festgelegt und freigegeben (18.09.2026), noch nicht begonnen.** Beginn in einer neuen Sitzung, da der Kontext der bisherigen Sitzung zu 63 % belegt war.
+
+Ziel: Applet und Desklet vor der Übersetzung vollständig prüfen. Zwei Phasen:
+
+- **Phase 1 – Prüfen, ohne Codeänderung.** Ergebnis ist der Prüfbericht `05_DOKUMENTATION/PRUEFBERICHT_AP19.md` (versioniert). Jeder Befund mit Ort (Datei, Zeile), Beschreibung, Schwere (kritisch / mittel / gering / Hinweis), Nachweis (durch Dateien belegt / durch Test belegt / abgeleitet / muss praktisch getestet werden) und Vorschlag.
+- **Phase 2 – Beheben nach Freigabe je Befund.** Kleine Korrekturen in AP19, größere als eigenes Arbeitspaket vorschlagen.
+
+Umfang Phase 1:
+
+1. Code-Durchsicht aller Dateien beider Komponenten, zusätzlich durch einen unabhängigen Prüfer (Unteragent ohne Kenntnis der bisherigen Annahmen; vom Nutzer freigegeben). Schwerpunkte: Fehler nur in einer Komponente, undefinierte Namen, nicht aufgeräumte Zeitgeber, Fehlerbehandlung, tote Stellen, Unterschiede Applet/Desklet.
+2. Funktionstest jeder Einstellung und Schaltfläche in beiden Komponenten, mit Ergebnisliste.
+3. Robustheit: beschädigte/unvollständige Listen in der Einstellungsdatei; fehlender Sensor, fehlende Schnittstelle, fehlendes Laufwerk; fehlendes Speedtest-Programm (nachgestellt); beschädigte `speedtest-values`; Entfernen und Wiederhinzufügen von Applet/Desklet (keine zurückbleibenden Zeitgeber, Meldungen, Dialoge). Jeweils mit Sicherung der Einstellungen und Wertevergleich.
+4. Langzeittest **über Nacht** (Entscheidung des Nutzers): Speicher und CPU-Zeit von Cinnamon, Messschleife je Komponente nur einmal pro Takt. Der Rechner bleibt eingeschaltet, die Sitzung läuft.
+5. Dokumentation: veraltete Stellen in diesem Dokument korrigieren (siehe „Weitere bekannte offene Punkte“). Aufräumvorschläge (`.bak`-Dateien in `02_QUELLCODE`, nie angezeigte Tooltips) nur als Vorschlag im Bericht; nichts löschen ohne Freigabe.
+6. Versionsnummer: erstmals `0.1.0-dev.19` bei der Sicherung von AP19 (siehe Abschnitt 9, Schritt 0).
+
+Akzeptanzkriterien:
+
+1. Prüfbericht liegt vor, alle Befunde im beschriebenen Format.
+2. Alle Dateien beider Komponenten durchgesehen, von Claude und vom unabhängigen Prüfer; Befunde des Prüfers nachgeprüft und als bestätigt oder widerlegt gekennzeichnet.
+3. Jede Einstellung und Schaltfläche in beiden Komponenten getestet, mit Ergebnisliste.
+4. Robustheitsfälle getestet, mit Ergebnis.
+5. Langzeittest über Nacht ausgewertet: Speicher- und CPU-Verlauf, keine vervielfachte Messschleife.
+6. Einstellungen des Nutzers nach allen Tests nachweislich unverändert (Wertevergleich).
+7. Veraltete Stellen in `PROJECT-STATUS.md` korrigiert.
+8. Phase 2: freigegebene Befunde behoben und erneut geprüft (Syntax, Namen, Prüfsummen, gezielter Test); geänderte Stellen vom Nutzer getestet.
+9. Gemeinsame Module am Ende identisch.
+
+Offen aus AP18, in AP19 mit zu prüfen: Lesbarkeit des Desklets mit Schriftschatten auf hellem Hintergrund (Nutzer prüft bei hellerem Hintergrundbild).
 
 Danach laut Roadmap: Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
 
@@ -1164,13 +1204,13 @@ Weitere bekannte offene Punkte:
 - Tooltips an Schaltflächen im Einstellungsschema werden von Cinnamon nicht angezeigt (siehe AP17). Bei Gelegenheit entfernen oder durch Hinweistexte ersetzen.
 - Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
 
-Vor Beginn von AP19:
+Vor Beginn von AP19 (neue Sitzung):
 
 1. `PROJECT-STATUS.md` lesen
 2. `ROADMAP_V2.md` lesen
 3. `git status` prüfen
 4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP19 schriftlich festlegen
+5. Ziel und Akzeptanzkriterien für AP19 sind festgelegt und freigegeben (Abschnitt 14); Snapshot `0.1.0-dev_AP19-START` anlegen und mit Phase 1 beginnen
 6. erst danach Code ändern
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
@@ -1210,7 +1250,7 @@ Erwarteter Ausgangspunkt nach AP18:
 - Arbeitsverzeichnis: sauber
 - Referenz-Tag: `0.1.0-dev_AP18-END`
 - AP18 abgeschlossen
-- AP19 vorgesehen (Zwischenprüfung), Akzeptanzkriterien noch schriftlich zu vereinbaren
+- AP19 (Zwischenprüfung) festgelegt und freigegeben, noch nicht begonnen; Beginn mit START-Snapshot in einer neuen Sitzung
 
 ---
 
