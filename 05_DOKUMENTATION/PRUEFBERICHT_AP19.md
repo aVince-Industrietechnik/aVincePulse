@@ -376,6 +376,23 @@ Vorschlag von Claude vollständig freigegeben („so machen“):
 
 Reihenfolge: Commit Phase 1 → Gruppe A → Speedtest-Paket → H15 → M3 → Nachtest über Nacht → Sicherungsroutine mit `0.1.0-dev.19`.
 
+### Umsetzung Gruppe A (19.09.2026)
+
+Geändert: nur `Applet/applet.js` und `Desklet/desklet.js`; die vier gemeinsamen Module unverändert (Prüfsummen identisch). Prüfung vor der Installation: Syntax mit `cjs`, Namensprüfung (alle aufgerufenen eigenen Methoden definiert), `_update()` nur noch aus Konstruktor, Zeitgeber und `_starteMessungNeu()`. Einstellungen vor dem Test gesichert in `…/einstellungen_phase2_A/`.
+
+| Befund | Umsetzung | Test (19.09.2026) | Ergebnis |
+|---|---|---|---|
+| K1 | neue Methode `_starteMessungNeu()` (entfernt den Zeitgeber, dann `_update()`), verwendet von Speedtest-Rückruf, `_baueZeilenNeu()` und Intervalländerung | Speedtest im Desklet 15:43:34 und im Applet 15:46:09, Taktzählung | **behoben, durch Test belegt:** je Speedtest ein einzelner Sofortdurchlauf, danach weiter genau eine Schleife (Desklet 60/min bei 1 s, Applet 20/min); LOAD im Applet wieder plausibel (35 % gegenüber 30 % im Desklet), DOWN/UP nicht mehr 0 |
+| G2 | `_update()` = `_messeUndZeige()` in `try/catch`, nächster Takt in `finally` (`_setzeNaechstenTakt()`) | nicht über die Bedienung auslösbar | durch Dateien belegt |
+| M1 | `on_desklet_removed`: `_entfernt = true`, `settings.finalize()`; `_update()`, `_baueZeilenNeu()`, Intervalländerung prüfen `_entfernt` | Desklet bei offenem Fenster entfernt, Schriftgröße geändert (15:52–15:54), wieder hinzugefügt | **behoben, durch Test belegt:** nach dem Entfernen 0 Durchläufe; Änderungen von Cinnamon abgewiesen („updateSetting … is null“, wie beim Applet), keine Fehlerzeile von aVincePulse. Beobachtung: das Fenster der entfernten Komponente reagiert dabei je Änderung mehrere Sekunden verzögert (Cinnamon, nicht aVincePulse) |
+| G8 | Signal-IDs `enter-event`/`leave-event` gemerkt und beim Entfernen getrennt; `_showPopup`/`_hidePopup`/`_updatePopupPosition` gegen null abgesichert | Applet entfernt kurz nach Hover (16:05:39) | **behoben, durch Test belegt:** kein `_hidePopup`-Fehler |
+| H1 | `_gueltig()` im Desklet; Schriftgröße 10–30, Intervall 1–30, Schriftstärke nur 400/500/600/700 | Einstellungsdatei mit `font-size 100`, `refresh-interval 0`, `font-weight "900; color: red"`, Neustart | **behoben:** Schriftstärke angewendet 600 statt des gespeicherten Unsinns (durch Test belegt); Schriftgröße 30 und Intervall 1 s angewendet – die Datei enthielt zu diesem Zeitpunkt bereits 30/1 (vermutlich vom Einstellungsfenster auf den Bereich gesetzt), daher für diese beiden durch Dateien belegt |
+| G6 | vorhandenen Fensterzeitgeber vor dem Neusetzen entfernen; Signal `unmanaged` gemerkt und beim Entfernen getrennt; kein Öffnen mehr nach dem Entfernen | nicht über die Bedienung auslösbar | durch Dateien belegt |
+| G5 | Icondatei vor dem Setzen prüfen, sonst Textkürzel und Protokollzeile | `panel-icon.png` in der Testinstallation umbenannt, Applet neu hinzugefügt (16:05:51) | **behoben, durch Test belegt:** „aVP“ im Panel, Zeile „Icondatei fehlt“; Datei danach zurückbenannt, Logo wieder da |
+| H6 | „popup scaled“ nur bei geänderter Skalierung protokollieren | sechsmal Hover | **behoben, durch Test belegt:** eine Zeile beim Aufbau statt 1–5 je Hover |
+
+Nach dem Test: Einstellungen identisch mit der Sicherung, Testinstallation identisch mit dem Repository, je Takt ein Durchlauf je Komponente.
+
 ## 9. Akzeptanzkriterien – Stand
 
 | Nr. | Kriterium | Stand |

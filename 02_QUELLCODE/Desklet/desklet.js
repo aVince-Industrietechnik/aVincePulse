@@ -68,6 +68,9 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         this._timeout = null;
 
+        // Wird beim Entfernen gesetzt; danach keine Messung mehr.
+        this._entfernt = false;
+
         // Zuordnung Messwert-ID -> Anzeigezeile.
         // Wird in _buildRows() aus METRIC_ORDER gefuellt.
         this._rows = {};
@@ -227,7 +230,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * Baut die Anzeigezeilen nach einer Aenderung der Messwertliste neu auf.
      */
     _baueZeilenNeu() {
-        if (!this._container)
+        if (!this._container || this._entfernt)
             return;
 
         this._container.destroy_all_children();
@@ -236,9 +239,20 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._buildRows();
         this._applyStyle();
 
-        // Der laufende Zeitgeber muss entfernt werden, bevor _update()
-        // einen neuen setzt. Sonst liefe die Messschleife doppelt und
-        // wuerde sich mit jeder weiteren Aenderung vervielfachen.
+        this._starteMessungNeu();
+    }
+
+    /*
+     * Misst sofort und startet die Messschleife neu.
+     *
+     * Der laufende Zeitgeber muss entfernt werden, bevor _update()
+     * einen neuen setzt. Sonst liefe die Messschleife doppelt und
+     * wuerde sich mit jedem weiteren Aufruf vervielfachen. Bis AP19
+     * rief der Speedtest _update() direkt auf; nach jedem Test lief
+     * dadurch eine Schleife mehr (Befund K1). Jeder sofortige
+     * Neustart der Messung geht deshalb ueber diese Methode.
+     */
+    _starteMessungNeu() {
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;
@@ -444,12 +458,18 @@ class AVinceHWMonitor extends Desklet.Desklet {
         if (!this._rows)
             return;
 
-        const fontSize = Math.max(1, Number(this.fontSize) || 14);
+        // Bereiche wie im Einstellungsschema (Befund H1).
+        const fontSize = Math.round(this._gueltig(this.fontSize, 10, 30, 14));
+        const fontWeight =
+            ["400", "500", "600", "700"].includes(String(this.fontWeight))
+                ? String(this.fontWeight)
+                : "600";
+
         const breiten = this._berechneSpaltenbreiten(fontSize);
 
         const style =
             "font-size: " + fontSize + "px;" +
-            "font-weight: " + this.fontWeight + ";";
+            "font-weight: " + fontWeight + ";";
 
         for (const id of METRIC_ORDER) {
             const item = this._rows[id];
@@ -561,7 +581,48 @@ class AVinceHWMonitor extends Desklet.Desklet {
         item.unit.set_style(item.einheitStil + farbe);
     }
 
+    /*
+     * Ein Takt der Messschleife: messen, anzeigen, naechsten Takt setzen.
+     *
+     * Der naechste Takt wird auch dann gesetzt, wenn beim Messen oder
+     * Anzeigen ein Fehler auftritt. Sonst bliebe die Anzeige bis zum
+     * Neuladen stehen (Befund G2). Nach dem Entfernen des Desklets
+     * wird nicht mehr gemessen.
+     */
     _update() {
+        if (this._entfernt)
+            return;
+
+        try {
+            this._messeUndZeige();
+        } catch (e) {
+            global.logError(e);
+        } finally {
+            this._setzeNaechstenTakt();
+        }
+    }
+
+    _setzeNaechstenTakt() {
+        if (this._entfernt)
+            return;
+
+        const seconds = Math.round(
+            this._gueltig(this.refreshInterval, 1, 30, 3)
+        );
+
+        // Der naechste Takt liegt auf einer vollen Taktmarke der
+        // Systemuhr, damit Applet und Desklet im selben Moment messen.
+        this._timeout = Mainloop.timeout_add(
+            Measurement.msBisZumNaechstenTakt(seconds),
+            () => {
+                this._timeout = null;
+                this._update();
+                return false;
+            }
+        );
+    }
+
+    _messeUndZeige() {
         const hardware =
             this._measurement.readHardwareValues();
 
@@ -665,19 +726,6 @@ class AVinceHWMonitor extends Desklet.Desklet {
         } catch (e) {
             global.logError(e);
         }
-
-        const seconds = Math.max(1, Number(this.refreshInterval) || 3);
-
-        // Der naechste Takt liegt auf einer vollen Taktmarke der
-        // Systemuhr, damit Applet und Desklet im selben Moment messen.
-        this._timeout = Mainloop.timeout_add(
-            Measurement.msBisZumNaechstenTakt(seconds),
-            () => {
-                this._timeout = null;
-                this._update();
-                return false;
-            }
-        );
     }
 
     /*
@@ -685,15 +733,27 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * sofort neu, damit die Aenderung ohne Wartezeit wirkt.
      */
     _onRefreshIntervalChanged() {
-        if (!this._container)
+        if (!this._container || this._entfernt)
             return;
 
-        if (this._timeout) {
-            Mainloop.source_remove(this._timeout);
-            this._timeout = null;
-        }
+        this._starteMessungNeu();
+    }
 
-        this._update();
+    /*
+     * Begrenzt einen Einstellungswert auf den zulaessigen Bereich
+     * und faellt bei ungueltiger Eingabe auf den Vorgabewert zurueck.
+     * Das Einstellungsfenster laesst nur gueltige Werte zu; eine von
+     * Hand bearbeitete oder beschaedigte Einstellungsdatei aber nicht
+     * (Befund H1: Schriftgroesse 100 ergab ein Desklet groesser als
+     * der Bildschirm). Wie _gueltig() im Applet.
+     */
+    _gueltig(wert, min, max, vorgabe) {
+        const zahl = Number(wert);
+
+        if (!Number.isFinite(zahl))
+            return vorgabe;
+
+        return Math.max(min, Math.min(max, zahl));
     }
 
     /*
@@ -1018,6 +1078,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
                 return;
 
             geoeffnet = true;
+            this._trenneFensterSignal();
+
+            // Wurde das Desklet inzwischen entfernt, kein Fenster mehr
+            // oeffnen (Befund G6).
+            if (this._entfernt)
+                return;
 
             // Direkt die Cinnamon-Funktion, damit nicht das noch
             // verschwindende alte Fenster nach vorne geholt wird.
@@ -1027,10 +1093,16 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         // Erst oeffnen, wenn das alte Fenster geschlossen ist.
         // Die Zeitgrenze sichert ab, falls das Signal ausbleibt.
-        const signal = altesFenster.connect("unmanaged", () => {
-            altesFenster.disconnect(signal);
-            oeffnen();
-        });
+        // Signal und Zeitgeber werden gemerkt, damit sie beim Entfernen
+        // des Desklets aufgeraeumt werden koennen (Befund G6).
+        this._trenneFensterSignal();
+        this._fensterSignal = {
+            fenster: altesFenster,
+            id: altesFenster.connect("unmanaged", () => oeffnen())
+        };
+
+        if (this._fensterZeitgeber)
+            Mainloop.source_remove(this._fensterZeitgeber);
 
         this._fensterZeitgeber = Mainloop.timeout_add(2000, () => {
             this._fensterZeitgeber = null;
@@ -1041,6 +1113,23 @@ class AVinceHWMonitor extends Desklet.Desklet {
         altesFenster.delete(global.get_current_time());
 
         return true;
+    }
+
+    /*
+     * Trennt das Signal "unmanaged" des alten Einstellungsfensters,
+     * sofern noch verbunden.
+     */
+    _trenneFensterSignal() {
+        if (!this._fensterSignal)
+            return;
+
+        try {
+            this._fensterSignal.fenster.disconnect(this._fensterSignal.id);
+        } catch (e) {
+            // Fenster bereits verschwunden: nichts mehr zu trennen.
+        }
+
+        this._fensterSignal = null;
     }
 
     /*
@@ -1359,7 +1448,9 @@ class AVinceHWMonitor extends Desklet.Desklet {
                         : "")
                 );
                 this._statusAnzeige.verbergeNachLesezeit();
-                this._update();
+                // Nicht _update() direkt: das startete eine zweite
+                // Messschleife (Befund K1).
+                this._starteMessungNeu();
             } else {
                 // Die Meldung bleibt kurz stehen, damit der Grund
                 // des Fehlschlags lesbar ist.
@@ -1374,10 +1465,23 @@ class AVinceHWMonitor extends Desklet.Desklet {
     }
 
     on_desklet_removed() {
+        // Ab hier wird nicht mehr gemessen und nichts mehr aufgebaut.
+        this._entfernt = true;
+
+        // Einstellungen abmelden. Sonst leitet Cinnamon Aenderungen aus
+        // einem noch offenen Einstellungsfenster weiter an dieses
+        // entfernte Desklet (Befund M1). Das Applet macht das bereits.
+        if (this.settings) {
+            this.settings.finalize();
+            this.settings = null;
+        }
+
         if (this._rueckfrage) {
             this._rueckfrage.close();
             this._rueckfrage = null;
         }
+
+        this._trenneFensterSignal();
 
         if (this._fensterZeitgeber) {
             Mainloop.source_remove(this._fensterZeitgeber);

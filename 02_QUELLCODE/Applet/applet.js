@@ -125,6 +125,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._metadataPath = metadata.path;
         this._timeout = null;
+
+        // Wird beim Entfernen gesetzt; danach keine Messung mehr.
+        this._entfernt = false;
         this._symbolischAktiv = false;
 
         // Vorgabewerte, bis die Einstellungen geladen sind.
@@ -224,11 +227,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         Main.uiGroup.add_child(this._popup);
 
-        this.actor.connect("enter-event", () => {
+        // Signal-IDs merken, damit sie beim Entfernen getrennt werden.
+        // Sonst reagierte eine entfernte Instanz noch auf die Maus
+        // (Befund G8).
+        this._enterId = this.actor.connect("enter-event", () => {
             this._showPopup();
         });
 
-        this.actor.connect("leave-event", () => {
+        this._leaveId = this.actor.connect("leave-event", () => {
             this._hidePopup();
         });
 
@@ -314,6 +320,15 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         const pfad =
             GLib.build_filenamev([this._metadataPath, datei]);
+
+        // Cinnamon faengt Fehler beim Setzen des Symbols selbst ab, und
+        // eine fehlende Datei fuehrt zu keinem Fehler, sondern zu einem
+        // leeren Panel-Platz. Deshalb vorher pruefen (Befund G5).
+        if (!GLib.file_test(pfad, GLib.FileTest.EXISTS)) {
+            global.logError("aVincePulse: Icondatei fehlt: " + pfad);
+            this._zeigeTextkuerzel();
+            return;
+        }
 
         try {
             if (einfarbig)
@@ -687,6 +702,12 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                 return;
 
             geoeffnet = true;
+            this._trenneFensterSignal();
+
+            // Wurde das Applet inzwischen entfernt, kein Fenster mehr
+            // oeffnen (Befund G6).
+            if (this._entfernt)
+                return;
 
             // Direkt die Cinnamon-Funktion, damit nicht das noch
             // verschwindende alte Fenster nach vorne geholt wird.
@@ -696,10 +717,16 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         // Erst oeffnen, wenn das alte Fenster geschlossen ist.
         // Die Zeitgrenze sichert ab, falls das Signal ausbleibt.
-        const signal = altesFenster.connect("unmanaged", () => {
-            altesFenster.disconnect(signal);
-            oeffnen();
-        });
+        // Signal und Zeitgeber werden gemerkt, damit sie beim Entfernen
+        // des Applets aufgeraeumt werden koennen (Befund G6).
+        this._trenneFensterSignal();
+        this._fensterSignal = {
+            fenster: altesFenster,
+            id: altesFenster.connect("unmanaged", () => oeffnen())
+        };
+
+        if (this._fensterZeitgeber)
+            Mainloop.source_remove(this._fensterZeitgeber);
 
         this._fensterZeitgeber = Mainloop.timeout_add(2000, () => {
             this._fensterZeitgeber = null;
@@ -710,6 +737,23 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         altesFenster.delete(global.get_current_time());
 
         return true;
+    }
+
+    /*
+     * Trennt das Signal "unmanaged" des alten Einstellungsfensters,
+     * sofern noch verbunden.
+     */
+    _trenneFensterSignal() {
+        if (!this._fensterSignal)
+            return;
+
+        try {
+            this._fensterSignal.fenster.disconnect(this._fensterSignal.id);
+        } catch (e) {
+            // Fenster bereits verschwunden: nichts mehr zu trennen.
+        }
+
+        this._fensterSignal = null;
     }
 
     /*
@@ -1067,9 +1111,23 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * sofort neu, damit die Aenderung ohne Wartezeit wirkt.
      */
     _onRefreshIntervalChanged() {
-        if (!this._popup)
+        if (!this._popup || this._entfernt)
             return;
 
+        this._starteMessungNeu();
+    }
+
+    /*
+     * Misst sofort und startet die Messschleife neu.
+     *
+     * Der laufende Zeitgeber muss entfernt werden, bevor _update()
+     * einen neuen setzt. Sonst liefe die Messschleife doppelt und
+     * wuerde sich mit jedem weiteren Aufruf vervielfachen. Bis AP19
+     * rief der Speedtest _update() direkt auf; nach jedem Test lief
+     * dadurch eine Schleife mehr (Befund K1). Jeder sofortige
+     * Neustart der Messung geht deshalb ueber diese Methode.
+     */
+    _starteMessungNeu() {
         if (this._timeout) {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;
@@ -1083,7 +1141,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * Baut die Anzeigezeilen nach einer Aenderung der Messwertliste neu auf.
      */
     _baueZeilenNeu() {
-        if (!this._popup)
+        if (!this._popup || this._entfernt)
             return;
 
         this._popup.destroy_all_children();
@@ -1092,15 +1150,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._buildRows();
         this._applyPopupScale();
 
-        // Der laufende Zeitgeber muss entfernt werden, bevor _update()
-        // einen neuen setzt. Sonst liefe die Messschleife doppelt und
-        // wuerde sich mit jeder weiteren Aenderung vervielfachen.
-        if (this._timeout) {
-            Mainloop.source_remove(this._timeout);
-            this._timeout = null;
-        }
-
-        this._update();
+        this._starteMessungNeu();
     }
 
     _makeRow(name, value, unit, symbol, symbolAnhebung) {
@@ -1331,12 +1381,18 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._wendeStufeAn(item);
         }
 
-        global.log(
-            "aVincePulse AP09: popup scaled - " + zeilen +
-            " rows, font " + fontSize + "px, " +
+        // Nur protokollieren, wenn sich etwas geaendert hat. Sonst
+        // schrieb jedes Ueberfahren des Symbols Zeilen ins
+        // Sitzungsprotokoll (Befund H6).
+        const skalierung =
+            zeilen + " rows, font " + fontSize + "px, " +
             Math.round(anteil * 100) + "% of " +
-            monitor.width + "x" + monitor.height
-        );
+            monitor.width + "x" + monitor.height;
+
+        if (skalierung !== this._letzteSkalierung) {
+            this._letzteSkalierung = skalierung;
+            global.log("aVincePulse AP09: popup scaled - " + skalierung);
+        }
     }
 
     /*
@@ -1443,6 +1499,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     _showPopup() {
+        if (!this._popup || this._entfernt)
+            return;
+
         // Erneut skalieren, falls sich Bildschirm oder Aufloesung
         // seit dem letzten Anzeigen geaendert haben.
         this._applyPopupScale();
@@ -1458,10 +1517,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     _hidePopup() {
-        this._popup.hide();
+        if (this._popup)
+            this._popup.hide();
     }
 
     _updatePopupPosition() {
+        if (!this._popup)
+            return;
+
         const monitor = Main.layoutManager.primaryMonitor;
 
         const width = this._popup.width;
@@ -1516,7 +1579,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
                         : "")
                 );
                 this._statusAnzeige.verbergeNachLesezeit();
-                this._update();
+                // Nicht _update() direkt: das startete eine zweite
+                // Messschleife (Befund K1).
+                this._starteMessungNeu();
             } else {
                 // Die Meldung bleibt kurz stehen, damit der Grund
                 // des Fehlschlags lesbar ist.
@@ -1536,13 +1601,55 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     /*
+     * Ein Takt der Messschleife: messen, anzeigen, naechsten Takt setzen.
+     *
+     * Der naechste Takt wird auch dann gesetzt, wenn beim Messen oder
+     * Anzeigen ein Fehler auftritt. Sonst bliebe die Anzeige bis zum
+     * Neuladen stehen (Befund G2). Nach dem Entfernen des Applets
+     * wird nicht mehr gemessen.
+     */
+    _update() {
+        if (this._entfernt)
+            return;
+
+        try {
+            this._messeUndZeige();
+        } catch (e) {
+            global.logError(e);
+        } finally {
+            this._setzeNaechstenTakt();
+        }
+    }
+
+    _setzeNaechstenTakt() {
+        if (this._entfernt)
+            return;
+
+        const sekunden = Math.round(
+            this._gueltig(this.refreshInterval, 1, 30,
+                          DEFAULT_REFRESH_INTERVAL_SECONDS)
+        );
+
+        // Der naechste Takt liegt auf einer vollen Taktmarke der
+        // Systemuhr, damit Applet und Desklet im selben Moment messen.
+        this._timeout = Mainloop.timeout_add(
+            Measurement.msBisZumNaechstenTakt(sekunden),
+            () => {
+                this._timeout = null;
+                this._update();
+                return false;
+            }
+        );
+    }
+
+    /*
      * Erfasst die Messwerte eigenständig.
      *
      * Es wird bewusst keine vom Desklet bereitgestellte Datei gelesen.
      * Das Applet bleibt dadurch unabhängig davon, ob ein Desklet
      * installiert oder aktiv ist.
      */
-    _update() {
+    _messeUndZeige() {
         const hardware =
             this._measurement.readHardwareValues();
 
@@ -1614,31 +1721,29 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             }
         }
 
-        if (this._popup.visible)
+        if (this._popup && this._popup.visible)
             this._updatePopupPosition();
-
-        const sekunden = Math.round(
-            this._gueltig(this.refreshInterval, 1, 30,
-                          DEFAULT_REFRESH_INTERVAL_SECONDS)
-        );
-
-        // Der naechste Takt liegt auf einer vollen Taktmarke der
-        // Systemuhr, damit Applet und Desklet im selben Moment messen.
-        this._timeout = Mainloop.timeout_add(
-            Measurement.msBisZumNaechstenTakt(sekunden),
-            () => {
-                this._timeout = null;
-                this._update();
-                return false;
-            }
-        );
     }
 
     on_applet_removed_from_panel() {
+        // Ab hier wird nicht mehr gemessen und nichts mehr angezeigt.
+        this._entfernt = true;
+
+        // Maussignale trennen (Befund G8).
+        for (const id of [this._enterId, this._leaveId]) {
+            if (id)
+                this.actor.disconnect(id);
+        }
+
+        this._enterId = null;
+        this._leaveId = null;
+
         if (this._rueckfrage) {
             this._rueckfrage.close();
             this._rueckfrage = null;
         }
+
+        this._trenneFensterSignal();
 
         if (this._fensterZeitgeber) {
             Mainloop.source_remove(this._fensterZeitgeber);
