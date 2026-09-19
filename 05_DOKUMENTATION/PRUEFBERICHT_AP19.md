@@ -292,6 +292,8 @@ Zeitraum 18.09.2026 22:05 bis 19.09.2026 08:00, 596 Minuten, Cinnamon ohne Neust
 
 **CPU-Plateau 00:00–02:34:** Ursache nicht ermittelt. Die Zahl der Messschleifen-Durchläufe war in dieser Zeit unverändert, der Speicher ebenfalls; ein Zusammenhang mit aVincePulse ist dadurch nicht belegt, aber auch nicht ausgeschlossen. Laut Systemjournal war der Nutzer um 23:58 (Aktualisierungsverwaltung, `mint-refresh-cache`), 23:59 (Hover über dem Applet) und 01:05 (Entsperren) am Gerät; um 02:34 findet sich kein Ereignis. Nachweis: durch Test belegt (Messung), Ursache muss praktisch getestet werden.
 
+**Nachtrag 19.09.2026, 16:37–16:44 – Plateau erneut aufgetreten und eingegrenzt:** Cinnamon lag nach einem Neustart erneut dauerhaft bei 40–41 % eines Kerns (Rechner reagierte träge). aVincePulse war dabei untätig (keine Anzeige, kein Dialog, kein Speedtest, keine Zeitgeber außer der Messschleife). Minimieren des seit dem Vorabend laufenden Mission Center änderte nichts. **Gegenprobe:** Applet und Desklet vom Nutzer entfernt – Cinnamon 47, 25, 38, 37, 38 %; nach dem Wiederhinzufügen 39–40 %. **Das Plateau wird nicht von aVincePulse verursacht** (durch Test belegt); dessen Anteil liegt im Bereich der Schwankung, passend zur Grundlast von 3 % in der Nacht. Weitere aktive Cinnamon-Erweiterungen: Desklets cpuload, diskspace, 7× TheLauncher; Erweiterungen transparent-panels, dynamic-wallpaper. Eingrenzung außerhalb dieses Projekts.
+
 **Ergebnis:** Kein Speicherleck erkennbar, Messschleifen stabil; die in K1 belegte Verdopplung bleibt dauerhaft bestehen, vervielfacht sich aber ohne weiteren Speedtest nicht.
 
 ## 7. Einstellungen des Nutzers
@@ -404,6 +406,19 @@ Geändert: gemeinsames Modul `speedtest.js` (in beiden Komponenten bitgenau iden
 | M2 | Zeitgrenze 120 s mit `force_exit()`; `Gio.Cancellable`; `verwerfe()` beim Entfernen der Komponente (Programm beenden, Sperre aufheben, keine Rückmeldung); Rückmeldung außerhalb des `try`; Rückrufe der Komponenten prüfen `_entfernt`; JSON als Array oder Objekt akzeptiert (H7) | Test im Desklet 16:17:36, Desklet innerhalb von 6 s entfernt | **behoben für das Entfernen, durch Test belegt:** 16:17:42 Programm beendet, Sperrdatei entfernt, kein Fehler im Protokoll. Die Zeitgrenze selbst ist nur mit einem absichtlich hängenden Programm prüfbar (Austausch per `sudo`, bewusst unterlassen): durch Dateien belegt |
 | G10 | alte Ablage nur, wenn die neue Datei fehlt; nur nicht negative Zahlen, sonst `--`; LAST ohne gültigen Zeitstempel `--`; alte Ablage unangetastet | `speedtest-values` leer, mit Text, ganz entfernt; vorher unmittelbar gesichert (`…/einstellungen_phase2_B/`) | **behoben, durch Test belegt:** leer → überall `--`, keine Übernahme, Datei nicht überschrieben; Text → nur gültige Zahl angezeigt; Datei fehlt → alte Werte einmalig übernommen, LAST `--`. Datei danach identisch mit Sicherung, alte Ablage unverändert (Prüfsumme) |
 | K1 (Nachprüfung) | – | drei Speedtests in diesem Test | weiterhin genau ein Durchlauf je Takt und Komponente |
+
+### Umsetzung H15 und M3 (19.09.2026)
+
+Geändert: `applet.js`, `desklet.js` (gemeinsame Module unverändert, Prüfsummen identisch). Prüfung: Syntax (`cjs`), Namensprüfung, im Desklet weiterhin alle Messwerte verwendet.
+
+| Befund | Umsetzung | Test (19.09.2026) | Ergebnis |
+|---|---|---|---|
+| H15 | `_nachRueckfrage()`: bei „Jetzt neu öffnen“ wird die Meldung als Rückruf an `_oeffneEinstellungenNeu(fertig)` übergeben und von `_setzeFensterPosition()` erst gezeigt, wenn das neue Fenster drei Prüfungen lang an seiner Position steht (spätestens nach 5 s) | USB-Stick eingesteckt, „Hardware neu erkennen“ bei offenem Fenster, „Jetzt neu öffnen“; Schnellaufzeichnung (eine einzige, 4 min) | **behoben, durch Test belegt:** Rückfrage aus 16:46:23.695, altes Fenster weg 23.898, neues Fenster an gleicher Stelle 24.261–24.354, **Meldung erst 24.410**; kein Durchscheinen mehr |
+| M3 | Schreiben von `/tmp/avince-hwmonitor-values` im Desklet entfernt | Zeitstempel der Datei nach dem Neustart 16:33:00 | **behoben, durch Test belegt:** letzte Änderung 16:32:57, danach keine mehr. Die vorhandene Datei in `/tmp` wurde nicht gelöscht; sie verschwindet beim nächsten Neustart des Rechners. |
+
+Während dieses Tests reagierte der Rechner träge. Ursache: zwei versehentlich parallel laufende Schnellaufzeichnungen von Claude sowie das CPU-Plateau von Cinnamon, das nachweislich nicht von aVincePulse stammt (Abschnitt 6, Nachtrag).
+
+**Zählverfahren nach M3:** Die Desklet-Schreibvorgänge entfallen als Zähler. Für den Nachtest zählt das Skript die Lesezugriffe beider Komponenten auf `speedtest-values` je Taktmarke; bei gleichem Intervall sind genau zwei je Takt zu erwarten (Applet und Desklet). Eine Vervielfachung in einer Komponente zeigt sich als mehr als zwei; welche Komponente betroffen ist, lässt sich dann durch vorübergehendes Entfernen einer Komponente feststellen.
 
 ## 9. Akzeptanzkriterien – Stand
 

@@ -701,31 +701,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
             }
         }
 
-        // Aktuelle Messwerte für das aVince Hardware Popup bereitstellen.
-        // Das Popup verwendet dadurch exakt dieselben Werte wie das Desklet.
-        try {
-            const sharedValues =
-                "CPU=" + cpu + "\n" +
-                "LOAD=" + load + "\n" +
-                "RAM=" + ram + "\n" +
-                "SSD=" + ssd + "\n" +
-                "FAN=" + fan + "\n" +
-                "DOWN_VALUE=" + down.value + "\n" +
-                "DOWN_UNIT=" + down.unit + "\n" +
-                "UP_VALUE=" + up.value + "\n" +
-                "UP_UNIT=" + up.unit + "\n" +
-                "SPEED_DOWN=" + (speedtest ? speedtest.SPEED_DOWN : "") + "\n" +
-                "SPEED_UP=" + (speedtest ? speedtest.SPEED_UP : "") + "\n" +
-                "PING=" + (speedtest ? speedtest.PING : "") + "\n" +
-                "JITTER=" + (speedtest ? speedtest.JITTER : "") + "\n";
-
-            GLib.file_set_contents(
-                "/tmp/avince-hwmonitor-values",
-                sharedValues
-            );
-        } catch (e) {
-            global.logError(e);
-        }
+        // Bis AP19 wurden die Werte hier zusaetzlich bei jedem Takt nach
+        // /tmp/avince-hwmonitor-values geschrieben, fuer das alte Applet
+        // avince-hwpopup@angelo. Das liest seit AP08 niemand mehr; das
+        // Schreiben ist entfallen (Befund M3).
     }
 
     /*
@@ -1040,17 +1019,29 @@ class AVinceHWMonitor extends Desklet.Desklet {
         if (!this._statusAnzeige)
             return;
 
-        const geoeffnet = neuOeffnen && this._oeffneEinstellungenNeu();
+        const zeigeMeldung = geoeffnet => {
+            if (!this._statusAnzeige || this._entfernt)
+                return;
 
-        this._statusAnzeige.zeige(
-            meldung +
-            (geoeffnet
-                ? "\n\nDas Einstellungsfenster wurde dafür neu geöffnet."
-                : "\n\nDie neuen Einträge erscheinen in der Auswahl, " +
-                  "sobald du das Einstellungsfenster schließt und " +
-                  "wieder öffnest.")
-        );
-        this._statusAnzeige.verbergeNachLesezeit();
+            this._statusAnzeige.zeige(
+                meldung +
+                (geoeffnet
+                    ? "\n\nDas Einstellungsfenster wurde dafür neu geöffnet."
+                    : "\n\nDie neuen Einträge erscheinen in der Auswahl, " +
+                      "sobald du das Einstellungsfenster schließt und " +
+                      "wieder öffnest.")
+            );
+            this._statusAnzeige.verbergeNachLesezeit();
+        };
+
+        // Beim Neu-Oeffnen erscheint die Meldung erst, wenn das neue
+        // Fenster an seinem Platz steht. Zuvor schien fuer gut eine
+        // halbe Sekunde das Fenster dahinter durch die halbtransparente
+        // Meldung (Befund H15).
+        if (neuOeffnen && this._oeffneEinstellungenNeu(() => zeigeMeldung(true)))
+            return;
+
+        zeigeMeldung(false);
     }
 
     /*
@@ -1059,9 +1050,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * geschriebene Auswahl zeigt. Ein bereits geoeffnetes Fenster
      * liest die Optionen sonst nicht erneut ein.
      *
+     * fertig wird gerufen, sobald das neue Fenster steht, spaetestens
+     * nach fuenf Sekunden (Befund H15).
+     *
      * Rueckgabe: true, wenn ein Fenster offen war.
      */
-    _oeffneEinstellungenNeu() {
+    _oeffneEinstellungenNeu(fertig) {
         const altesFenster = this._findeEinstellungsfenster();
 
         if (!altesFenster)
@@ -1088,7 +1082,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
             // Direkt die Cinnamon-Funktion, damit nicht das noch
             // verschwindende alte Fenster nach vorne geholt wird.
             super.configureDesklet();
-            this._setzeFensterPosition(x, y, altesFenster);
+            this._setzeFensterPosition(x, y, altesFenster, fertig);
         };
 
         // Erst oeffnen, wenn das alte Fenster geschlossen ist.
@@ -1141,9 +1135,16 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * deshalb so lange nachgesetzt, bis sie bei drei aufeinander
      * folgenden Pruefungen stimmt.
      */
-    _setzeFensterPosition(x, y, altesFenster) {
+    _setzeFensterPosition(x, y, altesFenster, fertig) {
         let versuche = 50;
         let stabil = 0;
+
+        const ende = () => {
+            this._fensterZeitgeber = null;
+
+            if (fertig && !this._entfernt)
+                fertig();
+        };
 
         if (this._fensterZeitgeber)
             Mainloop.source_remove(this._fensterZeitgeber);
@@ -1156,7 +1157,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
                 if (rahmen.x === x && rahmen.y === y) {
                     if (++stabil >= 3) {
-                        this._fensterZeitgeber = null;
+                        ende();
                         return false;
                     }
                 } else {
@@ -1166,7 +1167,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
             }
 
             if (--versuche <= 0) {
-                this._fensterZeitgeber = null;
+                ende();
                 return false;
             }
 

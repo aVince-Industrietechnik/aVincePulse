@@ -677,17 +677,29 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (!this._statusAnzeige)
             return;
 
-        const geoeffnet = neuOeffnen && this._oeffneEinstellungenNeu();
+        const zeigeMeldung = geoeffnet => {
+            if (!this._statusAnzeige || this._entfernt)
+                return;
 
-        this._statusAnzeige.zeige(
-            meldung +
-            (geoeffnet
-                ? "\n\nDas Einstellungsfenster wurde dafür neu geöffnet."
-                : "\n\nDie neuen Einträge erscheinen in der Auswahl, " +
-                  "sobald du das Einstellungsfenster schließt und " +
-                  "wieder öffnest.")
-        );
-        this._statusAnzeige.verbergeNachLesezeit();
+            this._statusAnzeige.zeige(
+                meldung +
+                (geoeffnet
+                    ? "\n\nDas Einstellungsfenster wurde dafür neu geöffnet."
+                    : "\n\nDie neuen Einträge erscheinen in der Auswahl, " +
+                      "sobald du das Einstellungsfenster schließt und " +
+                      "wieder öffnest.")
+            );
+            this._statusAnzeige.verbergeNachLesezeit();
+        };
+
+        // Beim Neu-Oeffnen erscheint die Meldung erst, wenn das neue
+        // Fenster an seinem Platz steht. Zuvor schien fuer gut eine
+        // halbe Sekunde das Fenster dahinter durch die halbtransparente
+        // Meldung (Befund H15).
+        if (neuOeffnen && this._oeffneEinstellungenNeu(() => zeigeMeldung(true)))
+            return;
+
+        zeigeMeldung(false);
     }
 
     /*
@@ -696,9 +708,12 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * geschriebene Auswahl zeigt. Ein bereits geoeffnetes Fenster
      * liest die Optionen sonst nicht erneut ein.
      *
+     * fertig wird gerufen, sobald das neue Fenster steht, spaetestens
+     * nach fuenf Sekunden (Befund H15).
+     *
      * Rueckgabe: true, wenn ein Fenster offen war.
      */
-    _oeffneEinstellungenNeu() {
+    _oeffneEinstellungenNeu(fertig) {
         const altesFenster = this._findeEinstellungsfenster();
 
         if (!altesFenster)
@@ -725,7 +740,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             // Direkt die Cinnamon-Funktion, damit nicht das noch
             // verschwindende alte Fenster nach vorne geholt wird.
             super.configureApplet();
-            this._setzeFensterPosition(x, y, altesFenster);
+            this._setzeFensterPosition(x, y, altesFenster, fertig);
         };
 
         // Erst oeffnen, wenn das alte Fenster geschlossen ist.
@@ -778,9 +793,16 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      * deshalb so lange nachgesetzt, bis sie bei drei aufeinander
      * folgenden Pruefungen stimmt.
      */
-    _setzeFensterPosition(x, y, altesFenster) {
+    _setzeFensterPosition(x, y, altesFenster, fertig) {
         let versuche = 50;
         let stabil = 0;
+
+        const ende = () => {
+            this._fensterZeitgeber = null;
+
+            if (fertig && !this._entfernt)
+                fertig();
+        };
 
         if (this._fensterZeitgeber)
             Mainloop.source_remove(this._fensterZeitgeber);
@@ -793,7 +815,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
                 if (rahmen.x === x && rahmen.y === y) {
                     if (++stabil >= 3) {
-                        this._fensterZeitgeber = null;
+                        ende();
                         return false;
                     }
                 } else {
@@ -803,7 +825,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             }
 
             if (--versuche <= 0) {
-                this._fensterZeitgeber = null;
+                ende();
                 return false;
             }
 
