@@ -34,10 +34,38 @@ const ZUSAETZLICHE_PFADE = [
     "/snap/bin/librespeed-cli"
 ];
 
+// Messwerte der Ablage; jeder muss als Zahl vorliegen.
+const WERTE_SCHLUESSEL = ["SPEED_DOWN", "SPEED_UP", "PING", "JITTER"];
+
+/*
+ * Zeitgrenze fuer einen Speedtest in Sekunden. Ein Test dauert auf dem
+ * Referenzgeraet rund 35 Sekunden. Haengt das Programm, wird es danach
+ * beendet, statt die Meldung "laeuft" dauerhaft stehen zu lassen und
+ * jeden weiteren Test zu sperren (Befund M2).
+ */
+const ZEITGRENZE_SEKUNDEN = 120;
+
+/*
+ * Sperrdatei gegen gleichzeitige Tests aus Applet und Desklet. Jede
+ * Komponente hat einen eigenen SpeedtestRunner; zwei parallele Tests
+ * teilten sich die Bandbreite und lieferten etwa halbe Werte
+ * (Befund G1). Eine Sperre, die aelter als die Zeitgrenze plus
+ * Reserve ist, gilt als verwaist, etwa nach einem Absturz.
+ */
+const SPERRDATEI = "speedtest.lock";
+const SPERRE_VERFALL_SEKUNDEN = ZEITGRENZE_SEKUNDEN + 30;
+
 var SpeedtestRunner = class SpeedtestRunner {
     constructor() {
         this._laeuft = false;
         this._quelle = "";
+
+        // Laufender Test (Befund M2): Prozess, Abbruch, Zeitgrenze.
+        this._prozess = null;
+        this._abbruch = null;
+        this._zeitgeber = null;
+        this._verworfen = false;
+        this._zeitUeberschritten = false;
     }
 
     /*
@@ -113,31 +141,37 @@ var SpeedtestRunner = class SpeedtestRunner {
      * Liest die gespeicherten Werte.
      *
      * Rueckgabe: Objekt mit SPEED_DOWN, SPEED_UP, PING, JITTER und
-     * optional TIMESTAMP, oder null wenn keine gueltigen Werte
-     * vorliegen.
+     * optional TIMESTAMP, oder null wenn noch nie gemessen wurde.
+     * Unbrauchbare Einzelwerte erscheinen als "--".
+     *
+     * Die fruehere Ablage wird nur uebernommen, wenn die neue Datei
+     * fehlt. Bis AP19 geschah das auch bei einer beschaedigten neuen
+     * Datei, und zwar bei jedem Takt: veraltete Werte erschienen als
+     * aktuell und ueberschrieben die neue Datei (Befund G10). Die
+     * fruehere Ablage selbst bleibt unangetastet.
      */
     leseWerte() {
-        let werte = this._leseDatei(this.datenPfad());
+        if (GLib.file_test(this.datenPfad(), GLib.FileTest.EXISTS))
+            return this._leseDatei(this.datenPfad());
 
-        if (!werte) {
-            werte = this._leseDatei(this._alterPfad());
+        const alt = this._leseDatei(this._alterPfad());
 
-            // Einmalige Uebernahme in die neue Ablage.
-            if (werte)
-                this._schreibeWerte(werte);
-        }
+        // Einmalige Uebernahme in die neue Ablage, nur mit
+        // vollstaendigen Werten.
+        if (alt && WERTE_SCHLUESSEL.every(k => alt[k] !== "--"))
+            this._schreibeWerte(alt);
 
-        return werte;
+        return alt;
     }
 
     _leseDatei(pfad) {
         try {
             const inhalt = this._dateiInhalt(pfad);
 
-            if (!inhalt)
+            if (inhalt === null)
                 return null;
 
-            const werte = {};
+            const roh = {};
 
             for (const zeile of inhalt.split("\n")) {
                 // Kommentarzeilen des erklaerenden Kopfes ueberspringen.
@@ -147,18 +181,26 @@ var SpeedtestRunner = class SpeedtestRunner {
                 const pos = zeile.indexOf("=");
 
                 if (pos > 0) {
-                    werte[zeile.substring(0, pos)] =
-                        zeile.substring(pos + 1);
+                    roh[zeile.substring(0, pos).trim()] =
+                        zeile.substring(pos + 1).trim();
                 }
             }
 
-            if (
-                werte.SPEED_DOWN === undefined ||
-                werte.SPEED_UP === undefined ||
-                werte.PING === undefined ||
-                werte.JITTER === undefined
-            )
-                return null;
+            // Nur nicht negative Zahlen werden angezeigt, alles andere
+            // als "--". Bis AP19 erschien etwa "abc" ungeprueft.
+            const werte = {};
+
+            for (const schluessel of WERTE_SCHLUESSEL) {
+                werte[schluessel] = /^\d+(\.\d+)?$/.test(roh[schluessel] || "")
+                    ? roh[schluessel]
+                    : "--";
+            }
+
+            if (/^\d+$/.test(roh.TIMESTAMP || ""))
+                werte.TIMESTAMP = roh.TIMESTAMP;
+
+            if (roh.QUELLE)
+                werte.QUELLE = roh.QUELLE;
 
             return werte;
 
@@ -168,6 +210,10 @@ var SpeedtestRunner = class SpeedtestRunner {
         }
     }
 
+    /*
+     * Inhalt einer Datei als Text, oder null wenn sie nicht gelesen
+     * werden kann. Eine leere Datei ergibt einen leeren Text.
+     */
     _dateiInhalt(pfad) {
         try {
             const ergebnis = GLib.file_get_contents(pfad);
@@ -303,13 +349,16 @@ var SpeedtestRunner = class SpeedtestRunner {
      * Anzeige in einer Messwertzeile, oder null.
      */
     alterDesErgebnisses(werte) {
-        if (!werte || !werte.TIMESTAMP)
+        if (!werte)
             return null;
 
         const zeitpunkt = Number(werte.TIMESTAMP);
 
-        if (!Number.isFinite(zeitpunkt) || zeitpunkt <= 0)
-            return null;
+        // Ohne gueltigen Zeitpunkt "--" statt null. Bei null blieb bis
+        // AP19 das zuletzt angezeigte Alter stehen und wirkte aktuell
+        // (Befund G10).
+        if (!werte.TIMESTAMP || !Number.isFinite(zeitpunkt) || zeitpunkt <= 0)
+            return { value: "--", unit: "min" };
 
         const jetzt = Math.floor(Date.now() / 1000);
         const sekunden = Math.max(0, jetzt - zeitpunkt);
@@ -376,7 +425,25 @@ var SpeedtestRunner = class SpeedtestRunner {
             return;
         }
 
+        // Laeuft bereits ein Test der anderen Komponente, nicht
+        // zusaetzlich starten (Befund G1).
+        const fremd = this._fremdeSperre();
+
+        if (fremd) {
+            rueckmeldung({
+                erfolg: false,
+                meldung:
+                    "Es läuft bereits ein Internet-Speedtest " +
+                    "(gestartet vom " + fremd + ").\n\n" +
+                    "Das Ergebnis erscheint in beiden Komponenten."
+            });
+            return;
+        }
+
         this._laeuft = true;
+        this._verworfen = false;
+        this._zeitUeberschritten = false;
+        this._setzeSperre();
 
         try {
             const prozess = Gio.Subprocess.new(
@@ -385,12 +452,49 @@ var SpeedtestRunner = class SpeedtestRunner {
                 Gio.SubprocessFlags.STDERR_PIPE
             );
 
-            prozess.communicate_utf8_async(null, null, (p, ergebnis) => {
+            this._prozess = prozess;
+            this._abbruch = new Gio.Cancellable();
+
+            // Haengt das Programm, wird es nach der Zeitgrenze beendet
+            // (Befund M2). Der Rueckruf unten meldet dann den Abbruch.
+            this._zeitgeber = Mainloop.timeout_add_seconds(
+                ZEITGRENZE_SEKUNDEN,
+                () => {
+                    this._zeitgeber = null;
+                    this._zeitUeberschritten = true;
+                    this._beendeProzess();
+                    return false;
+                }
+            );
+
+            prozess.communicate_utf8_async(null, this._abbruch, (p, ergebnis) => {
                 this._laeuft = false;
+                this._prozess = null;
+                this._abbruch = null;
+                this._entferneZeitgeber();
+
+                // Die Komponente wurde inzwischen entfernt: keine
+                // Rueckmeldung mehr an eine nicht vorhandene Anzeige.
+                // Die Sperre hat verwerfe() bereits aufgehoben; hier
+                // nicht erneut loeschen, sonst traefe es womoeglich die
+                // Sperre eines inzwischen gestarteten anderen Tests.
+                if (this._verworfen)
+                    return;
+
+                this._entferneSperre();
+
+                let antwort;
 
                 try {
                     const [, stdout, stderr] =
                         p.communicate_utf8_finish(ergebnis);
+
+                    if (this._zeitUeberschritten) {
+                        throw new Error(
+                            "Speedtest nach " + ZEITGRENZE_SEKUNDEN +
+                            " s abgebrochen"
+                        );
+                    }
 
                     if (!p.get_successful()) {
                         throw new Error(
@@ -398,14 +502,15 @@ var SpeedtestRunner = class SpeedtestRunner {
                         );
                     }
 
-                    const daten = JSON.parse(stdout)[0];
+                    const ausgabe = JSON.parse(stdout);
+                    const daten = Array.isArray(ausgabe) ? ausgabe[0] : ausgabe;
 
                     if (
                         !daten ||
-                        daten.download === undefined ||
-                        daten.upload === undefined ||
-                        daten.ping === undefined ||
-                        daten.jitter === undefined
+                        !Number.isFinite(Number(daten.download)) ||
+                        !Number.isFinite(Number(daten.upload)) ||
+                        !Number.isFinite(Number(daten.ping)) ||
+                        !Number.isFinite(Number(daten.jitter))
                     ) {
                         throw new Error("Die Messdaten sind unvollständig.");
                     }
@@ -427,24 +532,42 @@ var SpeedtestRunner = class SpeedtestRunner {
                     // Bericht ablegen.
                     const bericht = this._schreibeBericht(werte);
 
-                    rueckmeldung({
+                    antwort = {
                         erfolg: true,
                         werte: werte,
                         bericht: bericht
-                    });
+                    };
 
                 } catch (e) {
                     global.logError(e);
 
-                    rueckmeldung({
+                    antwort = {
                         erfolg: false,
-                        meldung: "Der Speedtest ist fehlgeschlagen."
-                    });
+                        meldung: this._zeitUeberschritten
+                            ? "Der Internet-Speedtest wurde nach " +
+                              ZEITGRENZE_SEKUNDEN + " Sekunden abgebrochen, " +
+                              "da er nicht beendet wurde."
+                            : "Der Speedtest ist fehlgeschlagen."
+                    };
+                }
+
+                // Rueckmeldung ausserhalb von try: Ein Fehler in der
+                // Anzeige der Komponente fuehrte bis AP19 dazu, dass
+                // nach "Speedtest abgeschlossen" zusaetzlich
+                // "fehlgeschlagen" gemeldet wurde (Befund M2).
+                try {
+                    rueckmeldung(antwort);
+                } catch (e) {
+                    global.logError(e);
                 }
             });
 
         } catch (e) {
             this._laeuft = false;
+            this._prozess = null;
+            this._abbruch = null;
+            this._entferneZeitgeber();
+            this._entferneSperre();
             global.logError(e);
 
             rueckmeldung({
@@ -452,6 +575,89 @@ var SpeedtestRunner = class SpeedtestRunner {
                 meldung: "Der Speedtest konnte nicht gestartet werden."
             });
         }
+    }
+
+    /*
+     * Verwirft einen laufenden Speedtest, etwa beim Entfernen der
+     * Komponente. Das Programm wird beendet, die Sperre aufgehoben,
+     * eine Rueckmeldung erfolgt nicht mehr.
+     */
+    verwerfe() {
+        this._verworfen = true;
+
+        if (this._abbruch)
+            this._abbruch.cancel();
+
+        this._beendeProzess();
+        this._entferneZeitgeber();
+
+        if (this._laeuft)
+            this._entferneSperre();
+
+        this._laeuft = false;
+    }
+
+    _beendeProzess() {
+        try {
+            if (this._prozess)
+                this._prozess.force_exit();
+        } catch (e) {
+            global.logError(e);
+        }
+    }
+
+    _entferneZeitgeber() {
+        if (this._zeitgeber) {
+            Mainloop.source_remove(this._zeitgeber);
+            this._zeitgeber = null;
+        }
+    }
+
+    _sperrPfad() {
+        return GLib.build_filenamev([this.datenVerzeichnis(), SPERRDATEI]);
+    }
+
+    _setzeSperre() {
+        try {
+            GLib.mkdir_with_parents(this.datenVerzeichnis(), 0o755);
+            GLib.file_set_contents(
+                this._sperrPfad(),
+                Math.floor(Date.now() / 1000) + "\n" +
+                (this._quelle || "unbekannt") + "\n"
+            );
+        } catch (e) {
+            global.logError(e);
+        }
+    }
+
+    _entferneSperre() {
+        try {
+            const datei = Gio.File.new_for_path(this._sperrPfad());
+
+            if (datei.query_exists(null))
+                datei.delete(null);
+        } catch (e) {
+            global.logError(e);
+        }
+    }
+
+    /*
+     * Name der Komponente, die gerade einen Test ausfuehrt, oder null.
+     * Eine veraltete Sperre wird ignoriert.
+     */
+    _fremdeSperre() {
+        const inhalt = this._dateiInhalt(this._sperrPfad());
+
+        if (!inhalt)
+            return null;
+
+        const [zeit, quelle] = inhalt.split("\n");
+        const alter = Math.floor(Date.now() / 1000) - Number(zeit);
+
+        if (!Number.isFinite(alter) || alter < 0 || alter > SPERRE_VERFALL_SEKUNDEN)
+            return null;
+
+        return quelle || "unbekannt";
     }
 };
 

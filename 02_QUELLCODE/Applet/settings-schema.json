@@ -351,7 +351,7 @@
     },
     "hinweis-speedtest": {
         "type": "label",
-        "description": "Ein Klick auf das Panel-Symbol startet den Speedtest."
+        "description": "Rechtsklick auf das Panel-Symbol öffnet das Menü mit dem Eintrag „Internet-Speedtest starten“."
     },
     "btn-speedtest": {
         "type": "button",

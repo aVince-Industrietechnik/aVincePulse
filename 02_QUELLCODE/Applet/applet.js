@@ -26,6 +26,7 @@ const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
+const PopupMenu = imports.ui.popupMenu;
 
 const Metrics = imports.applets['avincepulse-applet@avince'].metrics;
 const Measurement = imports.applets['avincepulse-applet@avince'].measurement;
@@ -237,6 +238,18 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._leaveId = this.actor.connect("leave-event", () => {
             this._hidePopup();
         });
+
+        // Speedtest ueber das Rechtsklick-Menue, wie beim Desklet
+        // (Befund H14). Eintraege, die vor dem Abschluss des Menues
+        // hinzukommen, stellt Cinnamon oberhalb seiner eigenen an.
+        this._menuEintragSpeedtest =
+            new PopupMenu.PopupMenuItem("Internet-Speedtest starten");
+
+        this._menuEintragSpeedtest.connect("activate", () => {
+            this.starteSpeedtest();
+        });
+
+        this._applet_context_menu.addMenuItem(this._menuEintragSpeedtest);
 
         this._update();
     }
@@ -1542,20 +1555,17 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     /*
-     * Ein Klick auf das Panel-Symbol startet den Speedtest.
-     * Ausfuehrung und Ablage verantwortet speedtest.js, damit
-     * Applet und Desklet dieselbe Umsetzung verwenden.
-     */
-    on_applet_clicked(event) {
-        this.starteSpeedtest();
-    }
-
-    /*
      * Startet den Internet-Speedtest.
-     * Wird vom Panel-Symbol und aus den Einstellungen gerufen.
+     * Wird aus dem Rechtsklick-Menue und aus den Einstellungen gerufen.
+     *
+     * Bis AP19 startete ein einfacher Klick auf das Panel-Symbol den
+     * Test. Das geschah leicht versehentlich, etwa beim Verschieben
+     * des Applets (Befund H14). Wie beim Desklet (AP11) laeuft der
+     * Start deshalb nur noch ueber das Menue. Ein Klick hat keine
+     * Wirkung; die Messwerte zeigt das Ueberfahren mit der Maus.
      */
     starteSpeedtest() {
-        if (this._speedtest.istAktiv())
+        if (this._entfernt || this._speedtest.istAktiv())
             return;
 
         this._hidePopup();
@@ -1568,6 +1578,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             "Internet-Speedtest läuft …", deckkraft);
 
         this._speedtest.starte(ergebnis => {
+            // Nach dem Entfernen keine Meldung mehr (Befund M2).
+            if (this._entfernt || !this._statusAnzeige)
+                return;
+
             if (ergebnis.erfolg) {
                 this._statusAnzeige.zeige(
                     "Speedtest abgeschlossen\n\n" +
@@ -1759,6 +1773,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             Mainloop.source_remove(this._timeout);
             this._timeout = null;
         }
+
+        // Ein laufender Speedtest wird beendet (Befund M2).
+        if (this._speedtest)
+            this._speedtest.verwerfe();
 
         if (this._statusAnzeige) {
             this._statusAnzeige.zerstoere();

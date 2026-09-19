@@ -393,6 +393,18 @@ Geändert: nur `Applet/applet.js` und `Desklet/desklet.js`; die vier gemeinsamen
 
 Nach dem Test: Einstellungen identisch mit der Sicherung, Testinstallation identisch mit dem Repository, je Takt ein Durchlauf je Komponente.
 
+### Umsetzung Speedtest-Paket (19.09.2026)
+
+Geändert: gemeinsames Modul `speedtest.js` (in beiden Komponenten bitgenau identisch), `applet.js`, `desklet.js`, `Applet/settings-schema.json` (Hinweistext zum Bedienweg). Prüfung: Syntax mit `cjs`, Namensprüfung (Methoden und Konstanten), Schema als JSON gültig, Prüfsummen der vier gemeinsamen Module identisch. Beobachtung: Taktzählung, Schnellaufzeichnung der Bildschirmebene, Prozess- und Sperrdateiüberwachung (alle 0,2 s).
+
+| Befund | Umsetzung | Test (19.09.2026) | Ergebnis |
+|---|---|---|---|
+| H14 | `on_applet_clicked` entfernt; Menüeintrag „Internet-Speedtest starten“ im Rechtsklick-Menü des Applets; Hinweistext im Schema angepasst | Linksklick, dann Rechtsklick (16:15:48) | **behoben, durch Test belegt:** Linksklick ohne Wirkung, Menüeintrag vorhanden |
+| G1 | Sperrdatei `~/.local/share/avincepulse/speedtest.lock` mit Zeitpunkt und Herkunft; gilt 150 s; eigene Meldung bei fremder Sperre | Test im Desklet 16:16:32, sofort danach im Applet | **behoben, durch Test belegt:** Applet meldet „Es läuft bereits ein Internet-Speedtest (gestartet vom aVincePulse Desklet)“; genau ein Programm läuft; Ergebnis 16:17:06 in beiden; Sperre danach entfernt |
+| M2 | Zeitgrenze 120 s mit `force_exit()`; `Gio.Cancellable`; `verwerfe()` beim Entfernen der Komponente (Programm beenden, Sperre aufheben, keine Rückmeldung); Rückmeldung außerhalb des `try`; Rückrufe der Komponenten prüfen `_entfernt`; JSON als Array oder Objekt akzeptiert (H7) | Test im Desklet 16:17:36, Desklet innerhalb von 6 s entfernt | **behoben für das Entfernen, durch Test belegt:** 16:17:42 Programm beendet, Sperrdatei entfernt, kein Fehler im Protokoll. Die Zeitgrenze selbst ist nur mit einem absichtlich hängenden Programm prüfbar (Austausch per `sudo`, bewusst unterlassen): durch Dateien belegt |
+| G10 | alte Ablage nur, wenn die neue Datei fehlt; nur nicht negative Zahlen, sonst `--`; LAST ohne gültigen Zeitstempel `--`; alte Ablage unangetastet | `speedtest-values` leer, mit Text, ganz entfernt; vorher unmittelbar gesichert (`…/einstellungen_phase2_B/`) | **behoben, durch Test belegt:** leer → überall `--`, keine Übernahme, Datei nicht überschrieben; Text → nur gültige Zahl angezeigt; Datei fehlt → alte Werte einmalig übernommen, LAST `--`. Datei danach identisch mit Sicherung, alte Ablage unverändert (Prüfsumme) |
+| K1 (Nachprüfung) | – | drei Speedtests in diesem Test | weiterhin genau ein Durchlauf je Takt und Komponente |
+
 ## 9. Akzeptanzkriterien – Stand
 
 | Nr. | Kriterium | Stand |

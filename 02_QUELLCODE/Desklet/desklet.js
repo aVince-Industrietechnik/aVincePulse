@@ -1431,12 +1431,16 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * Wird aus dem Kontextmenue und aus den Einstellungen gerufen.
      */
     starteSpeedtest() {
-        if (this._speedtest.istAktiv())
+        if (this._entfernt || this._speedtest.istAktiv())
             return;
 
         this._statusAnzeige.zeige("Internet-Speedtest läuft …");
 
         this._speedtest.starte(ergebnis => {
+            // Nach dem Entfernen keine Meldung mehr (Befund M2).
+            if (this._entfernt || !this._statusAnzeige)
+                return;
+
             if (ergebnis.erfolg) {
                 this._statusAnzeige.zeige(
                     "Speedtest abgeschlossen\n\n" +
@@ -1487,6 +1491,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
             Mainloop.source_remove(this._fensterZeitgeber);
             this._fensterZeitgeber = null;
         }
+
+        // Ein laufender Speedtest wird beendet (Befund M2).
+        if (this._speedtest)
+            this._speedtest.verwerfe();
 
         if (this._statusAnzeige) {
             this._statusAnzeige.zerstoere();
