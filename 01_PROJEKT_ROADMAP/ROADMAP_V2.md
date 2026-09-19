@@ -1677,7 +1677,8 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
 6. AP19 – Zwischenprüfung (Phase 1 abgeschlossen am 19.09.2026, Phase 2 läuft)
 7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–85 % in Desklet und Applet, unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben (eingeschoben am 19.09.2026 aus Befund G9 von AP19, vor der Übersetzung wegen neuer Einstellungstexte)
-8. Übersetzung Deutsch/Englisch
+8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026, vor der Übersetzung wegen neuer Einstellungstexte)
+9. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1709,6 +1710,22 @@ Festlegung des Nutzers:
 - Schatten und Farben werden auf hellem und dunklem Hintergrund praktisch erprobt, bevor sie festgelegt werden.
 
 Einordnung: OPTIONAL 1.0 → vorgezogen, da es eine Anforderung der Warnschwellen erfüllt. Ziel und Akzeptanzkriterien werden vor Beginn schriftlich festgelegt.
+
+### Aktion bei Linksklick auf das Applet (AP21)
+
+Aufgenommen am 19.09.2026. Seit AP19 (Befund H14) startet ein Linksklick auf das Panel-Symbol keinen Speedtest mehr; der Test läuft wie beim Desklet über das Rechtsklick-Menü. Der Linksklick ist damit frei.
+
+Festlegung des Nutzers:
+
+- Neue Einstellung „Aktion bei Linksklick“ im Applet mit der Auswahl:
+  - **Anzeige ein/aus** (Vorgabe): Die Hover-Anzeige bleibt nach einem Klick stehen, bis erneut geklickt, daneben geklickt oder `Esc` gedrückt wird.
+  - **Systemüberwachung öffnen**, sofern installiert (vgl. „Systemüberwachung per Klick“ oben).
+  - **Nichts**.
+- Begründung der Vorgabe: Das Referenzgerät ist ein 2-in-1 mit Touchscreen; ohne Maus gibt es kein Überfahren, die Anzeige war im Tablet-Betrieb bisher nicht erreichbar.
+- Eine stehende Anzeige verdeckt die Bildschirmmitte und muss daher zuverlässig zu schließen sein.
+- Das Öffnen der Systemüberwachung geschieht nur nach einem Klick und entspricht damit der Fensterregel (`PROJECT-STATUS.md`, Abschnitt 8).
+
+Einordnung: OPTIONAL 1.0, als eigenes Paket AP21 direkt nach AP20. Ziel und Akzeptanzkriterien werden vor Beginn schriftlich festgelegt.
 
 ### Abschlussprüfung vor der Veröffentlichung
 

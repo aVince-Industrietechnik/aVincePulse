@@ -1194,6 +1194,8 @@ Entscheidung des Nutzers vom 19.09.2026 zu Befund G9 (Warnfarben im Desklet auf 
 - Schatten und Farben werden zuerst auf hellem und dunklem Hintergrund praktisch erprobt; der Nutzer wählt nach Augenschein.
 - Ziel und Akzeptanzkriterien werden nach Abschluss von AP19 schriftlich festgelegt.
 
+Entscheidung des Nutzers vom 19.09.2026 im Anschluss an Befund H14 (Speedtest im Applet nur noch über das Rechtsklick-Menü): eigenes Arbeitspaket **AP21 – Aktion bei Linksklick**, direkt nach AP20 und vor der Übersetzung. Einstellung im Applet mit „Anzeige ein/aus“ (Vorgabe; Hover-Anzeige bleibt stehen, schließen per Klick, Klick daneben oder `Esc`), „Systemüberwachung öffnen“ und „Nichts“. Begründung der Vorgabe: Der Latitude-5285 ist ein 2-in-1 mit Touchscreen, ohne Maus war die Anzeige bisher nicht erreichbar. Einzelheiten in `ROADMAP_V2.md`, Abschnitt 24.
+
 Ursprüngliche Festlegung von AP19 (18.09.2026):
 
 Ziel: Applet und Desklet vor der Übersetzung vollständig prüfen. Zwei Phasen:
@@ -1224,7 +1226,7 @@ Akzeptanzkriterien:
 
 Offen aus AP18, in AP19 geprüft (19.09.2026, Funktionstest D10): Weiße Schrift auf hellem Hintergrund „relativ gut“, Warnfarben schlecht lesbar → Befund G9, AP20.
 
-Danach: AP20 – Lesbarkeit, anschließend laut Roadmap Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
+Danach: AP20 – Lesbarkeit, AP21 – Aktion bei Linksklick, anschließend laut Roadmap Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
 
 Weitere bekannte offene Punkte:
 
