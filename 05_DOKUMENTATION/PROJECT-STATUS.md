@@ -1,6 +1,6 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 18.09.2026 (AP18)  
+Stand: 19.09.2026 (AP19, Phase 1 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
@@ -63,11 +63,13 @@ Wichtig: `06_TESTVERSIONEN/` bleibt lokal auf der Synology/NAS und ist per `.git
 
 ## 5. Aktueller Git-Stand
 
-Bisherige relevante Commits:
+Grundlegende Commits zu Beginn des Repositorys:
 
 - `f0f7854` – Initial import: aVincePulse 0.1.0-dev through AP05
 - `e4cb758` – Restructure repository: use full aVincePulse development project
 - `6cb4ad6` – Add project handoff status for model-independent development
+
+Alle späteren Commits sind je Arbeitspaket über `git log --oneline` und die Tags unten nachvollziehbar; sie werden hier bewusst nicht einzeln aufgeführt, damit die Liste nicht veraltet.
 
 Tags:
 
@@ -293,7 +295,7 @@ Nur ausdrücklich als nicht verfügbar gemeldete Messwerte entfallen. Alle übri
 
 `battery_charge` und `psu_state` hängen beide am Systemakku, nicht am Netzteil. Ein Desktop-PC meldet häufig eine AC-Schnittstelle, aber keinen Akku; eine dauerhafte Anzeige `PSU ON` wäre dort ohne Aussage.
 
-Die Erkennung läuft einmalig beim Laden des Desklets. Ändert sich die Hardware oder wird ein Treiber verzögert geladen, ist ein Neuladen erforderlich. Die in der Roadmap vorgesehene Funktion „Hardware neu erkennen" ist noch nicht umgesetzt.
+Die Erkennung läuft einmalig beim Laden des Desklets. Ändert sich die Hardware oder wird ein Treiber verzögert geladen, ist ein Neuladen erforderlich. Die in der Roadmap vorgesehene Funktion „Hardware neu erkennen" war zu diesem Zeitpunkt noch nicht umgesetzt (seit AP12 vorhanden).
 
 #### Geprüfte Hardwarefälle
 
@@ -322,10 +324,10 @@ Damit die Kopien nicht auseinanderlaufen, importiert `measurement.js` den `Hardw
 this._measurement = new MeasurementProvider(new HardwareDetector());
 ```
 
-Der komponentenspezifische Importpfad steht dadurch nur noch in `desklet.js` und `applet.js`. Die drei gemeinsamen Module sind in beiden Komponenten bitgenau identisch und lassen sich per Prüfsumme vergleichen:
+Der komponentenspezifische Importpfad steht dadurch nur noch in `desklet.js` und `applet.js`. Die gemeinsamen Module sind in beiden Komponenten bitgenau identisch und lassen sich per Prüfsumme vergleichen. Seit AP11 sind es vier, `speedtest.js` kam hinzu:
 
 ```bash
-for f in metrics.js measurement.js hardwareDetection.js; do
+for f in metrics.js measurement.js hardwareDetection.js speedtest.js; do
     sha256sum 02_QUELLCODE/Desklet/$f 02_QUELLCODE/Applet/$f
 done
 ```
@@ -334,7 +336,7 @@ Ein Auseinanderlaufen fällt damit sofort auf. Änderungen an einem der drei Mod
 
 #### Entfernter Code
 
-Aus `applet.js` wurden rund 130 Zeiten toter Code entfernt: `_readSensors()`, `_readNetworkSpeed()`, `_formatRate()`, `_readFile()`, `_getDefaultInterface()` sowie die Zustandsvariablen `_lastRx`, `_lastTx`, `_lastNetTime` und `_lastInterface`. Diese Funktionen waren definiert, wurden aber nirgends aufgerufen; sie stammten aus der Zeit vor der Umstellung auf die gemeinsame Datei.
+Aus `applet.js` wurden rund 130 Zeilen toter Code entfernt: `_readSensors()`, `_readNetworkSpeed()`, `_formatRate()`, `_readFile()`, `_getDefaultInterface()` sowie die Zustandsvariablen `_lastRx`, `_lastTx`, `_lastNetTime` und `_lastInterface`. Diese Funktionen waren definiert, wurden aber nirgends aufgerufen; sie stammten aus der Zeit vor der Umstellung auf die gemeinsame Datei.
 
 #### Eigene Messung
 
@@ -408,7 +410,9 @@ Beim Wechsel zwischen Symbol und Textkürzel muss die jeweils andere Darstellung
 
 Eine Schaltfläche im Einstellungsfenster setzt alle Werte auf die Vorgaben zurück.
 
-Wichtig dabei: `settings.setValue()` schreibt ausschließlich die Einstellungsdatei. Weder die gebundenen Eigenschaften noch die zugehörigen Rückrufe werden dabei aktualisiert. Die Werte müssen deshalb zusätzlich im Objekt gesetzt und die Anwendungsmethoden selbst aufgerufen werden, sonst wirkt das Zurücksetzen nicht sichtbar.
+Wichtig dabei: `settings.setValue()` löst die zugehörigen Rückrufe nicht aus. Die Anwendungsmethoden müssen deshalb selbst aufgerufen werden, sonst wirkt das Zurücksetzen nicht sichtbar.
+
+Berichtigt in AP19 (Befund H2): Die frühere Aussage, `setValue()` aktualisiere auch die gebundenen Eigenschaften nicht, trifft nicht zu. Gebundene Eigenschaften lesen ihren Wert direkt aus den Einstellungsdaten (Cinnamon `settings.js`, `_getValue`), die `setValue()` ändert. Die zusätzlichen Zuweisungen im Code sind daher überflüssig und schreiben die Datei bei Listen ein zweites Mal; schädlich sind sie nicht.
 
 ### AP10 – Auswahl der angezeigten Messwerte
 
@@ -900,7 +904,7 @@ Das Applet enthält dieselben Module zusätzlich als Kopie:
 - `metrics.js`, `measurement.js`, `hardwareDetection.js`, `speedtest.js` – identisch mit dem Desklet
 - `icon.png`, `panel-icon.png`, `panel-icon-symbolic.png`
 
-Änderungen an den drei gemeinsamen Modulen sind stets in beide Verzeichnisse zu übernehmen und anschließend per Prüfsumme zu kontrollieren.
+Änderungen an den vier gemeinsamen Modulen sind stets in beide Verzeichnisse zu übernehmen und anschließend per Prüfsumme zu kontrollieren.
 
 ## 7a. Grafiken und Logo
 
@@ -921,8 +925,9 @@ erstellt und auf Lesbarkeit bei 16, 20, 24, 32 und 64 Pixel geprüft werden.
 
 Eine Lizenz- und Rechteprüfung der Grafiken steht noch aus.
 
-Das Applet verwendet derzeit weiterhin das Unicode-Zeichen `⚡` als Panel-Symbol
-und noch keines der hier abgelegten Icons.
+Seit AP08 verwendet das Applet als Panel-Symbol das C-1-Logo aus `03_Panel/`
+(`panel-icon.png`, `panel-icon-symbolic.png`), seit AP09 wählbar in vier Varianten.
+Das frühere Unicode-Zeichen `⚡` wird nicht mehr verwendet.
 
 ## 8. Technische Regeln
 
@@ -967,11 +972,9 @@ Vor der Verwendung eines neuen Zeichens ist zu prüfen, aus welcher Schrift es s
 fc-list ":charset=26C1" family
 ```
 
-### Feste Spaltenbreiten
+### Spaltenbreiten
 
-`stylesheet.css` verwendet feste Pixelbreiten für Bezeichnung, Wert und Einheit (70/58/50 px). Die Schriftgröße ist über die Einstellungen jedoch bis 30 px veränderbar. Ab etwa 20 px können dadurch auch Zahlen abgeschnitten werden.
-
-Dieser Punkt stammt aus der Baseline und ist noch offen. Die Breiten sollten aus der eingestellten Schriftgröße berechnet werden.
+Spaltenbreiten werden nicht fest vorgegeben, sondern in `_berechneSpaltenbreiten()` aus der Schriftgröße und den tatsächlich angezeigten Beschriftungen berechnet (seit AP10, in beiden Komponenten). Die früheren festen Breiten 70/58/50 px aus der Baseline sind entfernt. In AP19 bei Schriftgröße 10, 14 und 30 geprüft: nichts abgeschnitten.
 
 ### Hardwareerkennung
 
@@ -1043,7 +1046,10 @@ Aus AP16 bis AP18 abgeleitet, verbindlich:
 - **Abläufe über denselben Weg auslösen wie der Nutzer:** über die Schaltfläche und eine echte bzw. realistisch nachgestellte Änderung, nicht durch direkten Aufruf innerer Funktionen (AP16).
 - **Sichtbares messen, nicht nur Inhalte:** Größe, Position und Deckkraft einer Anzeige prüfen; kurzlebige Überlagerungen durch Aufzeichnung der sichtbaren Flächen in `Main.uiGroup` (AP17).
 - **Nach Änderungen an gemeinsamen Modulen oder am Stylesheet** ist ein Cinnamon-Neustart nötig (`Alt+F2`, `r`); das Neuladen einer Komponente über `ReloadExtension` genügt nur für `desklet.js`/`applet.js` und die Schemata. Den Neustart löst der Nutzer aus.
-- **Werkzeuge:** `org.Cinnamon.Eval` (über `gdbus`) für Zugriff auf laufende Komponenten; Applet-Instanz über `imports.ui.appletManager.getRunningInstancesForUuid(uuid)[0]`, Desklet-Instanz über `imports.ui.main.deskletContainer.actor.get_children().map(a => a._delegate)`. `grep` ist auf dem Referenzsystem durch `ugrep` ersetzt; für verwickelte Suchmuster Python verwenden.
+- **Sichern direkt vor dem Eingriff** (AP19): Eine Sicherung, die vor weiteren Tests angelegt wurde, kann beim Zurückspielen neuere Stände überschreiben (so geschehen mit `speedtest-values`).
+- **Messschleife von außen zählen** (AP19): Jeder Durchlauf von Applet und Desklet liest `~/.local/share/avincepulse/speedtest-values` einmal, das Desklet schreibt zusätzlich `/tmp/avince-hwmonitor-values`. Beides lässt sich per inotify zählen, ohne in Cinnamon einzugreifen (Skripte in `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/langzeit/`). Soll bei gleichem Intervall: je Taktmarke ein Durchlauf je Komponente. Entfällt das Schreiben der `/tmp`-Datei (Befund M3), ist die Zählung anzupassen.
+- **Kurzlebige Anzeigen** (AP19): Wiederholte lesende `Eval`-Abfragen aus Python erreichen etwa 300 Abfragen je Sekunde und erfassen auch Ein- und Ausblendvorgänge. Neben `Main.uiGroup` auch die Fenster (`global.get_window_actors()`) mit aufzeichnen; ein durchscheinendes Fenster hinter einer halbtransparenten Meldung wirkt für den Nutzer wie „anderer Text in der Meldung“ (H15).
+- **Werkzeuge:** `org.Cinnamon.Eval` für Zugriff auf laufende Komponenten, **aus Python über `Gio.DBusConnection.call_sync`** statt über `gdbus call`: `gdbus` wertet den übergebenen Text als GVariant aus und zerlegt Code mit einfachen Anführungszeichen oder `\n` (AP19). Der Cinnamon-Neustart über `Alt+F2`, `r` behält unter X11 die Prozessnummer bei; der Neustart ist am Protokoll („About to start Cinnamon“) oder an den Komponenten zu erkennen, nicht an der PID. `pkill -f` mit einem Muster, das in der eigenen Befehlszeile vorkommt, beendet die eigene Shell; Applet-Instanz über `imports.ui.appletManager.getRunningInstancesForUuid(uuid)[0]`, Desklet-Instanz über `imports.ui.main.deskletContainer.actor.get_children().map(a => a._delegate)`. `grep` ist auf dem Referenzsystem durch `ugrep` ersetzt; für verwickelte Suchmuster Python verwenden.
 
 ### Neustart des Referenzgeräts
 
@@ -1091,7 +1097,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_19-41-07` (AP17).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_21-31-48` (AP18).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -1127,11 +1133,21 @@ Die `.gitignore` ist entsprechend eingerichtet.
 
 ## 12. Lokale Testinstallation
 
-Aktive bzw. verwendete Cinnamon-Testinstallation des Desklets:
+Aktive Cinnamon-Testinstallationen:
 
-`~/.local/share/cinnamon/desklets/avincepulse-desklet@avince`
+- Desklet: `~/.local/share/cinnamon/desklets/avincepulse-desklet@avince`
+- Applet: `~/.local/share/cinnamon/applets/avincepulse-applet@avince`
 
-Die installierte Testkopie ist nicht automatisch identisch mit dem Git-Repository. Vor Tests bewusst prüfen, welche Dateien installiert bzw. synchronisiert wurden.
+Einstellungen: `~/.config/cinnamon/spices/<uuid>/<uuid>.json` (je Komponente eine Datei, `max-instances` 1).
+
+Die installierte Testkopie ist nicht automatisch identisch mit dem Git-Repository. Vor Tests bewusst prüfen, welche Dateien installiert bzw. synchronisiert wurden:
+
+```bash
+diff -rq -x '*.bak*' 02_QUELLCODE/Applet ~/.local/share/cinnamon/applets/avincepulse-applet@avince
+diff -rq -x '*.bak*' 02_QUELLCODE/Desklet ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince
+```
+
+Ebenfalls installiert, aber nicht aktiv: die Altstände `avince-hwpopup@angelo` (Applet) und `avince-hwmonitor@angelo` (Desklet). Deren Einstellungsordner enthält noch eine alte `speedtest-values`, auf die aVincePulse bei beschädigter neuer Datei zurückgreift (Befund G10 aus AP19).
 
 ## 13. Roadmap und Funktionsumfang
 
@@ -1160,7 +1176,25 @@ AP01 bis AP18 sind abgeschlossen.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**AP19 – Zwischenprüfung: festgelegt und freigegeben (18.09.2026), noch nicht begonnen.** Beginn in einer neuen Sitzung, da der Kontext der bisherigen Sitzung zu 63 % belegt war.
+**AP19 – Zwischenprüfung: Phase 1 abgeschlossen (19.09.2026), Phase 2 wartet auf Freigabe je Befund.**
+
+Stand Phase 1:
+
+- Snapshot `06_TESTVERSIONEN/0.1.0-dev_AP19-START/` angelegt (18.09.2026).
+- Prüfbericht `05_DOKUMENTATION/PRUEFBERICHT_AP19.md`: Code-Durchsicht (Claude und unabhängiger Prüfer, Befunde nachgeprüft), Langzeittest über Nacht (18./19.09.), Funktionstest Applet A1–A13 und Desklet D1–D10, Robustheit R1–R6, Wertevergleich der Einstellungen (identisch).
+- Prüfdaten, Sicherungen und Testprotokolle lokal unter `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/` (nicht versioniert).
+- Wichtigster Befund **K1 (kritisch):** Nach jedem Speedtest läuft die Messschleife zusätzlich einmal mehr; im Applet werden LOAD, DOWN und UP dadurch falsch (einschließlich Fehlalarmen der Warnfarben), im Desklet laufen die zusätzlichen Schleifen nach dem Entfernen weiter und füllen das Sitzungsprotokoll (etwa 20 MB/h) bis zum Cinnamon-Neustart.
+- Übrige Befunde: M1–M3 (mittel), G1–G10 (gering, G9 mittel), H1–H15 (Hinweise); Übersicht in Abschnitt 2 des Prüfberichts.
+
+Entscheidung des Nutzers vom 19.09.2026 zu Befund G9 (Warnfarben im Desklet auf hellem Hintergrund schlecht lesbar): eigenes Arbeitspaket **AP20 – Lesbarkeit**, eingeschoben vor der Übersetzung:
+
+- Einstellung „Hintergrundfläche“ (Deckkraft 0–85 %) in Desklet **und** Applet.
+- Ab 45 %: Fläche, normaler Schatten, normale Warnfarben. Unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben, ohne eigenen Schalter.
+- Für das Applet wird damit die Festlegung aus AP09 („Deckkraft nicht unter 45 %“) bewusst aufgehoben.
+- Schatten und Farben werden zuerst auf hellem und dunklem Hintergrund praktisch erprobt; der Nutzer wählt nach Augenschein.
+- Ziel und Akzeptanzkriterien werden nach Abschluss von AP19 schriftlich festgelegt.
+
+Ursprüngliche Festlegung von AP19 (18.09.2026):
 
 Ziel: Applet und Desklet vor der Übersetzung vollständig prüfen. Zwei Phasen:
 
@@ -1188,30 +1222,29 @@ Akzeptanzkriterien:
 8. Phase 2: freigegebene Befunde behoben und erneut geprüft (Syntax, Namen, Prüfsummen, gezielter Test); geänderte Stellen vom Nutzer getestet.
 9. Gemeinsame Module am Ende identisch.
 
-Offen aus AP18, in AP19 mit zu prüfen: Lesbarkeit des Desklets mit Schriftschatten auf hellem Hintergrund (Nutzer prüft bei hellerem Hintergrundbild).
+Offen aus AP18, in AP19 geprüft (19.09.2026, Funktionstest D10): Weiße Schrift auf hellem Hintergrund „relativ gut“, Warnfarben schlecht lesbar → Befund G9, AP20.
 
-Danach laut Roadmap: Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
+Danach: AP20 – Lesbarkeit, anschließend laut Roadmap Übersetzung Deutsch/Englisch. Vor dem Einreichen bei Cinnamon Spices folgt eine Abschlussprüfung.
 
 Weitere bekannte offene Punkte:
 
-- Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Sobald das alte Applet `avince-hwpopup@angelo` nicht mehr verwendet wird, liest diese Datei niemand mehr und das Schreiben kann entfallen.
+- Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Das alte Applet `avince-hwpopup@angelo` ist installiert, aber nicht aktiv (geprüft 19.09.2026); die Datei liest damit niemand mehr (Befund M3 aus AP19). Der Langzeittest von AP19 nutzt sie als Zähler.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
-- Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße.
+- Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße. Die Deckkraft kommt mit AP20.
 - Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen.
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
 - Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen. Dabei auch die englischen Reste im Hardwarebericht übersetzen („unlabeled“, „NOT FOUND“, „none“; Entscheidung vom 18.09.2026). Der Titelvergleich des Einstellungsfensters (AP15) ist dann anzupassen.
 - Tooltips an Schaltflächen im Einstellungsschema werden von Cinnamon nicht angezeigt (siehe AP17). Bei Gelegenheit entfernen oder durch Hinweistexte ersetzen.
-- Veraltete Stellen in diesem Dokument: Abschnitt 7a nennt noch `⚡` als Panel-Symbol (seit AP08 das C-1-Logo), Abschnitt 8 beschreibt noch feste Spaltenbreiten (seit AP10 berechnet), Abschnitt 7 spricht von drei statt vier gemeinsamen Modulen.
+- Die in AP19 genannten veralteten Stellen dieses Dokuments (Abschnitt 5, 7, 7a, 8, 10, 12 sowie AP07, AP08, AP09) wurden am 19.09.2026 korrigiert.
 
-Vor Beginn von AP19 (neue Sitzung):
+Fortsetzung von AP19 (Phase 2):
 
-1. `PROJECT-STATUS.md` lesen
-2. `ROADMAP_V2.md` lesen
-3. `git status` prüfen
-4. sicherstellen, dass `main` und GitHub synchron sind
-5. Ziel und Akzeptanzkriterien für AP19 sind festgelegt und freigegeben (Abschnitt 14); Snapshot `0.1.0-dev_AP19-START` anlegen und mit Phase 1 beginnen
-6. erst danach Code ändern
+1. `PROJECT-STATUS.md`, `ROADMAP_V2.md` und `PRUEFBERICHT_AP19.md` lesen
+2. `git status` prüfen, `main` und GitHub synchron
+3. Befunde nur nach Freigabe des Nutzers je Befund beheben; Freigaben im Prüfbericht vermerken
+4. nach jeder Änderung: Syntax (`cjs`), Namensprüfung, Prüfsummen der vier gemeinsamen Module, gezielter Test, Test durch den Nutzer
+5. Abschluss mit der Sicherungsroutine aus Abschnitt 9, erstmals mit Versionsnummer `0.1.0-dev.19`
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
@@ -1244,13 +1277,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP18:
+Erwarteter Ausgangspunkt während AP19:
 
 - Branch: `main`
 - Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP18-END`
-- AP18 abgeschlossen
-- AP19 (Zwischenprüfung) festgelegt und freigegeben, noch nicht begonnen; Beginn mit START-Snapshot in einer neuen Sitzung
+- Referenz-Tag: `0.1.0-dev_AP18-END` (Quellcode unverändert seit AP18)
+- AP19 Phase 1 abgeschlossen, Prüfbericht und Dokumentation committet
+- AP19 Phase 2: Behebung nach Freigabe je Befund, siehe Abschnitt 14 und `PRUEFBERICHT_AP19.md`
 
 ---
 

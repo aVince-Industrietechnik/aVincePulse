@@ -1675,8 +1675,9 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 3. AP16 – Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar, VERBINDLICH 1.0 (abgeschlossen)
 4. AP17 – eingeschoben: Rückfrage vor dem Neu-Öffnen, Meldungen, Umlaute (abgeschlossen)
 5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
-6. AP19 – Zwischenprüfung
-7. Übersetzung Deutsch/Englisch
+6. AP19 – Zwischenprüfung (Phase 1 abgeschlossen am 19.09.2026, Phase 2 läuft)
+7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–85 % in Desklet und Applet, unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben (eingeschoben am 19.09.2026 aus Befund G9 von AP19, vor der Übersetzung wegen neuer Einstellungstexte)
+8. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1693,6 +1694,21 @@ Umfang:
 - Übereinstimmung von Applet und Desklet
 
 Gefundene Fehler werden behoben; größere Änderungen werden als eigenes Arbeitspaket vorgeschlagen. Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen.
+
+Ergebnis Phase 1 (19.09.2026): `05_DOKUMENTATION/PRUEFBERICHT_AP19.md`. Aus Befund G9 wurde AP20 – Lesbarkeit beschlossen.
+
+### Lesbarkeit (AP20)
+
+Aufgenommen am 19.09.2026 auf Grund des Funktionstests D10 von AP19: Warnfarben im Desklet sind auf hellem Hintergrund schlecht lesbar; die Anforderung „Farben müssen auf hellem und dunklem Hintergrund lesbar bleiben“ (Warnschwellen, oben) ist damit nicht erfüllt.
+
+Festlegung des Nutzers:
+
+- Einstellung „Hintergrundfläche“ (Deckkraft 0–85 %) in Desklet und Applet, je Komponente getrennt.
+- Ab 45 % abgedunkelte Fläche wie bisher bei der Hover-Anzeige; unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben, ohne eigenen Schalter.
+- Für das Applet wird die Festlegung aus AP09 (Deckkraft nicht unter 45 %) bewusst aufgehoben.
+- Schatten und Farben werden auf hellem und dunklem Hintergrund praktisch erprobt, bevor sie festgelegt werden.
+
+Einordnung: OPTIONAL 1.0 → vorgezogen, da es eine Anforderung der Warnschwellen erfüllt. Ziel und Akzeptanzkriterien werden vor Beginn schriftlich festgelegt.
 
 ### Abschlussprüfung vor der Veröffentlichung
 
