@@ -1688,7 +1688,7 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
 6. AP19 – Zwischenprüfung (abgeschlossen am 20.09.2026)
 7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–55 % im Applet und 0–35 % im Desklet, fester kräftiger Schriftschatten, Warnfarben je nach Hintergrund wählbar (eingeschoben am 19.09.2026 aus Befund G9 von AP19; abgeschlossen am 20.09.2026)
-8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026, vor der Übersetzung wegen neuer Einstellungstexte; begonnen am 20.09.2026)
+8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026; abgeschlossen am 20.09.2026)
 9. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
@@ -1749,7 +1749,7 @@ Festlegung des Nutzers:
 - Eine stehende Anzeige verdeckt die Bildschirmmitte und muss daher zuverlässig zu schließen sein.
 - Das Öffnen der Systemüberwachung geschieht nur nach einem Klick und entspricht damit der Fensterregel (`PROJECT-STATUS.md`, Abschnitt 8).
 
-Ergänzende Entscheidung des Nutzers vom 20.09.2026: Das Schließen per `Esc` wird umgesetzt. Es verlangt, dass das Applet die Tastatur kurzzeitig an sich zieht (`Main.pushModal()`, wie Cinnamons eigene Menüs). Für den Tablet-Betrieb ist das ohne Bedeutung; dort trägt der bildschirmfüllende Klickfänger, der unabhängig davon arbeitet.
+Abgeschlossen am 20.09.2026. Ergänzende Entscheidung des Nutzers vom selben Tag: Das Schließen per `Esc` wird umgesetzt. Es verlangt, dass das Applet die Tastatur kurzzeitig an sich zieht (`Main.pushModal()`, wie Cinnamons eigene Menüs). Für den Tablet-Betrieb ist das ohne Bedeutung; dort trägt der bildschirmfüllende Klickfänger, der unabhängig davon arbeitet.
 
 Einordnung: OPTIONAL 1.0, als eigenes Paket AP21 direkt nach AP20. Ziel und Akzeptanzkriterien wurden am 20.09.2026 festgelegt und freigegeben; sie stehen in `05_DOKUMENTATION/PROJECT-STATUS.md`, Abschnitt 14.
 

@@ -1,12 +1,12 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 20.09.2026 (AP20 abgeschlossen)  
+Stand: 20.09.2026 (AP21 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP20-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP19-END`  
-Versionsnummer in `metadata.json`: `0.1.0-dev.20` (Regel aus Abschnitt 9, Schritt 0)
+Aktueller Referenzstand: `0.1.0-dev_AP21-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP20-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.21` (Regel aus Abschnitt 9, Schritt 0)
 
 ## 1. Zweck dieses Dokuments
 
@@ -90,6 +90,7 @@ Tags:
 - `0.1.0-dev_AP18-END` – Entwicklungsstand nach Abschluss von AP18
 - `0.1.0-dev_AP19-END` – Entwicklungsstand nach Abschluss von AP19
 - `0.1.0-dev_AP20-END` – Entwicklungsstand nach Abschluss von AP20
+- `0.1.0-dev_AP21-END` – Entwicklungsstand nach Abschluss von AP21
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1007,6 +1008,63 @@ Funktionstest durch den Nutzer am 20.09.2026, bestanden: Umschalten der Warnfarb
 
 Zum Wertevergleich: Nach den Tests standen alle 13 Werte je Komponente exakt auf den Vorgaben des Schemas. Die Abweichungen gegenüber der Sicherung – Applet 55 → 25 Prozent, Desklet 10 → 0 Prozent – stammen aus dem Funktionstest der Schaltfläche „Auf Standardwerte zurücksetzen“ und nicht aus einem ungewollten Eingriff.
 
+### AP21 – Aktion bei Linksklick auf das Applet
+
+Abgeschlossen.
+
+Dateien: `Applet/applet.js`, `Applet/settings-schema.json`. Die vier gemeinsamen Module und das Desklet blieben unberührt.
+
+Ziel, Akzeptanzkriterien und die verworfenen Alternativen stehen in Abschnitt 14.
+
+#### Warum
+
+Die große Messwert-Anzeige erschien bisher nur, solange der Mauszeiger auf dem Panel-Symbol stand. Auf dem Referenzgerät, einem 2-in-1 mit Touchscreen, gibt es im Tablet-Betrieb kein Überfahren – ein Finger tippt und ist wieder weg. Die Anzeige war dort **überhaupt nicht erreichbar**. Der Linksklick war seit AP19 frei, weil der Speedtest ins Rechtsklick-Menü gewandert ist (Befund H14).
+
+#### Die Einstellung
+
+Neu im Abschnitt „Hover-Anzeige“: „Aktion bei Linksklick“ mit „Anzeige ein/aus“ (Vorgabe), „Systemüberwachung öffnen“ und „Nichts“.
+
+Bei „Anzeige ein/aus“ bleibt die Anzeige nach einem Klick stehen. Sie schließt durch erneuten Klick auf das Panel-Symbol, Klick auf die Anzeige selbst, Klick daneben oder `Esc`. Die ersten drei Wege funktionieren auch per Fingertipp; ein Touchscreen hat kein `Esc`.
+
+#### Wie das Schließen abgesichert ist
+
+Zwei voneinander unabhängige Mittel:
+
+- Ein unsichtbarer **Klickfänger** spannt sich über die gesamte Zeichenfläche – nicht nur über den primären Monitor – und nimmt Klick und Fingertipp entgegen.
+- Zusätzlich greift `Main.pushModal()` die Tastatur, allein für `Esc`. Schlägt das fehl, liefert es `false`; dann bleibt die Anzeige über den Klickfänger bedienbar, nur `Esc` entfällt, und eine Protokollzeile hält das fest.
+
+Das Popup wird nur während der Anhaftung `reactive`. Sonst finge es beim bloßen Überfahren Mausereignisse ab, die den darunter liegenden Fenstern zustehen.
+
+#### Systemüberwachung
+
+Gesucht wird über mehrere Arbeitsumgebungen hinweg – GNOME, MATE, Xfce, KDE, LXDE – zuerst über den Programmeintrag (`Gio.DesktopAppInfo`), danach über den Befehlsnamen (`GLib.find_program_in_path`). Ist nichts vorhanden, erscheint eine Meldung, ohne zur Installation aus Fremdquellen aufzufordern (Regel von Cinnamon Spices). Mit `cjs` belegt: Ein fehlender Eintrag liefert `null`, das Referenzgerät löst `org.gnome.SystemMonitor.desktop` auf.
+
+#### Zusammenspiel mit dem Übrigen
+
+- Ein Speedtest löst die Anhaftung, damit die Meldung in der Bildschirmmitte nicht mit der Anzeige zusammenfällt.
+- Das Verlassen des Panel-Symbols verbirgt eine angeheftete Anzeige nicht mehr (`_hidePopup()` prüft den Zustand).
+- Eine Änderung der Einstellung löst die Anhaftung, damit niemand mit einer stehenden Anzeige zurückbleibt, die er über den Klick nicht mehr schließen kann.
+- Beim Entfernen des Applets wird zuerst gelöst, danach alles abgeräumt.
+
+#### Prüfung
+
+Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, Schema als JSON. Die verwendeten Namen `Clutter.KEY_Escape`, `Clutter.EVENT_STOP`, `Gio.DesktopAppInfo` und `Gio.AppInfoCreateFlags` wurden mit `cjs` belegt statt angenommen.
+
+Funktionstest durch den Nutzer am 20.09.2026, alle Punkte bestanden: Überfahren mit der Maus unverändert; Anheften per Klick; Schließen über Symbol, Anzeige, daneben und `Esc`; weiterlaufende Messwerte; **Bedienung per Fingertipp im Tablet-Betrieb**; „Systemüberwachung öffnen“ und „Nichts“.
+
+**Akzeptanzkriterium 7 – Entfernen bei angehefteter Anzeige.** Über die Bedienung nicht auslösbar, da der Klickfänger bei jedem Klick zuerst schließt. Geprüft über ein Neuladen des Applets per DBus, das denselben Code durchläuft (`removeAppletFromPanels` → `on_applet_removed_from_panel`), mit `deleteConfig = false`, sodass die Einstellungen erhalten bleiben. Skript: `06_TESTVERSIONEN/0.1.0-dev_AP21-PRUEFDATEN/test_entfernen.py`.
+
+Ergebnis (20.09.2026, durch Test belegt):
+
+| Zeitpunkt | `modalCount` | angeheftet | Tastaturgriff | Klickfänger |
+|---|---|---|---|---|
+| vor dem Entfernen | 1 | ja | ja | ja |
+| nach dem Entfernen | **0** | nein | nein | nein |
+
+Kein hängender Tastaturgriff, keine Protokollzeile von aVincePulse, das Applet lud sich in 193 ms wieder. Damit ist das Restrisiko dieser Bauweise praktisch widerlegt.
+
+Die Einstellungen des Nutzers waren nach allen Tests unverändert; hinzugekommen ist allein der neue Schlüssel `linksklick-aktion`.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1305,11 +1363,21 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP20 sind abgeschlossen.
+AP01 bis AP21 sind abgeschlossen.
 
-**In Arbeit: AP21 – Aktion bei Linksklick auf das Applet.** Ziel und Akzeptanzkriterien wurden am 20.09.2026 schriftlich festgelegt und vom Nutzer freigegeben; sie stehen unten in diesem Abschnitt. Danach das Arbeitspaket zum Speedtest-Programm, der Unterstützen-Hinweis und die Übersetzung.
+**Als Nächstes** stehen laut `ROADMAP_V2.md`, Abschnitt 24, noch drei Pakete vor der Veröffentlichung an. Ihre Reihenfolge ist nicht festgelegt und mit dem Nutzer zu klären:
 
-### AP21 – Aktion bei Linksklick: Ziel und Akzeptanzkriterien (freigegeben am 20.09.2026)
+- **Speedtest-Programm** – `speedtest-cli` aus den Paketquellen unterstützen, `librespeed-cli` nur verwenden, wenn vorhanden, und ein verständliches Verhalten, wenn kein Programm da ist. Notwendig, weil `librespeed-cli` kein Paket der Mint-Quellen ist und Cinnamon Spices keine Installationsanweisungen für Fremdquellen erlaubt.
+- **Unterstützen-Hinweis** – README, `FUNDING.yml` und eine Schaltfläche im Einstellungsfenster. Vor der Übersetzung, da die Texte mit übersetzt werden.
+- **Übersetzung Deutsch/Englisch** über gettext, mit englischen Ausgangstexten.
+
+Danach folgt die Abschlussprüfung vor der Einreichung bei Cinnamon Spices.
+
+Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
+
+**AP21 – Aktion bei Linksklick: abgeschlossen am 20.09.2026.** Ergebnis in Abschnitt 6 unter „AP21“. Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf fest.
+
+### AP21 – Aktion bei Linksklick: Ziel und Akzeptanzkriterien (freigegeben und abgeschlossen am 20.09.2026)
 
 Grundlage: Festlegung vom 19.09.2026 in `ROADMAP_V2.md`, Abschnitt 24, entstanden aus Befund H14 von AP19.
 
@@ -1335,7 +1403,7 @@ Der seit AP19 freie Linksklick bekommt darum eine wählbare Aktion, voreingestel
 5. **Systemüberwachung portabel finden:** keine feste Bindung an `gnome-system-monitor`. Gesucht wird über eine Kandidatenliste (GNOME, MATE, Xfce, KDE, LXDE) mit `Gio.DesktopAppInfo` und ersatzweise `GLib.find_program_in_path()`. Ist nichts vorhanden, erscheint eine verständliche Meldung – kein Fehler und keine Installationsanleitung für Fremdquellen (Regel von Cinnamon Spices).
 6. **Fensterregel eingehalten** (Abschnitt 8): Die Systemüberwachung öffnet nur nach einem Klick des Benutzers.
 7. **Sauberes Aufräumen:** Beim Entfernen des Applets werden der Modalzustand, der Klickfänger und alle neuen Signale getrennt. Geprüft wird ausdrücklich der Fall, dass das Applet entfernt wird, **während** die Anzeige angeheftet ist; danach darf nichts zurückbleiben und der Bildschirm muss bedienbar sein.
-8. **Verträglich mit dem Übrigen:** Ein Speedtest löst die Anhaftung, damit die Meldung in der Bildschirmmitte nicht mit der Anzeige zusammenfällt. Das Rechtsklick-Menü bleibt unverändert erreichbar.
+8. **Verträglich mit dem Übrigen:** Ein Speedtest löst die Anhaftung, damit die Meldung in der Bildschirmmitte nicht mit der Anzeige zusammenfällt. Das Rechtsklick-Menü bleibt erreichbar – bei stehender Anzeige über einen zweiten Klick, siehe unten. *Nachtrag nach dem Test: Der Speedtest ist bei angehefteter Anzeige über die Bedienung gar nicht auslösbar, da jeder Klick zuvor schließt. Die Absicherung bleibt trotzdem, weil der in der Roadmap vorgesehene zeitgesteuerte Speedtest ohne Klick auslöst; sie ist durch Dateien belegt, nicht durch einen Test.*
 9. **Mehrere Bildschirme:** Der Klickfänger deckt die gesamte Zeichenfläche ab, nicht nur den primären Monitor.
 10. **Robustheit:** Ein beschädigter Wert der neuen Einstellung fällt auf die Vorgabe zurück. Schlägt `Main.pushModal()` fehl – es liefert dann `false` –, bleibt die Anzeige bedienbar und schließt über den Klickfänger; nur `Esc` entfällt in diesem Fall.
 11. **„Zurücksetzen“** stellt auch die neue Einstellung auf die Vorgabe zurück.
@@ -1347,6 +1415,20 @@ Der seit AP19 freie Linksklick bekommt darum eine wählbare Aktion, voreingestel
 Die Anhaftung bekommt zwei voneinander unabhängige Sicherungen: einen unsichtbaren, bildschirmfüllenden Klickfänger unterhalb der Anzeige, der Klick und Fingertipp zuverlässig abfängt, und zusätzlich `Main.pushModal()` für die `Esc`-Taste. Das Popup wird dafür `reactive: true`.
 
 Das Modal ist die einzige Stelle mit einem Restrisiko: Ein Modalzustand, der nicht beendet wird, ließe den Bildschirm nicht mehr auf Eingaben reagieren. Abgesichert ist das dreifach – Cinnamon beendet ihn selbst, sobald der Actor zerstört wird, das Applet beendet ihn beim Entfernen, und der Klickfänger arbeitet unabhängig davon.
+
+#### Geprüft und bewusst verworfen (20.09.2026)
+
+**Klick neben der Anzeige soll nichts bewirken.** Der Nutzer fragte, ob die angeheftete Anzeige auch stehen bleiben kann, während man den Inhalt dahinter normal bedient und scrollt – schließen dann nur über `Esc`, Linksklick auf das Panel-Symbol oder Linksklick auf die Anzeige.
+
+Technisch umsetzbar, aber nicht mit der jetzigen Bauweise vereinbar: `Main.pushModal()` fängt zwangsläufig **alle** Eingaben ab, genau deshalb schließt heute jeder Klick die Anzeige. Damit der Inhalt dahinter bedienbar bleibt, müssten der Tastaturgriff und der Klickfänger entfallen und `Esc` über ein globales Tastenkürzel kommen (`Main.keybindingManager.addHotKey`, zur Laufzeit registrierbar, meldet mit `false`, wenn ein Kürzel nicht belegbar ist).
+
+Abwägung: Der Umbau hätte das Restrisiko eines hängenden Tastaturgriffs vollständig beseitigt, dafür aber zwei Nebenwirkungen – `Esc` wäre für alle anderen Programme abgefangen, solange die Anzeige steht, und über der Anzeigefläche ließe sich nicht mehr scrollen. Zudem ist nicht gesichert, ob Muffin `Esc` ohne Modifikatortaste überhaupt als globales Kürzel annimmt.
+
+**Entscheidung des Nutzers: nicht umbauen, alles so belassen.**
+
+**Doppelter Rechtsklick bei stehender Anzeige.** Solange die Anzeige angeheftet ist, liegt der Klickfänger über dem gesamten Bildschirm, auch über dem Panel. Ein Rechtsklick schließt deshalb zuerst die Anzeige, ohne das Kontextmenü zu öffnen; erst der zweite öffnet es. Das entspricht dem Verhalten von Cinnamons eigenen Menüs. Der Nutzer hat das geprüft und ausdrücklich als nicht störend bezeichnet.
+
+**Systemüberwachung mittig öffnen.** Ein Applet sollte fremde Fenster nicht verschieben; das ist Sache der Fensterverwaltung, bei Cinnamon Spices unüblich, und es würde die Systemüberwachung auch dann verschieben, wenn sie anders geöffnet wird. Cinnamon kann das systemweit selbst: `org.cinnamon.muffin placement-mode` auf `'center'`, erreichbar auch über die Systemeinstellungen unter „Fenster“. Der naheliegendere Schlüssel `center-new-windows` ist in Cinnamon 6.6 als veraltet gekennzeichnet und wirkungslos. **Entscheidung des Nutzers: nichts ändern.**
 
 #### Nicht Bestandteil von AP21
 
@@ -1534,12 +1616,12 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP20:
+Erwarteter Ausgangspunkt nach AP21:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP20-END`, Versionsnummer `0.1.0-dev.20`
-- AP01 bis AP20 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` vorhanden
-- Nächstes Arbeitspaket: AP21 – Aktion bei Linksklick auf das Applet; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
+- Referenz-Tag: `0.1.0-dev_AP21-END`, Versionsnummer `0.1.0-dev.21`
+- AP01 bis AP21 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` vorhanden
+- Nächstes Arbeitspaket: noch zu wählen – Speedtest-Programm, Unterstützen-Hinweis oder Übersetzung; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
 ---
 
