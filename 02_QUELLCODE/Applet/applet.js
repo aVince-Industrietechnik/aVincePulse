@@ -130,6 +130,48 @@ const POPUP_MAX_FONT_SIZE = 48;
 const DEFAULT_POPUP_OPACITY = 0.35;
 const MAX_POPUP_OPACITY = 55;
 
+/*
+ * Aktion beim Linksklick auf das Panel-Symbol (AP21).
+ *
+ * Der Linksklick ist seit AP19 frei: Bis dahin startete er den
+ * Internet-Speedtest, was versehentlich geschah (Befund H14).
+ *
+ * Vorgabe ist "anzeige". Grund: Die grosse Messwert-Anzeige erscheint
+ * sonst nur, solange der Mauszeiger ueber dem Symbol steht. Auf einem
+ * Geraet mit Touchscreen gibt es kein Ueberfahren - ein Finger tippt
+ * und ist wieder weg -, die Anzeige waere dort gar nicht erreichbar.
+ */
+const DEFAULT_LINKSKLICK = "anzeige";
+const LINKSKLICK_AKTIONEN = ["anzeige", "systemueberwachung", "nichts"];
+
+/*
+ * Systemueberwachung, in dieser Reihenfolge gesucht.
+ *
+ * Bewusst nicht auf gnome-system-monitor festgelegt: aVincePulse soll
+ * auf unterschiedlichen Arbeitsumgebungen laufen. Zuerst werden die
+ * Programmeintraege der Arbeitsumgebungen gesucht, danach die Befehle
+ * selbst. Wird nichts gefunden, erscheint eine Meldung; ein Hinweis,
+ * etwas nachzuinstallieren, waere bei Cinnamon Spices unerwuenscht.
+ */
+const SYSTEMUEBERWACHUNG_EINTRAEGE = [
+    "org.gnome.SystemMonitor.desktop",
+    "gnome-system-monitor.desktop",
+    "mate-system-monitor.desktop",
+    "xfce4-taskmanager.desktop",
+    "org.kde.plasma-systemmonitor.desktop",
+    "org.kde.ksysguard.desktop",
+    "lxtask.desktop"
+];
+
+const SYSTEMUEBERWACHUNG_BEFEHLE = [
+    "gnome-system-monitor",
+    "mate-system-monitor",
+    "xfce4-taskmanager",
+    "plasma-systemmonitor",
+    "ksysguard",
+    "lxtask"
+];
+
 
 class AVincePulseApplet extends Applet.TextIconApplet {
     constructor(metadata, orientation, panel_height, instance_id) {
@@ -146,6 +188,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         // Wird beim Entfernen gesetzt; danach keine Messung mehr.
         this._entfernt = false;
         this._symbolischAktiv = false;
+
+        // Angeheftete Anzeige (AP21): bleibt stehen, bis sie
+        // geschlossen wird, statt beim Verlassen des Symbols zu
+        // verschwinden.
+        this._istAngeheftet = false;
+        this._modalAktiv = false;
+        this._klickfaenger = null;
 
         // Vorgabewerte, bis die Einstellungen geladen sind.
         this.refreshInterval = DEFAULT_REFRESH_INTERVAL_SECONDS;
@@ -185,6 +234,17 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             "panel-symbol",
             "panelSymbol",
             this._applyPanelSymbol.bind(this)
+        );
+
+        // Aktion beim Linksklick (AP21). Eine Aenderung wirkt sofort;
+        // eine angeheftete Anzeige wird dabei geloest, damit der
+        // Benutzer nicht mit einer stehenden Anzeige zurueckbleibt,
+        // die er ueber den Klick nicht mehr schliessen kann.
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "linksklick-aktion",
+            "linksklickAktion",
+            this._loeseAnzeige.bind(this)
         );
 
 
@@ -253,6 +313,8 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._applyPopupScale();
 
         Main.uiGroup.add_child(this._popup);
+
+        this._erzeugeKlickfaenger();
 
         // Signal-IDs merken, damit sie beim Entfernen getrennt werden.
         // Sonst reagierte eine entfernte Instanz noch auf die Maus
@@ -1061,11 +1123,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         const groesse = Math.round(DEFAULT_POPUP_HEIGHT_RATIO * 100);
         const deckkraft = Math.round(DEFAULT_POPUP_OPACITY * 100);
         const symbol = "icon";
+        const linksklick = DEFAULT_LINKSKLICK;
 
         this.settings.setValue("refresh-interval", intervall);
         this.settings.setValue("popup-height-ratio", groesse);
         this.settings.setValue("popup-opacity", deckkraft);
         this.settings.setValue("panel-symbol", symbol);
+        this.settings.setValue("linksklick-aktion", linksklick);
 
         // Messwertliste: alle sichtbar, Reihenfolge und
         // Bezeichnungen wie ausgeliefert.
@@ -1113,6 +1177,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.popupHeightRatio = groesse;
         this.popupOpacity = deckkraft;
         this.panelSymbol = symbol;
+        this.linksklickAktion = linksklick;
 
         this._applyPanelSymbol();
         this._applyPopupStyle();
@@ -1592,6 +1657,208 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         row.unit.set_text(unit);
     }
 
+    /*
+     * Unsichtbare Flaeche ueber dem gesamten Bildschirm (AP21).
+     *
+     * Sie faengt Klick und Fingertipp neben der Anzeige ab und
+     * schliesst diese. Sie ist die verlaessliche Sicherung: Der
+     * zusaetzliche Tastaturgriff fuer Esc kann fehlschlagen, der
+     * Klickfaenger nicht. Solange die Anzeige nicht angeheftet ist,
+     * bleibt er verborgen und faengt nichts ab.
+     */
+    _erzeugeKlickfaenger() {
+        this._klickfaenger = new St.Widget({
+            reactive: true,
+            can_focus: true,
+            visible: false
+        });
+
+        Main.uiGroup.add_child(this._klickfaenger);
+
+        // Die Anzeige liegt ueber dem Klickfaenger, sonst waere sie
+        // verdeckt und ein Klick auf sie kaeme nie an.
+        Main.uiGroup.set_child_above_sibling(this._popup, this._klickfaenger);
+
+        this._klickfaenger.connect("button-press-event", () => {
+            this._loeseAnzeige();
+
+            return Clutter.EVENT_STOP;
+        });
+
+        this._klickfaenger.connect("key-press-event", (actor, event) => {
+            if (event.get_key_symbol() === Clutter.KEY_Escape) {
+                this._loeseAnzeige();
+
+                return Clutter.EVENT_STOP;
+            }
+
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        // Ein Klick auf die Anzeige selbst schliesst sie ebenfalls.
+        this._popup.connect("button-press-event", () => {
+            this._loeseAnzeige();
+
+            return Clutter.EVENT_STOP;
+        });
+    }
+
+    /*
+     * Gewaehlte Aktion beim Linksklick. Ein beschaedigter Wert faellt
+     * auf die Vorgabe zurueck.
+     */
+    _linksklickAktion() {
+        const wahl = String(this.linksklickAktion);
+
+        return LINKSKLICK_AKTIONEN.includes(wahl)
+            ? wahl
+            : DEFAULT_LINKSKLICK;
+    }
+
+    /*
+     * Linksklick auf das Panel-Symbol. Cinnamon ruft diese Methode
+     * ueber Applet._onButtonPressEvent, aber nur ausserhalb des
+     * Panel-Bearbeitungsmodus - dort dient der Klick dem Verschieben.
+     */
+    on_applet_clicked(event) {
+        if (this._entfernt)
+            return;
+
+        switch (this._linksklickAktion()) {
+            case "systemueberwachung":
+                this._oeffneSystemueberwachung();
+                break;
+
+            case "nichts":
+                break;
+
+            default:
+                if (this._istAngeheftet)
+                    this._loeseAnzeige();
+                else
+                    this._hefteAnzeigeAn();
+        }
+    }
+
+    /*
+     * Laesst die Anzeige stehen, bis sie geschlossen wird (AP21).
+     *
+     * Zwei voneinander unabhaengige Wege fuehren wieder heraus: der
+     * Klickfaenger fuer Klick und Fingertipp, und - sofern der
+     * Tastaturgriff gelingt - Esc.
+     */
+    _hefteAnzeigeAn() {
+        if (!this._popup || !this._klickfaenger || this._entfernt)
+            return;
+
+        this._istAngeheftet = true;
+
+        /*
+         * Der Klickfaenger deckt die gesamte Zeichenflaeche ab, nicht
+         * nur den primaeren Monitor. Sonst bliebe ein Klick auf einem
+         * zweiten Bildschirm wirkungslos.
+         */
+        this._klickfaenger.set_position(0, 0);
+        this._klickfaenger.set_size(global.stage.width, global.stage.height);
+        this._klickfaenger.show();
+
+        Main.uiGroup.set_child_above_sibling(this._popup, this._klickfaenger);
+
+        // Nur waehrend der Anhaftung nimmt die Anzeige Klicks an.
+        // Sonst finge sie beim blossen Ueberfahren Mausereignisse ab,
+        // die darunter liegenden Fenstern zustehen.
+        this._popup.reactive = true;
+
+        this._showPopup();
+
+        /*
+         * Der Tastaturgriff dient allein der Esc-Taste. Schlaegt er
+         * fehl, bleibt die Anzeige ueber den Klickfaenger bedienbar;
+         * nur Esc entfaellt dann.
+         */
+        this._modalAktiv = Main.pushModal(this._klickfaenger);
+
+        if (this._modalAktiv)
+            this._klickfaenger.grab_key_focus();
+        else
+            global.log("aVincePulse AP21: Tastaturgriff nicht moeglich, " +
+                       "Esc steht nicht zur Verfuegung");
+    }
+
+    /*
+     * Hebt die Anhaftung auf und raeumt alles ab, was dazugehoert.
+     * Wird auch beim Entfernen des Applets und vor einem Speedtest
+     * gerufen und muss deshalb mehrfach aufrufbar sein.
+     */
+    _loeseAnzeige() {
+        if (!this._istAngeheftet)
+            return;
+
+        this._istAngeheftet = false;
+
+        if (this._modalAktiv) {
+            Main.popModal(this._klickfaenger);
+            this._modalAktiv = false;
+        }
+
+        if (this._klickfaenger)
+            this._klickfaenger.hide();
+
+        if (this._popup)
+            this._popup.reactive = false;
+
+        this._hidePopup();
+    }
+
+    /*
+     * Oeffnet die Systemueberwachung der Arbeitsumgebung (AP21).
+     *
+     * Nur nach einem Klick des Benutzers, entsprechend der Fensterregel
+     * in PROJECT-STATUS.md, Abschnitt 8.
+     */
+    _oeffneSystemueberwachung() {
+        try {
+            for (const eintrag of SYSTEMUEBERWACHUNG_EINTRAEGE) {
+                const programm = Gio.DesktopAppInfo.new(eintrag);
+
+                if (programm) {
+                    programm.launch([], null);
+
+                    return;
+                }
+            }
+
+            for (const befehl of SYSTEMUEBERWACHUNG_BEFEHLE) {
+                if (!GLib.find_program_in_path(befehl))
+                    continue;
+
+                Gio.AppInfo.create_from_commandline(
+                    befehl,
+                    null,
+                    Gio.AppInfoCreateFlags.NONE
+                ).launch([], null);
+
+                return;
+            }
+
+            this._statusAnzeige.zeige(
+                "Auf diesem System wurde keine Systemüberwachung " +
+                "gefunden."
+            );
+
+            this._statusAnzeige.verbergeNach(8);
+
+        } catch (e) {
+            global.logError(e);
+
+            this._statusAnzeige.zeige(
+                "Die Systemüberwachung konnte nicht geöffnet werden."
+            );
+
+            this._statusAnzeige.verbergeNach(8);
+        }
+    }
+
     _showPopup() {
         if (!this._popup || this._entfernt)
             return;
@@ -1611,6 +1878,13 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     _hidePopup() {
+        // Eine angeheftete Anzeige bleibt stehen, auch wenn der
+        // Mauszeiger das Panel-Symbol verlaesst (AP21). Geschlossen
+        // wird sie ueber _loeseAnzeige(), das die Anhaftung zuerst
+        // aufhebt und dann hierher zurueckkommt.
+        if (this._istAngeheftet)
+            return;
+
         if (this._popup)
             this._popup.hide();
     }
@@ -1649,6 +1923,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (this._entfernt || this._speedtest.istAktiv())
             return;
 
+        // Eine angeheftete Anzeige wuerde sonst stehen bleiben und
+        // mit der Meldung in der Bildschirmmitte zusammenfallen
+        // (AP21). _loeseAnzeige() verbirgt die Anzeige gleich mit.
+        this._loeseAnzeige();
         this._hidePopup();
 
         // Die Meldung verwendet eine feste Deckkraft, siehe
@@ -1818,6 +2096,15 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     on_applet_removed_from_panel() {
+        /*
+         * Zuerst die Anhaftung aufheben (AP21). Bleibt der
+         * Tastaturgriff bestehen, nimmt der Bildschirm keine Eingaben
+         * mehr an. Cinnamon loest ihn zwar auch selbst, sobald der
+         * Klickfaenger zerstoert wird, doch darauf allein soll es
+         * nicht ankommen.
+         */
+        this._loeseAnzeige();
+
         // Ab hier wird nicht mehr gemessen und nichts mehr angezeigt.
         this._entfernt = true;
 
@@ -1864,6 +2151,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (this._popup) {
             this._popup.destroy();
             this._popup = null;
+        }
+
+        if (this._klickfaenger) {
+            this._klickfaenger.destroy();
+            this._klickfaenger = null;
         }
     }
 }

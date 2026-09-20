@@ -1307,7 +1307,50 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 AP01 bis AP20 sind abgeschlossen.
 
-**Als Nächstes: AP21 – Aktion bei Linksklick auf das Applet.** Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen und vom Nutzer freizugeben. Inhalt nach der Festlegung vom 19.09.2026 (`ROADMAP_V2.md`, Abschnitt 24): Einstellung „Aktion bei Linksklick“ mit „Anzeige ein/aus“ (Vorgabe; die Hover-Anzeige bleibt stehen, schließen per Klick, Klick daneben oder `Esc`), „Systemüberwachung öffnen“ und „Nichts“. Begründung der Vorgabe: Das Referenzgerät ist ein 2-in-1 mit Touchscreen; ohne Maus gibt es kein Überfahren, die Anzeige war im Tablet-Betrieb bisher nicht erreichbar. Danach das Arbeitspaket zum Speedtest-Programm, der Unterstützen-Hinweis und die Übersetzung.
+**In Arbeit: AP21 – Aktion bei Linksklick auf das Applet.** Ziel und Akzeptanzkriterien wurden am 20.09.2026 schriftlich festgelegt und vom Nutzer freigegeben; sie stehen unten in diesem Abschnitt. Danach das Arbeitspaket zum Speedtest-Programm, der Unterstützen-Hinweis und die Übersetzung.
+
+### AP21 – Aktion bei Linksklick: Ziel und Akzeptanzkriterien (freigegeben am 20.09.2026)
+
+Grundlage: Festlegung vom 19.09.2026 in `ROADMAP_V2.md`, Abschnitt 24, entstanden aus Befund H14 von AP19.
+
+#### Ziel
+
+Das Applet soll auch ohne Maus bedienbar sein. Die große Messwert-Anzeige erscheint bisher nur, solange der Mauszeiger über dem Panel-Symbol steht. Auf dem Referenzgerät, einem 2-in-1 mit Touchscreen, gibt es im Tablet-Betrieb kein Überfahren – ein Finger tippt und ist wieder weg. Die Anzeige ist dort deshalb überhaupt nicht erreichbar.
+
+Der seit AP19 freie Linksklick bekommt darum eine wählbare Aktion, voreingestellt auf das Ein- und Ausschalten der Anzeige.
+
+#### Ausgangslage im Code (geprüft am 20.09.2026)
+
+- `on_applet_clicked()` gibt es im Applet nicht; der Linksklick ist seit Befund H14 ohne Wirkung. Bis AP19 startete er den Speedtest, was versehentlich geschah, etwa beim Verschieben des Applets.
+- Die Anzeige hängt an `enter-event` und `leave-event` auf `this.actor`. Das Popup selbst ist `reactive: false` und fängt heute keine Klicks.
+- `Main.pushModal()` ist in Cinnamon 6.6 vorhanden (`/usr/share/cinnamon/js/ui/main.js`) und wird von Cinnamons eigenen Menüs verwendet. Es verbindet sich mit dem `destroy`-Signal des übergebenen Actors und ruft dann selbst `popModal()`.
+- Systemüberwachung auf dem Referenzgerät: `gnome-system-monitor` (`org.gnome.SystemMonitor.desktop`). Für externe Programme gibt es mit `_oeffneBerichte()` bereits ein Muster über `Gio.AppInfo`.
+
+#### Akzeptanzkriterien
+
+1. **Neue Einstellung „Aktion bei Linksklick“** im Applet, Abschnitt „Hover-Anzeige“, mit drei Möglichkeiten: „Anzeige ein/aus“ (Vorgabe), „Systemüberwachung öffnen“ und „Nichts“ (Verhalten wie bisher).
+2. **Angeheftete Anzeige:** Ein Linksklick lässt die Anzeige stehen, bis sie geschlossen wird. Sie schließt durch erneuten Klick auf das Panel-Symbol, Klick auf die Anzeige selbst, Klick daneben oder `Esc`. Die ersten drei Wege funktionieren auch per Fingertipp; auf einem Touchscreen gibt es kein `Esc`. Entscheidung des Nutzers vom 20.09.2026: `Esc` wird umgesetzt.
+3. **Das Überfahren mit der Maus bleibt unverändert.** Solange die Anzeige angeheftet ist, darf das Verlassen des Symbols sie nicht verbergen.
+4. **Die Messwerte laufen weiter**, solange die Anzeige steht – im eingestellten Takt und ohne zusätzliche Messschleife (Regel aus Befund K1).
+5. **Systemüberwachung portabel finden:** keine feste Bindung an `gnome-system-monitor`. Gesucht wird über eine Kandidatenliste (GNOME, MATE, Xfce, KDE, LXDE) mit `Gio.DesktopAppInfo` und ersatzweise `GLib.find_program_in_path()`. Ist nichts vorhanden, erscheint eine verständliche Meldung – kein Fehler und keine Installationsanleitung für Fremdquellen (Regel von Cinnamon Spices).
+6. **Fensterregel eingehalten** (Abschnitt 8): Die Systemüberwachung öffnet nur nach einem Klick des Benutzers.
+7. **Sauberes Aufräumen:** Beim Entfernen des Applets werden der Modalzustand, der Klickfänger und alle neuen Signale getrennt. Geprüft wird ausdrücklich der Fall, dass das Applet entfernt wird, **während** die Anzeige angeheftet ist; danach darf nichts zurückbleiben und der Bildschirm muss bedienbar sein.
+8. **Verträglich mit dem Übrigen:** Ein Speedtest löst die Anhaftung, damit die Meldung in der Bildschirmmitte nicht mit der Anzeige zusammenfällt. Das Rechtsklick-Menü bleibt unverändert erreichbar.
+9. **Mehrere Bildschirme:** Der Klickfänger deckt die gesamte Zeichenfläche ab, nicht nur den primären Monitor.
+10. **Robustheit:** Ein beschädigter Wert der neuen Einstellung fällt auf die Vorgabe zurück. Schlägt `Main.pushModal()` fehl – es liefert dann `false` –, bleibt die Anzeige bedienbar und schließt über den Klickfänger; nur `Esc` entfällt in diesem Fall.
+11. **„Zurücksetzen“** stellt auch die neue Einstellung auf die Vorgabe zurück.
+12. **Prüfung:** Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, Einstellungen unmittelbar vor jedem Eingriff sichern und danach vergleichen. Funktionstest durch den Nutzer am Schreibtisch mit Maus **und** im Tablet-Betrieb per Fingertipp.
+13. **Abschluss:** Versionsnummer `0.1.0-dev.21`, Snapshot, Fortschreibung der Dokumentation, Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
+
+#### Umsetzung
+
+Die Anhaftung bekommt zwei voneinander unabhängige Sicherungen: einen unsichtbaren, bildschirmfüllenden Klickfänger unterhalb der Anzeige, der Klick und Fingertipp zuverlässig abfängt, und zusätzlich `Main.pushModal()` für die `Esc`-Taste. Das Popup wird dafür `reactive: true`.
+
+Das Modal ist die einzige Stelle mit einem Restrisiko: Ein Modalzustand, der nicht beendet wird, ließe den Bildschirm nicht mehr auf Eingaben reagieren. Abgesichert ist das dreifach – Cinnamon beendet ihn selbst, sobald der Actor zerstört wird, das Applet beendet ihn beim Entfernen, und der Klickfänger arbeitet unabhängig davon.
+
+#### Nicht Bestandteil von AP21
+
+Das Tastenkürzel für die Hover-Anzeige (eigener Punkt in Abschnitt 24 der Roadmap), ein Klick auf einzelne Messwertzeilen, Änderungen am Desklet.
 
 **AP20 – Lesbarkeit: abgeschlossen am 20.09.2026.** Ergebnis in Abschnitt 6 unter „AP20“. Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf des Arbeitspakets fest.
 

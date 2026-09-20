@@ -35,6 +35,17 @@
         "description": "Hintergrundfläche",
         "tooltip": "Deckkraft der Fläche hinter der Anzeige. 0 Prozent zeigt die Anzeige ohne Fläche. Je höher der Wert, desto dunkler die Fläche. Über hellem Bildschirminhalt wird sie dabei mittelgrau, und die Warnfarben verlieren an Kontrast; bei hoher Deckkraft passt der gedämpfte Warnfarbensatz besser."
     },
+    "linksklick-aktion": {
+        "type": "combobox",
+        "default": "anzeige",
+        "description": "Aktion bei Linksklick",
+        "options": {
+            "Anzeige ein/aus": "anzeige",
+            "Systemüberwachung öffnen": "systemueberwachung",
+            "Nichts": "nichts"
+        },
+        "tooltip": "„Anzeige ein/aus“ lässt die Messwerte nach einem Klick stehen, bis erneut geklickt, daneben geklickt oder Esc gedrückt wird. Das ist vor allem am Touchscreen nützlich, wo es kein Überfahren mit der Maus gibt. Der Internet-Speedtest wird davon nicht gestartet; dafür gibt es das Menü der rechten Maustaste."
+    },
     "kopf-panel": {
         "type": "header",
         "description": "Panel"
