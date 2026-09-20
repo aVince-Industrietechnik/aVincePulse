@@ -1196,7 +1196,16 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-20_08-49-45` (AP19); Wiederherstellungsprobe bestanden (Prüfsummen, Klon aus dem Bundle, Vergleich von Quellcode, Dokumentation und AP19-END-Snapshot).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-20_17-10-11` (AP20); Wiederherstellungsprobe bestanden (Prüfsummen, Klon aus dem Bundle mit 16 Tags auf `0.1.0-dev_AP20-END`, Archiv entpackt und alle sechs Projektverzeichnisse verglichen, 2443 von 2443 Dateien).
+
+**Achtung beim Anlegen des Archivs:** `tar` nicht mit `--exclude-vcs-ignores` aufrufen. Die Option lässt die per `.gitignore` ausgeschlossenen Dateien weg – darunter die `.bak`-Dateien in `02_QUELLCODE` und `05_DOKUMENTATION`, die es ausschließlich auf der NAS gibt. Beim AP20-Backup ist das zunächst passiert und wurde vor der Freigabe berichtigt; die Backups bis AP19 sind davon nicht betroffen (nachgeprüft am 20.09.2026). Richtig ist der einfache Aufruf:
+
+```bash
+cd /mnt/LX-NAS-linux/60_SETUP_INSTALLATION
+tar -czf aVincePulse_Backups/<Zeitstempel>/aVincePulse_Development_<AP>_FINAL.tar.gz aVincePulse_Development
+```
+
+Die Probe deckt das auf, wenn sie das Archiv wirklich entpackt und vollständig vergleicht – ein Vergleich allein gegen den Klon aus dem Bundle würde den Fehler nicht zeigen, da dort dieselben Dateien fehlen.
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
