@@ -110,17 +110,25 @@ const POPUP_MAX_FONT_SIZE = 48;
  *
  * Fuer grosse, fette Schrift gilt 3.0 : 1 als Mindestkontrast.
  *
- * Seit AP20 sind 0 bis 35 Prozent einstellbar, Vorgabe 25 Prozent.
+ * Seit AP20 sind 0 bis 55 Prozent einstellbar, Vorgabe 35 Prozent.
  * Die Festlegung aus AP09 ("nicht unter 45 Prozent") ist damit
  * bewusst aufgehoben (Entscheidung des Nutzers vom 19./20.09.2026):
  * Die Lesbarkeit traegt nun der Schriftschatten aus metrics.js, dazu
- * der waehlbare Warnfarbensatz. Der Hoechstwert von 35 Prozent kam
- * aus der Erprobung auf hellem und dunklem Hintergrundbild:
- * hoehere Werte machen die Flaeche ueber hellem Inhalt mittelgrau,
- * und gerade die Warnfarben verlieren darauf.
+ * der waehlbare Warnfarbensatz.
+ *
+ * Das Applet reicht bewusst weiter als das Desklet, das bei 35
+ * Prozent endet (Nachtrag vom 20.09.2026). Die Hover-Anzeige deckt
+ * einen grossen Teil des Bildschirms ab und soll den Inhalt dahinter
+ * auch verdecken duerfen; das Desklet liegt dagegen dauerhaft auf
+ * dem Schreibtisch, wo eine kraeftige Flaeche stoert.
+ *
+ * Zu bedenken bleibt: Ueber hellem Bildschirminhalt wird die Flaeche
+ * mit steigender Deckkraft mittelgrau, und gerade die Warnfarben
+ * verlieren darauf an Kontrast. Wer die Anzeige staerker abdunkelt,
+ * waehlt dafuer sinnvollerweise den gedaempften Warnfarbensatz.
  */
-const DEFAULT_POPUP_OPACITY = 0.25;
-const MAX_POPUP_OPACITY = 35;
+const DEFAULT_POPUP_OPACITY = 0.35;
+const MAX_POPUP_OPACITY = 55;
 
 
 class AVincePulseApplet extends Applet.TextIconApplet {

@@ -26,14 +26,14 @@
     },
     "popup-opacity": {
         "type": "scale",
-        "default": 25,
+        "default": 35,
         "min": 0,
-        "max": 35,
+        "max": 55,
         "step": 5,
         "digits": 0,
         "units": "%",
         "description": "Hintergrundfläche",
-        "tooltip": "Deckkraft der Fläche hinter der Anzeige. 0 Prozent zeigt die Anzeige ohne Fläche. Je höher der Wert, desto dunkler die Fläche. Mehr als 35 Prozent sind bewusst nicht wählbar: Darüber wird die Fläche über hellem Bildschirminhalt mittelgrau, und die Warnfarben verlieren darauf an Lesbarkeit."
+        "tooltip": "Deckkraft der Fläche hinter der Anzeige. 0 Prozent zeigt die Anzeige ohne Fläche. Je höher der Wert, desto dunkler die Fläche. Über hellem Bildschirminhalt wird sie dabei mittelgrau, und die Warnfarben verlieren an Kontrast; bei hoher Deckkraft passt der gedämpfte Warnfarbensatz besser."
     },
     "kopf-panel": {
         "type": "header",

@@ -1687,7 +1687,7 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 4. AP17 – eingeschoben: Rückfrage vor dem Neu-Öffnen, Meldungen, Umlaute (abgeschlossen)
 5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
 6. AP19 – Zwischenprüfung (abgeschlossen am 20.09.2026)
-7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–35 % in Desklet und Applet, fester kräftiger Schriftschatten, Warnfarben je nach Hintergrund wählbar (eingeschoben am 19.09.2026 aus Befund G9 von AP19; abgeschlossen am 20.09.2026)
+7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–55 % im Applet und 0–35 % im Desklet, fester kräftiger Schriftschatten, Warnfarben je nach Hintergrund wählbar (eingeschoben am 19.09.2026 aus Befund G9 von AP19; abgeschlossen am 20.09.2026)
 8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026, vor der Übersetzung wegen neuer Einstellungstexte; als Nächstes)
 9. Übersetzung Deutsch/Englisch
 
@@ -1728,7 +1728,7 @@ Ergänzende Entscheidungen des Nutzers vom 20.09.2026:
 
 Ergebnis der Erprobung vom 20.09.2026 auf hellem und dunklem Hintergrundbild:
 
-- Deckkraft der Hintergrundfläche: Skala **0 bis 35 %** statt 0 bis 85 %. Oberhalb davon wird die Fläche über hellem Bildschirminhalt mittelgrau, und die Warnfarben verlieren darauf. Vorgabe: Applet 25 %, Desklet 0 %.
+- Deckkraft der Hintergrundfläche: Skala **0 bis 35 %** statt 0 bis 85 %. Oberhalb davon wird die Fläche über hellem Bildschirminhalt mittelgrau, und die Warnfarben verlieren darauf. Vorgabe zunächst Applet 25 %, Desklet 0 %. **Nachtrag vom 20.09.2026:** Das Applet reicht bis 55 % bei einer Vorgabe von 35 %, da die Hover-Anzeige den Bildschirm ohnehin großflächig verdeckt; das Desklet bleibt bei 0 bis 35 % mit Vorgabe 0 %.
 - Schriftschatten: fest `0px 0px 8px rgba(0,0,0,1)` für beide Komponenten.
 - Die Umschaltung bei 45 % entfällt, da mit der neuen Skala nicht mehr erreichbar.
 - Warnfarben: neue Einstellung je Komponente, „Für dunkle Hintergründe (leuchtend)“ wie seit AP18 oder „Für helle Hintergründe (gedämpft)“. Der Nutzer wählte je Hintergrund eine andere Variante; eine selbsttätige Erkennung des Bildschirminhalts scheidet aus (in AP08 bewusst verworfen).

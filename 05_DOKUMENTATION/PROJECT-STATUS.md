@@ -356,7 +356,7 @@ Dass beide Komponenten bei gleichzeitigem Betrieb dieselben Sensoren lesen, ist 
 - Die Beschriftung `SPEED ↓` wurde zuvor abgeschnitten; die Spaltenbreiten skalieren nun mit der Schriftgröße.
 - Hinter der Anzeige liegt eine abgedunkelte Fläche mit abgerundeten Ecken. Die Schrift bleibt dadurch auf jedem Bildschirminhalt lesbar, ohne Schrift- und Schattenfarbe je nach Hintergrund umzuschalten.
 
-Zur Deckkraft siehe `DEFAULT_POPUP_OPACITY` in `applet.js`. Der damalige Standardwert 0.55 ergibt gegenüber weißer Schrift im ungünstigsten Fall – reinweißer Inhalt dahinter – einen Kontrast von 4.7 : 1. **Abgelöst durch AP20:** Die Skala reicht dort von 0 bis 35 Prozent bei einer Vorgabe von 25 Prozent; die Lesbarkeit trägt seither der Schriftschatten, und die Warnfarben sind je nach Hintergrund wählbar.
+Zur Deckkraft siehe `DEFAULT_POPUP_OPACITY` in `applet.js`. Der damalige Standardwert 0.55 ergibt gegenüber weißer Schrift im ungünstigsten Fall – reinweißer Inhalt dahinter – einen Kontrast von 4.7 : 1. **Abgelöst durch AP20:** Die Skala reicht dort von 0 bis 55 Prozent bei einer Vorgabe von 35 Prozent; die Lesbarkeit trägt seither der Schriftschatten, und die Warnfarben sind je nach Hintergrund wählbar.
 
 Eine Auswertung des tatsächlichen Bildschirminhalts über `global.stage.read_pixels` wäre technisch möglich, wurde aber verworfen: Unter einer großflächigen Anzeige liegt selten einheitlich Helles oder Dunkles, und die Umschaltung würde beim Verschieben von Fenstern springen.
 
@@ -389,10 +389,10 @@ Das Applet besaß bisher keine Einstellungen; alle Werte waren fest im Quelltext
 |---|---|---|---|
 | Aktualisierungsintervall | spinbutton | 1–30 s | 3 |
 | Anzeigegröße | scale | 40–90 % | 70 |
-| Deckkraft der Hintergrundfläche | scale | 45–85 % (seit AP20: 0–35 %) | 55 (seit AP20: 25) |
+| Deckkraft der Hintergrundfläche | scale | 45–85 % (seit AP20: 0–55 %) | 55 (seit AP20: 35) |
 | Panel-Symbol | combobox | vier Varianten | Logo farbig |
 
-Die Untergrenze der Deckkraft von 45 Prozent war bewusst gesetzt: Darunter unterschreitet weiße Schrift auf hellem Bildschirminhalt den Mindestkontrast von 3.0 : 1. **Abgelöst durch AP20:** Die Skala reicht dort von 0 bis 35 Prozent, die Vorgabe liegt bei 25 Prozent, und die Lesbarkeit trägt der Schriftschatten. Zusätzlich begrenzt `_gueltig()` alle Werte im Code, sodass eine beschädigte oder von Hand bearbeitete Einstellungsdatei nicht zu einer unbrauchbaren Darstellung führt.
+Die Untergrenze der Deckkraft von 45 Prozent war bewusst gesetzt: Darunter unterschreitet weiße Schrift auf hellem Bildschirminhalt den Mindestkontrast von 3.0 : 1. **Abgelöst durch AP20:** Die Skala reicht dort von 0 bis 55 Prozent, die Vorgabe liegt bei 35 Prozent, und die Lesbarkeit trägt der Schriftschatten. Zusätzlich begrenzt `_gueltig()` alle Werte im Code, sodass eine beschädigte oder von Hand bearbeitete Einstellungsdatei nicht zu einer unbrauchbaren Darstellung führt.
 
 #### Panel-Symbol
 
@@ -937,13 +937,38 @@ Ausgelöst durch Befund G9 aus AP19: Die Warnfarben des Desklets waren auf helle
 
 #### Hintergrundfläche
 
-Beide Komponenten haben jetzt die Einstellung „Hintergrundfläche“ mit einer Deckkraft von 0 bis 35 Prozent. Das Desklet bekommt damit erstmals eine abgedunkelte Fläche hinter den Messwerten; Ecken und Innenabstände richten sich nach der Schriftgröße, bei 0 Prozent sieht es aus wie vor AP20. Beim Applet ersetzt die Einstellung die frühere Skala von 45 bis 85 Prozent.
+Beide Komponenten haben jetzt die Einstellung „Hintergrundfläche“. Das Desklet bekommt damit erstmals eine abgedunkelte Fläche hinter den Messwerten; Ecken und Innenabstände richten sich nach der Schriftgröße, bei 0 Prozent sieht es aus wie vor AP20. Beim Applet ersetzt die Einstellung die frühere Skala von 45 bis 85 Prozent.
 
-Vorgaben: Applet 25 Prozent, Desklet 0 Prozent.
+Die Bereiche sind je Komponente verschieden (Nachtrag vom 20.09.2026, siehe unten):
+
+| Komponente | Skala | Vorgabe |
+|---|---|---|
+| Applet (Hover-Anzeige) | 0–55 % | 35 % |
+| Desklet | 0–35 % | 0 % |
 
 Der Höchstwert von 35 Prozent kam aus der praktischen Erprobung. Über hellem Bildschirminhalt wird eine stärkere Fläche mittelgrau, und darauf verlieren gerade die Warnfarben: Bei 55 Prozent über reinweißem Inhalt erreicht `#FF5252` nur 1,49 : 1 und `#FFA726` nur 2,44 : 1.
 
 Damit ist die Festlegung aus AP09 („Deckkraft im Applet nicht unter 45 Prozent“) bewusst aufgehoben. Sie beruhte darauf, dass die Fläche allein die Lesbarkeit tragen sollte; diese Aufgabe hat seit AP20 der Schriftschatten.
+
+#### Nachtrag vom 20.09.2026: größerer Bereich im Applet
+
+Nach dem Abschluss von AP20 hat der Nutzer entschieden, die Skala des **Applets** wieder bis 55 Prozent zu öffnen und die Vorgabe auf 35 Prozent zu setzen. Das Desklet bleibt bei 0 bis 35 Prozent mit der Vorgabe 0 Prozent.
+
+Begründung: Die Hover-Anzeige des Applets deckt einen großen Teil des Bildschirms ab und soll den Inhalt dahinter auch verdecken dürfen. Das Desklet liegt dagegen dauerhaft auf dem Schreibtisch, wo eine kräftige Fläche stört.
+
+Zu bedenken bleibt der Zielkonflikt, den die Erprobung gezeigt hat: Mit steigender Deckkraft wird die weiße Schrift über hellem Inhalt besser lesbar, die Warnfarben aber schlechter. Kontraste über reinweißem Bildschirminhalt:
+
+| Deckkraft | weiße Schrift | leuchtend (Warnung / kritisch) | gedämpft (Warnung / kritisch) |
+|---|---|---|---|
+| 0 % | 1,00 : 1 | 1,94 / 3,19 | 3,79 / 5,62 |
+| 25 % | 1,84 : 1 | 1,06 / 1,74 | 2,06 / 3,06 |
+| 35 % | 2,43 : 1 | 1,25 / 1,31 | 1,56 / 2,31 |
+| 45 % | 3,36 : 1 | 1,73 / 1,05 | 1,13 / 1,67 |
+| 55 % | 4,74 : 1 | 2,44 / 1,49 | 1,25 / 1,19 |
+
+Der Schriftschatten ist darin nicht enthalten. Wer die Anzeige stärker abdunkelt, wählt für die Warnfarben sinnvollerweise den Satz, der sich vom jeweiligen Grauton abhebt.
+
+Der Nachtrag betrifft nur `Applet/applet.js` und `Applet/settings-schema.json`; die vier gemeinsamen Module blieben unberührt. Der Tag `0.1.0-dev_AP20-END` zeigt weiterhin auf den Stand vor dem Nachtrag, die Versionsnummer bleibt `0.1.0-dev.20`.
 
 #### Schriftschatten
 
@@ -1324,7 +1349,7 @@ Der Nutzer hat die Varianten auf hellem und auf dunklem Hintergrundbild verglich
 
 | Bereich | helles Hintergrundbild | dunkles Hintergrundbild | Festlegung |
 |---|---|---|---|
-| Deckkraft | 25 % gut | 25 % gut | Skala **0–35 %**, mehr wird nicht mehr angeboten |
+| Deckkraft | 25 % gut | 25 % gut | Skala **0–35 %**, mehr wird nicht mehr angeboten (Applet später auf 0–55 % erweitert, siehe Nachtrag) |
 | Schatten | Variante A | Variante A | **A**: `0px 0px 8px rgba(0,0,0,1)`, fest für beide Komponenten |
 | Warnfarben | Variante A (gedämpft) | Variante B (leuchtend) | **beide**, über eine neue Einstellung wählbar |
 
@@ -1343,9 +1368,9 @@ Offen geblieben und nicht mehr geklärt: ob Cinnamon (St) mehrere Schatten je Te
 Die Kriterien 1 bis 5 wurden am 20.09.2026 nach der Erprobung fortgeschrieben; die ursprüngliche Fassung steht in der Git-Historie (Commit `6b42c7a`). Grund sind die drei Änderungen aus dem Abschnitt darüber, alle auf Entscheidung des Nutzers.
 
 1. **Desklet:** neue Einstellung „Hintergrundfläche“ (Skala 0–35 Prozent) im Abschnitt „Darstellung“. Ab dem ersten Schritt über 0 liegt hinter den Zeilen eine abgedunkelte Fläche mit abgerundeten Ecken und Innenabstand; Ecken und Abstände richten sich nach der Schriftgröße. Bei 0 Prozent ist das Desklet optisch wie bisher.
-2. **Applet:** Skala der Einstellung „Hintergrundfläche“ auf 0–35 Prozent, im Schema und an jeder Stelle im Code, die den Wert begrenzt. Die Festlegung aus AP09 („nicht unter 45 Prozent“) ist damit ausdrücklich aufgehoben. Ein gespeicherter Wert außerhalb des Bereichs wird nicht überschrieben, sondern bei der Anwendung begrenzt.
+2. **Applet:** Skala der Einstellung „Hintergrundfläche“ auf 0–55 Prozent (Nachtrag vom 20.09.2026, zunächst 0–35), im Schema und an jeder Stelle im Code, die den Wert begrenzt. Die Festlegung aus AP09 („nicht unter 45 Prozent“) ist damit ausdrücklich aufgehoben. Ein gespeicherter Wert außerhalb des Bereichs wird nicht überschrieben, sondern bei der Anwendung begrenzt.
 3. **Schrift und Farben:** Der Schriftschatten ist fest und für beide Komponenten gleich (`SCHRIFTSCHATTEN` in `metrics.js`, `0px 0px 8px rgba(0,0,0,1)`); er trägt die Lesbarkeit, da die Fläche nur noch schwach sein kann. Die Warnfarben sind über die neue Einstellung „Warnfarben“ wählbar (hell/dunkel) und wirken sofort, ohne Neuladen.
-4. **Vorgabewerte:** Applet 25 Prozent, Desklet 0 Prozent, Warnfarben „dunkel“ in beiden Komponenten. Gespeicherte Werte werden nicht überschrieben.
+4. **Vorgabewerte:** Applet 35 Prozent bei einer Skala bis 55 Prozent, Desklet 0 Prozent bei einer Skala bis 35 Prozent (Nachtrag vom 20.09.2026; zunächst waren es 25 Prozent und 35 Prozent für beide), Warnfarben „dunkel“ in beiden Komponenten. Gespeicherte Werte werden nicht überschrieben.
 5. **Kontrastnachweis:** Die Kontraste beider Farbsätze und der weißen Schrift sind für den ungünstigsten Fall – reinweißer und reinschwarzer Inhalt – rechnerisch belegt und in `metrics.js` sowie in `06_TESTVERSIONEN/0.1.0-dev_AP20-PRUEFDATEN/kontrast.py` festgehalten. Ein Mindestwert von 3,0 : 1 wird **nicht** als Bedingung gesetzt: Im Bereich bis 35 Prozent Deckkraft trägt der Schriftschatten wesentlich zur Lesbarkeit bei, und seine Wirkung lässt sich nicht in eine Kontrastzahl fassen. Maßgeblich ist der Augenschein des Nutzers auf hellem und dunklem Hintergrundbild; die Zahlen dienen der Nachvollziehbarkeit und der Auswahl der Farbwerte.
 6. **Befund G3:** Die Meldungen in der Bildschirmmitte verwenden in beiden Komponenten fest 55 Prozent.
 7. **Warnfarben und Schatten bleiben zentral** in `metrics.js`; keine zweite Farbtabelle im UI-Code. Der Schatten des Desklets wandert aus `stylesheet.css` in den Code, damit beide Komponenten denselben Wert verwenden und eine Änderung keinen Cinnamon-Neustart erfordert; das Stylesheet behält eine gleichlautende Angabe für den Fall, dass noch kein Stil gesetzt ist.
