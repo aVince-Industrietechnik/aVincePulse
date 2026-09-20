@@ -1,47 +1,4 @@
 {
-    "erprobung-kopf": {
-        "type": "header",
-        "description": "Erprobung AP20 – wird nach der Entscheidung wieder entfernt"
-    },
-    "erprobung-hinweis": {
-        "type": "label",
-        "description": "Nur zum Vergleich der Varianten auf hellem und dunklem Hintergrundbild. Schatten und Warnfarben wirken erst, wenn die Hintergrundfläche unter 45 Prozent steht. Die Vorschau färbt alle Messwerte ein, ohne die Warnschwellen zu verändern."
-    },
-    "erprobung-schatten": {
-        "type": "combobox",
-        "default": "A",
-        "description": "Schatten ohne Fläche",
-        "options": {
-            "A – weich, 8 px": "A",
-            "B – eng und hart, 3 px": "B",
-            "C – doppelt, 3 px und 9 px": "C"
-        }
-    },
-    "erprobung-warnfarben": {
-        "type": "combobox",
-        "default": "A",
-        "description": "Warnfarben ohne Fläche",
-        "options": {
-            "A – gedämpft (#E65100 / #C62828)": "A",
-            "B – wie bisher (#FFA726 / #FF5252)": "B",
-            "C – mittlerer Weg (#FF8F00 / #D50000)": "C"
-        }
-    },
-    "erprobung-farben-immer": {
-        "type": "switch",
-        "default": false,
-        "description": "Gewählte Warnfarben auch mit Hintergrundfläche verwenden"
-    },
-    "erprobung-vorschau": {
-        "type": "combobox",
-        "default": "aus",
-        "description": "Vorschau der Warnfarben",
-        "options": {
-            "aus": "aus",
-            "alle als Warnung": "warnung",
-            "alle als kritisch": "kritisch"
-        }
-    },
     "kopf-anzeige": {
         "type": "header",
         "description": "Hover-Anzeige"
@@ -69,14 +26,14 @@
     },
     "popup-opacity": {
         "type": "scale",
-        "default": 55,
+        "default": 25,
         "min": 0,
-        "max": 85,
+        "max": 35,
         "step": 5,
         "digits": 0,
         "units": "%",
         "description": "Hintergrundfläche",
-        "tooltip": "Deckkraft der Fläche hinter der Anzeige. 0 Prozent zeigt die Anzeige ohne Fläche. Je höher der Wert, desto dunkler die Fläche. Unter 45 Prozent werden Schriftschatten und Warnfarben automatisch kräftiger, damit die Anzeige auf hellem Hintergrund lesbar bleibt."
+        "tooltip": "Deckkraft der Fläche hinter der Anzeige. 0 Prozent zeigt die Anzeige ohne Fläche. Je höher der Wert, desto dunkler die Fläche. Mehr als 35 Prozent sind bewusst nicht wählbar: Darüber wird die Fläche über hellem Bildschirminhalt mittelgrau, und die Warnfarben verlieren darauf an Lesbarkeit."
     },
     "kopf-panel": {
         "type": "header",
@@ -290,6 +247,17 @@
         "type": "switch",
         "default": true,
         "description": "Warnfarben anzeigen"
+    },
+    "warnfarben-satz": {
+        "type": "combobox",
+        "default": "dunkel",
+        "dependency": "warnschwellen-aktiv",
+        "description": "Warnfarben",
+        "options": {
+            "Für dunkle Hintergründe (leuchtend)": "dunkel",
+            "Für helle Hintergründe (gedämpft)": "hell"
+        },
+        "tooltip": "Welche Farben besser lesbar sind, hängt vom Bildschirminhalt hinter der Anzeige ab. Leuchtend passt zu dunklen Hintergrundbildern, gedämpft zu hellen."
     },
     "hinweis-warnschwellen": {
         "type": "label",

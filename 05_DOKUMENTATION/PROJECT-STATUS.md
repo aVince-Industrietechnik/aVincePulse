@@ -1249,15 +1249,37 @@ Applet und Desklet sollen auf jedem Bildschirminhalt lesbar sein – weiße Schr
 - **Vorgabewert der Hintergrundfläche im Desklet:** 0 Prozent. Das Desklet sieht nach dem Update unverändert aus; die Fläche wird bewusst eingeschaltet.
 - **Umfang der Erprobung:** drei Varianten A/B/C je Bereich.
 
+#### Ergebnis der Erprobung vom 20.09.2026
+
+Der Nutzer hat die Varianten auf hellem und auf dunklem Hintergrundbild verglichen und entschieden:
+
+| Bereich | helles Hintergrundbild | dunkles Hintergrundbild | Festlegung |
+|---|---|---|---|
+| Deckkraft | 25 % gut | 25 % gut | Skala **0–35 %**, mehr wird nicht mehr angeboten |
+| Schatten | Variante A | Variante A | **A**: `0px 0px 8px rgba(0,0,0,1)`, fest für beide Komponenten |
+| Warnfarben | Variante A (gedämpft) | Variante B (leuchtend) | **beide**, über eine neue Einstellung wählbar |
+
+Daraus folgen drei Änderungen gegenüber der ursprünglichen Festlegung:
+
+1. **Höchstwert 35 statt 85 Prozent** (Entscheidung des Nutzers). Grund: Oberhalb davon wird die Fläche über hellem Bildschirminhalt mittelgrau, und gerade die Warnfarben verlieren darauf. Der Kontrastnachweis bestätigt das: Bei 55 % über reinweißem Inhalt erreicht `#FF5252` nur 1,49 : 1, `#FFA726` nur 2,44 : 1; brauchbar würden sie erst bei 85 % (4,74 bzw. 7,79 : 1).
+2. **Die Umschaltung bei 45 Prozent entfällt.** Sie wäre mit der neuen Skala nicht mehr erreichbar und damit toter Code. An ihre Stelle treten ein fester, kräftiger Schriftschatten und der wählbare Warnfarbensatz. `WARN_FLAECHE_GRENZE`, `mitFlaeche()` und `schattenFuer()` aus der Erprobungsfassung sind wieder entfernt.
+3. **Neue Einstellung „Warnfarben“** je Komponente, im Abschnitt „Warnschwellen“ und abhängig vom Schalter „Warnfarben anzeigen“: „Für dunkle Hintergründe (leuchtend)“ = `#FFA726` / `#FF5252` wie seit AP18, „Für helle Hintergründe (gedämpft)“ = `#E65100` / `#C62828`. Vorgabe ist „dunkel“, damit sich für Bestandsnutzer nichts ungefragt ändert. Begründung für die Einstellung statt einer festen Farbe: Der Nutzer hat je Hintergrund eine andere Variante gewählt, und aVincePulse kennt den Bildschirminhalt nicht – die Auswertung über `global.stage.read_pixels` wurde in AP08 bewusst verworfen, weil die Umschaltung beim Verschieben von Fenstern springen würde.
+
+Die Applet-Vorgabe von 55 % war mit der neuen Skala nicht mehr zulässig und liegt jetzt bei 25 %. Ein bereits gespeicherter Wert oberhalb von 35 % wird nicht überschrieben, sondern bei der Anwendung auf den zulässigen Bereich begrenzt (`_gueltig()`, wie bei Befund H1).
+
+Offen geblieben und nicht mehr geklärt: ob Cinnamon (St) mehrere Schatten je Text darstellt. Variante C hätte das beantwortet, wurde aber nicht gewählt. St-Quellen liegen auf dem Referenzgerät nicht vor. Für AP20 ohne Bedeutung, da ein einzelner Schatten genügt.
+
 #### Akzeptanzkriterien
 
-1. **Desklet:** neue Einstellung „Hintergrundfläche“ (Skala 0–85 Prozent) im Abschnitt „Darstellung“. Ab 45 Prozent liegt hinter den Zeilen eine abgedunkelte Fläche mit abgerundeten Ecken und Innenabstand, wie bei der Hover-Anzeige des Applets. Bei 0 Prozent ist das Desklet optisch wie bisher.
-2. **Applet:** Untergrenze der Einstellung „Deckkraft der Hintergrundfläche“ von 45 auf 0 gesenkt, im Schema und an allen drei Stellen im Code, die den Wert begrenzen. Die Festlegung aus AP09 („nicht unter 45 Prozent“) ist damit ausdrücklich aufgehoben.
-3. **Umschaltpunkt 45 Prozent** in beiden Komponenten: darunter automatisch kräftigerer Schatten und angepasste Warnfarben, darüber Schatten und Farben wie bisher. Kein zusätzlicher Schalter. Die Umschaltung greift sofort beim Verschieben des Reglers, ohne Neuladen.
-4. **Vorgabewerte:** Applet 55 Prozent, Desklet 0 Prozent. Gespeicherte Werte werden nicht überschrieben.
-5. **Kontrastnachweis:** Für jede Flächenstufe ab 45 Prozent ist der Kontrast gegen den ungünstigsten Fall – reinweißer Inhalt – rechnerisch belegt und beträgt mindestens 3,0 : 1 für weiße Schrift und für beide Warnfarben. Unter 45 Prozent entscheidet der Augenschein des Nutzers aus Schritt 1; das Ergebnis wird mit den gewählten Werten dokumentiert.
+Die Kriterien 1 bis 5 wurden am 20.09.2026 nach der Erprobung fortgeschrieben; die ursprüngliche Fassung steht in der Git-Historie (Commit `6b42c7a`). Grund sind die drei Änderungen aus dem Abschnitt darüber, alle auf Entscheidung des Nutzers.
+
+1. **Desklet:** neue Einstellung „Hintergrundfläche“ (Skala 0–35 Prozent) im Abschnitt „Darstellung“. Ab dem ersten Schritt über 0 liegt hinter den Zeilen eine abgedunkelte Fläche mit abgerundeten Ecken und Innenabstand; Ecken und Abstände richten sich nach der Schriftgröße. Bei 0 Prozent ist das Desklet optisch wie bisher.
+2. **Applet:** Skala der Einstellung „Hintergrundfläche“ auf 0–35 Prozent, im Schema und an jeder Stelle im Code, die den Wert begrenzt. Die Festlegung aus AP09 („nicht unter 45 Prozent“) ist damit ausdrücklich aufgehoben. Ein gespeicherter Wert außerhalb des Bereichs wird nicht überschrieben, sondern bei der Anwendung begrenzt.
+3. **Schrift und Farben:** Der Schriftschatten ist fest und für beide Komponenten gleich (`SCHRIFTSCHATTEN` in `metrics.js`, `0px 0px 8px rgba(0,0,0,1)`); er trägt die Lesbarkeit, da die Fläche nur noch schwach sein kann. Die Warnfarben sind über die neue Einstellung „Warnfarben“ wählbar (hell/dunkel) und wirken sofort, ohne Neuladen.
+4. **Vorgabewerte:** Applet 25 Prozent, Desklet 0 Prozent, Warnfarben „dunkel“ in beiden Komponenten. Gespeicherte Werte werden nicht überschrieben.
+5. **Kontrastnachweis:** Die Kontraste beider Farbsätze und der weißen Schrift sind für den ungünstigsten Fall – reinweißer und reinschwarzer Inhalt – rechnerisch belegt und in `metrics.js` sowie in `06_TESTVERSIONEN/0.1.0-dev_AP20-PRUEFDATEN/kontrast.py` festgehalten. Ein Mindestwert von 3,0 : 1 wird **nicht** als Bedingung gesetzt: Im Bereich bis 35 Prozent Deckkraft trägt der Schriftschatten wesentlich zur Lesbarkeit bei, und seine Wirkung lässt sich nicht in eine Kontrastzahl fassen. Maßgeblich ist der Augenschein des Nutzers auf hellem und dunklem Hintergrundbild; die Zahlen dienen der Nachvollziehbarkeit und der Auswahl der Farbwerte.
 6. **Befund G3:** Die Meldungen in der Bildschirmmitte verwenden in beiden Komponenten fest 55 Prozent.
-7. **Warnfarben bleiben zentral** in `metrics.js`; keine zweite Farbtabelle im UI-Code. Der Schatten des Desklets wandert aus `stylesheet.css` in den Code, da er von der Deckkraft abhängt; das Stylesheet behält die Vorgabe für den Fall, dass kein Stil gesetzt ist.
+7. **Warnfarben und Schatten bleiben zentral** in `metrics.js`; keine zweite Farbtabelle im UI-Code. Der Schatten des Desklets wandert aus `stylesheet.css` in den Code, damit beide Komponenten denselben Wert verwenden und eine Änderung keinen Cinnamon-Neustart erfordert; das Stylesheet behält eine gleichlautende Angabe für den Fall, dass noch kein Stil gesetzt ist.
 8. **„Zurücksetzen“** stellt in beiden Komponenten auch den neuen Wert auf die Vorgabe zurück, sichtbar wirksam.
 9. **Robustheit:** ein beschädigter oder außerhalb des Bereichs liegender Wert in der Einstellungsdatei führt zum Vorgabewert, nicht zu einer unbrauchbaren Anzeige (`_gueltig()`, auch im Desklet).
 10. **Prüfung vor jeder Installation:** Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module identisch. Einstellungsdateien unmittelbar vor jedem Eingriff sichern, danach mit `wertevergleich.py` vergleichen; am Ende nachweislich unverändert.

@@ -38,8 +38,8 @@ const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
 const standardMesswertListe = Metrics.standardMesswertListe;
 const ordneMesswerte = Metrics.ordneMesswerte;
-const WARNFARBEN = Metrics.WARNFARBEN;
-const schattenFuer = Metrics.schattenFuer;
+const SCHRIFTSCHATTEN = Metrics.SCHRIFTSCHATTEN;
+const WARNFARBEN_VORGABE = Metrics.WARNFARBEN_VORGABE;
 const warnfarbeFuer = Metrics.warnfarbeFuer;
 const standardWarnListe = Metrics.standardWarnListe;
 const ordneWarnschwellen = Metrics.ordneWarnschwellen;
@@ -52,11 +52,13 @@ const bewerteStufe = Metrics.bewerteStufe;
  * bisher, die Flaeche wird bewusst eingeschaltet (Entscheidung des
  * Nutzers vom 20.09.2026).
  *
- * Der Schatten gilt, solange eine Flaeche vorhanden ist; darunter
- * liefert schattenFuer() die kraeftigere Fassung aus metrics.js.
+ * Hoechstwert 35 Prozent, siehe Einstellungsschema: Daruber wird die
+ * Flaeche ueber hellem Bildschirminhalt mittelgrau, und die
+ * Warnfarben verlieren darauf an Lesbarkeit. Den Schatten liefert
+ * metrics.js, er ist fuer beide Komponenten gleich.
  */
 const DEFAULT_HINTERGRUND_DECKKRAFT = 0;
-const SCHATTEN_MIT_FLAECHE = "0px 0px 6px rgba(0,0,0,0.9)";
+const MAX_HINTERGRUND_DECKKRAFT = 35;
 
 // Einstellungsschluessel der Sensorauswahl je Sensorart
 // (siehe SENSOR_ARTEN in hardwareDetection.js).
@@ -139,21 +141,6 @@ class AVinceHWMonitor extends Desklet.Desklet {
             this._onRefreshIntervalChanged.bind(this)
         );
 
-        // ERPROBUNG AP20: faellt nach der Entscheidung des Nutzers
-        // zusammen mit den Einstellungen wieder weg.
-        for (const [schluessel, eigenschaft] of [
-            ["erprobung-schatten", "erprobungSchatten"],
-            ["erprobung-warnfarben", "erprobungWarnfarben"],
-            ["erprobung-vorschau", "erprobungVorschau"],
-            ["erprobung-farben-immer", "erprobungFarbenImmer"]
-        ]) {
-            this.settings.bindProperty(
-                Settings.BindingDirection.IN,
-                schluessel,
-                eigenschaft,
-                this._applyStyle.bind(this)
-            );
-        }
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
@@ -169,6 +156,15 @@ class AVinceHWMonitor extends Desklet.Desklet {
             "warnschwellen-aktiv",
             "warnAktiv",
             this._baueZeilenNeu.bind(this)
+        );
+
+        // Welcher Farbsatz passt, haengt vom Hintergrundbild ab und
+        // wird deshalb vom Benutzer gewaehlt (AP20).
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "warnfarben-satz",
+            "warnfarbenSatz",
+            this._applyStyle.bind(this)
         );
 
         this.settings.bindProperty(
@@ -499,9 +495,23 @@ class AVinceHWMonitor extends Desklet.Desklet {
      */
     _deckkraft() {
         return Math.round(
-            this._gueltig(this.hintergrundDeckkraft, 0, 85,
+            this._gueltig(this.hintergrundDeckkraft, 0,
+                          MAX_HINTERGRUND_DECKKRAFT,
                           DEFAULT_HINTERGRUND_DECKKRAFT)
         );
+    }
+
+    /*
+     * Gewaehlter Warnfarbensatz (AP20). Eine beschaedigte Auswahl
+     * faellt auf die Vorgabe zurueck; warnfarbeFuer() tut das
+     * ebenfalls, hier steht der Wert aber sauber fuer die Anzeige.
+     */
+    _warnfarbenSatz() {
+        const wahl = String(this.warnfarbenSatz);
+
+        return wahl === "hell" || wahl === "dunkel"
+            ? wahl
+            : WARNFARBEN_VORGABE;
     }
 
     /*
@@ -533,20 +543,6 @@ class AVinceHWMonitor extends Desklet.Desklet {
         );
     }
 
-    /*
-     * ERPROBUNG AP20: Mit der Vorschau lassen sich die Warnfarben
-     * ansehen, ohne die Warnschwellen des Nutzers zu veraendern.
-     * Faellt nach der Entscheidung wieder weg.
-     */
-    _anzeigeStufe(item) {
-        const vorschau = String(this.erprobungVorschau || "aus");
-
-        if (vorschau === "warnung" || vorschau === "kritisch")
-            return vorschau;
-
-        return item.stufe;
-    }
-
     _applyStyle() {
         if (!this._rows)
             return;
@@ -565,18 +561,16 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._setzeHintergrundflaeche(deckkraft, fontSize);
 
         /*
-         * Der Schatten haengt von der Deckkraft ab und wird deshalb
-         * hier gesetzt, nicht im Stylesheet (AP20). Das Stylesheet
-         * behaelt seinen Wert als Vorgabe, falls kein Stil gesetzt
-         * ist; eine Aenderung dort wuerde ausserdem einen Cinnamon-
-         * Neustart erfordern.
+         * Der Schatten steht in metrics.js und wird hier gesetzt,
+         * nicht im Stylesheet (AP20): So haben Applet und Desklet
+         * denselben Wert, und eine Aenderung erfordert keinen
+         * Cinnamon-Neustart. Das Stylesheet behaelt seine Angabe als
+         * Vorgabe, falls noch kein Stil gesetzt ist.
          */
         const style =
             "font-size: " + fontSize + "px;" +
             "font-weight: " + fontWeight + ";" +
-            "text-shadow: " +
-            schattenFuer(deckkraft, this.erprobungSchatten,
-                         SCHATTEN_MIT_FLAECHE) + ";";
+            "text-shadow: " + SCHRIFTSCHATTEN + ";";
 
         for (const id of METRIC_ORDER) {
             const item = this._rows[id];
@@ -680,9 +674,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
         if (!item || item.wertStil === undefined)
             return;
 
-        const gewaehlt = warnfarbeFuer(
-            this._anzeigeStufe(item), this._deckkraft(),
-            this.erprobungWarnfarben, this.erprobungFarbenImmer === true);
+        const gewaehlt = warnfarbeFuer(item.stufe, this._warnfarbenSatz());
 
         const farbe = gewaehlt ? "color: " + gewaehlt + ";" : "";
 
@@ -1518,8 +1510,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
         const warnListe = standardWarnListe();
 
         this.settings.setValue("warnschwellen-aktiv", true);
+        this.settings.setValue("warnfarben-satz", WARNFARBEN_VORGABE);
         this.settings.setValue("warnschwellen-liste", warnListe);
         this.warnAktiv = true;
+        this.warnfarbenSatz = WARNFARBEN_VORGABE;
         this.warnListe = warnListe;
 
         this._detector.setzeAuswahl(this._sensorAuswahl());

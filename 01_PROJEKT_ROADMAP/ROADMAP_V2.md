@@ -1726,7 +1726,14 @@ Ergänzende Entscheidungen des Nutzers vom 20.09.2026:
 - Vorgabewert der Hintergrundfläche im Desklet: 0 %. Das Desklet sieht nach dem Update unverändert aus; die Fläche wird bewusst eingeschaltet. Das Applet behält seine Vorgabe von 55 %.
 - Erprobung mit drei Varianten A/B/C je Bereich (Schatten, Warnfarben unter 45 %) sowie den Deckkraftstufen 0, 25, 45, 55 und 85 %.
 
-Einordnung: OPTIONAL 1.0 → vorgezogen, da es eine Anforderung der Warnschwellen erfüllt. Ziel und Akzeptanzkriterien wurden am 20.09.2026 festgelegt und freigegeben; sie stehen in `05_DOKUMENTATION/PROJECT-STATUS.md`, Abschnitt 14.
+Ergebnis der Erprobung vom 20.09.2026 auf hellem und dunklem Hintergrundbild:
+
+- Deckkraft der Hintergrundfläche: Skala **0 bis 35 %** statt 0 bis 85 %. Oberhalb davon wird die Fläche über hellem Bildschirminhalt mittelgrau, und die Warnfarben verlieren darauf. Vorgabe: Applet 25 %, Desklet 0 %.
+- Schriftschatten: fest `0px 0px 8px rgba(0,0,0,1)` für beide Komponenten.
+- Die Umschaltung bei 45 % entfällt, da mit der neuen Skala nicht mehr erreichbar.
+- Warnfarben: neue Einstellung je Komponente, „Für dunkle Hintergründe (leuchtend)“ wie seit AP18 oder „Für helle Hintergründe (gedämpft)“. Der Nutzer wählte je Hintergrund eine andere Variante; eine selbsttätige Erkennung des Bildschirminhalts scheidet aus (in AP08 bewusst verworfen).
+
+Einordnung: OPTIONAL 1.0 → vorgezogen, da es eine Anforderung der Warnschwellen erfüllt. Ziel und Akzeptanzkriterien wurden am 20.09.2026 festgelegt, freigegeben und nach der Erprobung fortgeschrieben; sie stehen in `05_DOKUMENTATION/PROJECT-STATUS.md`, Abschnitt 14.
 
 ### Aktion bei Linksklick auf das Applet (AP21)
 

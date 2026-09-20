@@ -42,8 +42,8 @@ const METRICS = Metrics.METRICS;
 const METRIC_ORDER = Metrics.METRIC_ORDER;
 const standardMesswertListe = Metrics.standardMesswertListe;
 const ordneMesswerte = Metrics.ordneMesswerte;
-const WARNFARBEN = Metrics.WARNFARBEN;
-const schattenFuer = Metrics.schattenFuer;
+const SCHRIFTSCHATTEN = Metrics.SCHRIFTSCHATTEN;
+const WARNFARBEN_VORGABE = Metrics.WARNFARBEN_VORGABE;
 const warnfarbeFuer = Metrics.warnfarbeFuer;
 const standardWarnListe = Metrics.standardWarnListe;
 const ordneWarnschwellen = Metrics.ordneWarnschwellen;
@@ -110,22 +110,17 @@ const POPUP_MAX_FONT_SIZE = 48;
  *
  * Fuer grosse, fette Schrift gilt 3.0 : 1 als Mindestkontrast.
  *
- * Seit AP20 sind 0 bis 85 Prozent einstellbar. Die Festlegung aus
- * AP09 ("nicht unter 45 Prozent") ist damit bewusst aufgehoben
- * (Entscheidung des Nutzers vom 19./20.09.2026): Unterhalb von
- * WARN_FLAECHE_GRENZE traegt nicht mehr die Flaeche die Lesbarkeit,
- * sondern ein kraeftigerer Schatten und kraeftigere Warnfarben aus
- * metrics.js. Der Nutzer entscheidet damit selbst, ob ihm eine
- * durchsichtige Anzeige wichtiger ist als der sichere Kontrast.
+ * Seit AP20 sind 0 bis 35 Prozent einstellbar, Vorgabe 25 Prozent.
+ * Die Festlegung aus AP09 ("nicht unter 45 Prozent") ist damit
+ * bewusst aufgehoben (Entscheidung des Nutzers vom 19./20.09.2026):
+ * Die Lesbarkeit traegt nun der Schriftschatten aus metrics.js, dazu
+ * der waehlbare Warnfarbensatz. Der Hoechstwert von 35 Prozent kam
+ * aus der Erprobung auf hellem und dunklem Hintergrundbild:
+ * hoehere Werte machen die Flaeche ueber hellem Inhalt mittelgrau,
+ * und gerade die Warnfarben verlieren darauf.
  */
-const DEFAULT_POPUP_OPACITY = 0.55;
-
-/*
- * Schatten der Hover-Anzeige, solange eine Flaeche vorhanden ist.
- * Groesserer Radius als im Desklet, da die Schrift hier bis 48 px
- * gross wird.
- */
-const SCHATTEN_MIT_FLAECHE = "0px 0px 8px rgba(0,0,0,0.9)";
+const DEFAULT_POPUP_OPACITY = 0.25;
+const MAX_POPUP_OPACITY = 35;
 
 
 class AVincePulseApplet extends Applet.TextIconApplet {
@@ -174,7 +169,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             Settings.BindingDirection.IN,
             "popup-opacity",
             "popupOpacity",
-            this._applyDeckkraft.bind(this)
+            this._applyPopupStyle.bind(this)
         );
 
         this.settings.bindProperty(
@@ -184,21 +179,6 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._applyPanelSymbol.bind(this)
         );
 
-        // ERPROBUNG AP20: faellt nach der Entscheidung des Nutzers
-        // zusammen mit den Einstellungen wieder weg.
-        for (const [schluessel, eigenschaft] of [
-            ["erprobung-schatten", "erprobungSchatten"],
-            ["erprobung-warnfarben", "erprobungWarnfarben"],
-            ["erprobung-vorschau", "erprobungVorschau"],
-            ["erprobung-farben-immer", "erprobungFarbenImmer"]
-        ]) {
-            this.settings.bindProperty(
-                Settings.BindingDirection.IN,
-                schluessel,
-                eigenschaft,
-                this._applyPopupScale.bind(this)
-            );
-        }
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
@@ -209,6 +189,15 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         // Warnschwellen (AP18). Eine Aenderung baut die Zeilen neu auf
         // und loest damit sofort eine neue Bewertung aus.
+        // Welcher Farbsatz passt, haengt vom Hintergrundbild ab und
+        // wird deshalb vom Benutzer gewaehlt (AP20).
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "warnfarben-satz",
+            "warnfarbenSatz",
+            this._applyPopupScale.bind(this)
+        );
+
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
             "warnschwellen-aktiv",
@@ -1096,8 +1085,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         const warnListe = standardWarnListe();
 
         this.settings.setValue("warnschwellen-aktiv", true);
+        this.settings.setValue("warnfarben-satz", WARNFARBEN_VORGABE);
         this.settings.setValue("warnschwellen-liste", warnListe);
         this.warnAktiv = true;
+        this.warnfarbenSatz = WARNFARBEN_VORGABE;
         this.warnListe = warnListe;
 
         this._detector.setzeAuswahl(this._sensorAuswahl());
@@ -1116,7 +1107,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.panelSymbol = symbol;
 
         this._applyPanelSymbol();
-        this._applyDeckkraft();
+        this._applyPopupStyle();
         this._baueZeilenNeu();
 
         this._statusAnzeige.zeige(
@@ -1144,22 +1135,21 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      */
     _deckkraft() {
         return Math.round(
-            this._gueltig(this.popupOpacity, 0, 85,
+            this._gueltig(this.popupOpacity, 0, MAX_POPUP_OPACITY,
                           DEFAULT_POPUP_OPACITY * 100)
         );
     }
 
     /*
-     * Wird bei jeder Aenderung der Deckkraft gerufen (AP20).
-     *
-     * Neben der Flaeche muessen auch Schatten und Warnfarben neu
-     * gesetzt werden: Unterhalb von WARN_FLAECHE_GRENZE gelten die
-     * kraeftigeren Fassungen. Beides steckt in _applyPopupScale(),
-     * das die Zeilenstile neu aufbaut und _wendeStufeAn() ruft.
+     * Gewaehlter Warnfarbensatz (AP20). Eine beschaedigte Auswahl
+     * faellt auf die Vorgabe zurueck.
      */
-    _applyDeckkraft() {
-        this._applyPopupStyle();
-        this._applyPopupScale();
+    _warnfarbenSatz() {
+        const wahl = String(this.warnfarbenSatz);
+
+        return wahl === "hell" || wahl === "dunkel"
+            ? wahl
+            : WARNFARBEN_VORGABE;
     }
 
     /*
@@ -1184,19 +1174,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         );
     }
 
-    /*
-     * ERPROBUNG AP20: Mit der Vorschau lassen sich die Warnfarben
-     * ansehen, ohne die Warnschwellen des Nutzers zu veraendern.
-     * Faellt nach der Entscheidung wieder weg.
-     */
-    _anzeigeStufe(item) {
-        const vorschau = String(this.erprobungVorschau || "aus");
 
-        if (vorschau === "warnung" || vorschau === "kritisch")
-            return vorschau;
-
-        return item.stufe;
-    }
 
     /*
      * Begrenzt einen Einstellungswert auf den zulaessigen Bereich
@@ -1445,15 +1423,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             Math.min(POPUP_MAX_FONT_SIZE, fontSize)
         );
 
-        // Der Schatten haengt von der Deckkraft ab: ohne Flaeche
-        // muss er die Lesbarkeit allein tragen (AP20).
+        // Der Schatten traegt die Lesbarkeit, sobald wenig oder
+        // keine Flaeche eingestellt ist (AP20). Er steht in
+        // metrics.js, damit beide Komponenten gleich aussehen.
         const commonStyle =
             "font-size: " + fontSize + "px;" +
             "font-weight: 700;" +
             "color: white;" +
-            "text-shadow: " +
-            schattenFuer(this._deckkraft(), this.erprobungSchatten,
-                         SCHATTEN_MIT_FLAECHE) + ";";
+            "text-shadow: " + SCHRIFTSCHATTEN + ";";
 
         const breiten = this._berechneSpaltenbreiten(fontSize);
 
@@ -1581,9 +1558,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (!item || item.wertStil === undefined)
             return;
 
-        const gewaehlt = warnfarbeFuer(
-            this._anzeigeStufe(item), this._deckkraft(),
-            this.erprobungWarnfarben, this.erprobungFarbenImmer === true);
+        const gewaehlt = warnfarbeFuer(item.stufe, this._warnfarbenSatz());
 
         const farbe = gewaehlt ? "color: " + gewaehlt + ";" : "";
 
