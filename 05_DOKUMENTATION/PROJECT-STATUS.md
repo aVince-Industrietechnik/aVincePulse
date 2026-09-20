@@ -1140,7 +1140,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-18_21-31-48` (AP18).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-20_08-49-45` (AP19); Wiederherstellungsprobe bestanden (Prüfsummen, Klon aus dem Bundle, Vergleich von Quellcode, Dokumentation und AP19-END-Snapshot).
 
 Jedes Backup wird nach dem Anlegen überprüft: Prüfsummen vergleichen, das Bundle in ein temporäres Verzeichnis klonen und den Quellcode gegen das Original vergleichen. Ein Backup gilt erst nach bestandener Probe als gültig.
 
@@ -1275,7 +1275,7 @@ Danach: AP20 – Lesbarkeit, AP21 – Aktion bei Linksklick, anschließend laut 
 
 Weitere bekannte offene Punkte:
 
-- Erledigt mit AP19 (Befund M3): Das Desklet schreibt `/tmp/avince-hwmonitor-values` nicht mehr. Die alten Komponenten `avince-hwpopup@angelo` und `avince-hwmonitor@angelo` sind installiert, aber nicht aktiv; der Nutzer behält sie vorerst. Ihr Quellcode liegt versioniert in `05_DOKUMENTATION/QUELLCODE_VOR_AP05_SYNC_2026-09-16/`, eine Kopie ihres Einstellungsordners in `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/altstaende/`.
+- Erledigt mit AP19 (Befund M3): Das Desklet schreibt `/tmp/avince-hwmonitor-values` nicht mehr. Die alten Komponenten `avince-hwpopup@angelo` und `avince-hwmonitor@angelo` sind installiert, aber nicht aktiv; der Nutzer behält sie vorerst. Ihr Quellcode liegt in `05_DOKUMENTATION/QUELLCODE_VOR_AP05_SYNC_2026-09-16/`, eine Kopie ihres Einstellungsordners in `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/altstaende/`. **Achtung:** Beide Verzeichnisse sind per `.gitignore` von GitHub ausgeschlossen und liegen nur auf der NAS sowie in den Vollbackups (im Archiv `…_FINAL.tar.gz` enthalten, geprüft am 20.09.2026). Vor einer Deinstallation der Altstände ist das zu beachten.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
 - Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße. Die Deckkraft kommt mit AP20.
 - Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen. **Ergebnis der Vorprüfung vom 19.09.2026:** `librespeed-cli` ist kein Paket der Mint-Quellen, die Spices-Regeln verbieten aber Installationsanweisungen für Quellen außerhalb des Spices-Umfelds. Dafür ist ein eigenes Arbeitspaket vor der Veröffentlichung vorgesehen (`ROADMAP_V2.md`, Abschnitt 24, „Speedtest-Programm vor der Veröffentlichung“): `speedtest-cli` aus den Paketquellen unterstützen, `librespeed-cli` nur verwenden, wenn vorhanden.
