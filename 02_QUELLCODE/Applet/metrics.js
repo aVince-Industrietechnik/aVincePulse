@@ -283,12 +283,126 @@ var WARNSCHWELLEN = {
     battery_charge: { richtung: "tief", warnung: 20, kritisch: 10 }
 };
 
-// Farben der Stufen. Auf der abgedunkelten Flaeche der Hover-Anzeige
-// und mit Schriftschatten auch auf hellem Hintergrund lesbar.
+// Farben der Stufen auf abgedunkelter Flaeche. Dort sind die hellen
+// Farben gut lesbar; ohne Flaeche gilt WARNFARBEN_VARIANTEN (AP20).
 var WARNFARBEN = {
     warnung: "#FFA726",
     kritisch: "#FF5252"
 };
+
+/*
+ * Lesbarkeit ohne Hintergrundflaeche (AP20).
+ *
+ * Ab WARN_FLAECHE_GRENZE Prozent Deckkraft traegt die abgedunkelte
+ * Flaeche die Lesbarkeit. Darunter muessen Schatten und Farbe sie
+ * allein sichern. Beide Komponenten verwenden dieselben Werte, damit
+ * Applet und Desklet gleich aussehen.
+ *
+ * Ausgangslage (Befund G9 aus AP19): Ohne Flaeche erreicht das bisher
+ * verwendete Orange #FFA726 gegen reinweissen Bildschirminhalt nur
+ * 1,95 : 1. Als Mindestkontrast gelten 3,0 : 1 fuer grosse, fette
+ * Schrift. Da der Hintergrund unbekannt ist, muss eine Farbe gegen
+ * Weiss UND gegen Schwarz bestehen.
+ *
+ * ERPROBUNG AP20 (20.09.2026): Die Varianten A, B und C werden auf
+ * hellem und dunklem Hintergrundbild verglichen. Nach der Entscheidung
+ * des Nutzers bleibt genau eine uebrig; die Einstellungen unter
+ * "Erprobung" und die uebrigen Varianten entfallen dann wieder.
+ *
+ * Rechnerische Kontraste der Farbvarianten ohne Flaeche
+ * (nachgerechnet mit 06_TESTVERSIONEN/0.1.0-dev_AP20-PRUEFDATEN/
+ * kontrast.py, WCAG 2.1):
+ *
+ *   A  #E65100 Warnung   3,79 : 1 gegen Weiss  5,54 : 1 gegen Schwarz
+ *      #C62828 kritisch  5,62 : 1              3,74 : 1
+ *   B  #FFA726 Warnung   1,94 : 1             10,81 : 1   (wie bisher)
+ *      #FF5252 kritisch  3,19 : 1              6,58 : 1
+ *   C  #FF8F00 Warnung   2,29 : 1              9,18 : 1
+ *      #D50000 kritisch  5,48 : 1              3,83 : 1
+ *
+ * Nur A besteht rechnerisch gegen beide Extreme. B setzt ganz auf den
+ * Schatten, C liegt dazwischen. Den Ausschlag gibt der Augenschein.
+ *
+ * Offen und in der Erprobung mit zu beurteilen: Auch MIT Flaeche
+ * bleiben die hellen Farben rechnerisch schwach, sobald die Flaeche
+ * ueber hellem Bildschirminhalt liegt und dadurch mittelgrau wird.
+ * Bei 55 Prozent ueber Reinweiss erreicht #FF5252 nur 1,49 : 1,
+ * #FFA726 nur 2,44 : 1; erst bei 85 Prozent werden es 4,74 bzw.
+ * 7,79 : 1. Eine dunklere Farbe hilft dort nicht, sie verschwindet
+ * auf der dunklen Flaeche erst recht. Deshalb laesst sich in der
+ * Erprobung einstellen, ob die Varianten auch mit Flaeche gelten.
+ */
+var WARN_FLAECHE_GRENZE = 45;
+
+/*
+ * Schattenvarianten fuer die Darstellung ohne Flaeche.
+ *
+ * C gibt zwei Schatten an und klaert damit zugleich, ob Cinnamon
+ * (St) mehrere Schatten je Text darstellt. Das ist nicht gesichert
+ * und laesst sich nur praktisch pruefen. Bleibt bei C sichtbar kein
+ * Schatten, unterstuetzt St nur einen.
+ */
+var SCHATTEN_VARIANTEN = {
+    A: "0px 0px 8px rgba(0,0,0,1)",
+    B: "0px 0px 3px rgba(0,0,0,1)",
+    C: "0px 0px 3px rgba(0,0,0,1), 0px 0px 9px rgba(0,0,0,1)"
+};
+
+var WARNFARBEN_VARIANTEN = {
+    A: { warnung: "#E65100", kritisch: "#C62828" },
+    B: { warnung: "#FFA726", kritisch: "#FF5252" },
+    C: { warnung: "#FF8F00", kritisch: "#D50000" }
+};
+
+/*
+ * Liefert den Eintrag einer Variantentabelle. Eine unbekannte oder
+ * beschaedigte Angabe faellt auf A zurueck.
+ */
+function warnVariante(tabelle, name) {
+    return tabelle[String(name).toUpperCase()] || tabelle.A;
+}
+
+/*
+ * Gilt bei dieser Deckkraft die Darstellung mit Flaeche?
+ * deckkraft ist der eingestellte Wert in Prozent (0 bis 85).
+ */
+function mitFlaeche(deckkraft) {
+    const wert = Number(deckkraft);
+
+    return Number.isFinite(wert) && wert >= WARN_FLAECHE_GRENZE;
+}
+
+/*
+ * Schatten fuer Beschriftung, Wert und Einheit.
+ *
+ * grundschatten ist der bisherige Schatten der Komponente; er gilt
+ * weiter, solange eine Flaeche vorhanden ist. Applet und Desklet
+ * verwenden dort verschiedene Radien, da ihre Schriftgroessen weit
+ * auseinanderliegen.
+ */
+function schattenFuer(deckkraft, variante, grundschatten) {
+    if (mitFlaeche(deckkraft))
+        return grundschatten;
+
+    return warnVariante(SCHATTEN_VARIANTEN, variante);
+}
+
+/*
+ * Farbe einer Warnstufe, passend zur eingestellten Deckkraft.
+ * Liefert null, wenn die Stufe nicht eingefaerbt wird.
+ *
+ * ERPROBUNG AP20: Mit auchMitFlaeche = true gilt die gewaehlte
+ * Variante unabhaengig von der Deckkraft. Damit laesst sich
+ * beurteilen, ob die hellen Farben auf einer Flaeche ueber hellem
+ * Bildschirminhalt genuegen (siehe Kommentar oben). Der Parameter
+ * faellt nach der Entscheidung des Nutzers wieder weg.
+ */
+function warnfarbeFuer(stufe, deckkraft, variante, auchMitFlaeche) {
+    if (mitFlaeche(deckkraft) && auchMitFlaeche !== true)
+        return WARNFARBEN[stufe] || null;
+
+    return warnVariante(WARNFARBEN_VARIANTEN, variante)[stufe] || null;
+}
 
 /*
  * Puffer gegen Flackern: Eine erreichte Stufe gilt weiter, bis der

@@ -673,6 +673,12 @@ var SpeedtestRunner = class SpeedtestRunner {
  * Sie liegt hier, weil sie mit dem Speedtest entstanden ist; bei
  * weiterer Verwendung gehoert sie in ein eigenes Modul.
  */
+/*
+ * Deckkraft der Flaeche hinter den Meldungen in der Bildschirmmitte.
+ * Fest, siehe zeige() (Befund G3 aus AP19).
+ */
+const MELDUNG_DECKKRAFT = 0.55;
+
 var StatusAnzeige = class StatusAnzeige {
     constructor() {
         this._label = null;
@@ -681,16 +687,18 @@ var StatusAnzeige = class StatusAnzeige {
 
     /*
      * Zeigt einen Text mittig auf dem Bildschirm.
-     * deckkraft liegt zwischen 0 und 1; fehlt der Wert, wird ein
-     * gut lesbarer Vorgabewert verwendet.
+     *
+     * Die Flaeche hinter der Meldung verwendet immer 0,55 und folgt
+     * bewusst nicht der Einstellung "Hintergrundflaeche" (Befund G3
+     * aus AP19, Entscheidung des Nutzers vom 20.09.2026). Meldungen
+     * sind kurzlebig und wichtig; sie sollen unabhaengig davon lesbar
+     * sein, wie durchsichtig der Benutzer seine Anzeige eingestellt
+     * hat. 0,55 ergibt gegen reinweissen Inhalt 4,7 : 1.
      */
-    zeige(text, deckkraft) {
+    zeige(text) {
         this._entferneZeitgeber();
 
-        const opazitaet =
-            Number.isFinite(Number(deckkraft))
-                ? Math.max(0.45, Math.min(0.85, Number(deckkraft)))
-                : 0.55;
+        const opazitaet = MELDUNG_DECKKRAFT;
 
         const monitor = Main.layoutManager.primaryMonitor;
 

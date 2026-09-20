@@ -1686,8 +1686,8 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 3. AP16 – Netzwerkschnittstelle und Laufwerk für den Speicherplatz wählbar, VERBINDLICH 1.0 (abgeschlossen)
 4. AP17 – eingeschoben: Rückfrage vor dem Neu-Öffnen, Meldungen, Umlaute (abgeschlossen)
 5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
-6. AP19 – Zwischenprüfung (Phase 1 abgeschlossen am 19.09.2026, Phase 2 läuft)
-7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–85 % in Desklet und Applet, unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben (eingeschoben am 19.09.2026 aus Befund G9 von AP19, vor der Übersetzung wegen neuer Einstellungstexte)
+6. AP19 – Zwischenprüfung (abgeschlossen am 20.09.2026)
+7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–85 % in Desklet und Applet, unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben (eingeschoben am 19.09.2026 aus Befund G9 von AP19, vor der Übersetzung wegen neuer Einstellungstexte; begonnen am 20.09.2026)
 8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026, vor der Übersetzung wegen neuer Einstellungstexte)
 9. Übersetzung Deutsch/Englisch
 
@@ -1720,7 +1720,13 @@ Festlegung des Nutzers:
 - Für das Applet wird die Festlegung aus AP09 (Deckkraft nicht unter 45 %) bewusst aufgehoben.
 - Schatten und Farben werden auf hellem und dunklem Hintergrund praktisch erprobt, bevor sie festgelegt werden.
 
-Einordnung: OPTIONAL 1.0 → vorgezogen, da es eine Anforderung der Warnschwellen erfüllt. Ziel und Akzeptanzkriterien werden vor Beginn schriftlich festgelegt.
+Ergänzende Entscheidungen des Nutzers vom 20.09.2026:
+
+- Meldungen in der Bildschirmmitte (Befund G3 aus AP19) verwenden fest 55 % Deckkraft, unabhängig von der Einstellung und in beiden Komponenten einheitlich. Begründung: Meldungen sind kurzlebig und wichtig und sollen immer lesbar sein.
+- Vorgabewert der Hintergrundfläche im Desklet: 0 %. Das Desklet sieht nach dem Update unverändert aus; die Fläche wird bewusst eingeschaltet. Das Applet behält seine Vorgabe von 55 %.
+- Erprobung mit drei Varianten A/B/C je Bereich (Schatten, Warnfarben unter 45 %) sowie den Deckkraftstufen 0, 25, 45, 55 und 85 %.
+
+Einordnung: OPTIONAL 1.0 → vorgezogen, da es eine Anforderung der Warnschwellen erfüllt. Ziel und Akzeptanzkriterien wurden am 20.09.2026 festgelegt und freigegeben; sie stehen in `05_DOKUMENTATION/PROJECT-STATUS.md`, Abschnitt 14.
 
 ### Aktion bei Linksklick auf das Applet (AP21)
 

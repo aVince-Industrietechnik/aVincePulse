@@ -11,8 +11,14 @@
 }
 
 /* Breiten werden in desklet.js aus der Schriftgroesse berechnet.
+
    Der Schatten haelt weisse Schrift und Warnfarben auch auf hellem
-   Hintergrund lesbar (AP18). */
+   Hintergrund lesbar (AP18). Seit AP20 setzt desklet.js ihn selbst,
+   da er von der eingestellten Deckkraft der Hintergrundflaeche
+   abhaengt: Ohne Flaeche muss er kraeftiger ausfallen. Die Angabe
+   hier bleibt als Vorgabe fuer den Fall, dass kein Stil gesetzt ist
+   - etwa beim ersten Zeichnen vor dem ersten _applyStyle(). Sie hier
+   zu aendern wuerde ausserdem einen Cinnamon-Neustart erfordern. */
 .avince-hw-name {
     font-size: 14px;
     color: white;

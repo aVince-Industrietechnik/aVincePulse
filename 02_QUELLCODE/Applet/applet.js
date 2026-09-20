@@ -43,6 +43,8 @@ const METRIC_ORDER = Metrics.METRIC_ORDER;
 const standardMesswertListe = Metrics.standardMesswertListe;
 const ordneMesswerte = Metrics.ordneMesswerte;
 const WARNFARBEN = Metrics.WARNFARBEN;
+const schattenFuer = Metrics.schattenFuer;
+const warnfarbeFuer = Metrics.warnfarbeFuer;
 const standardWarnListe = Metrics.standardWarnListe;
 const ordneWarnschwellen = Metrics.ordneWarnschwellen;
 const bewerteStufe = Metrics.bewerteStufe;
@@ -107,12 +109,23 @@ const POPUP_MAX_FONT_SIZE = 48;
  *   0.40  Kontrast 2.8 : 1   zu schwach
  *
  * Fuer grosse, fette Schrift gilt 3.0 : 1 als Mindestkontrast.
- * Werte unter 0.45 sollten daher nicht angeboten werden.
  *
- * Der Wert ist ueber die Einstellungen veraenderbar. Das Schema
- * laesst bewusst nur 45 bis 85 Prozent zu.
+ * Seit AP20 sind 0 bis 85 Prozent einstellbar. Die Festlegung aus
+ * AP09 ("nicht unter 45 Prozent") ist damit bewusst aufgehoben
+ * (Entscheidung des Nutzers vom 19./20.09.2026): Unterhalb von
+ * WARN_FLAECHE_GRENZE traegt nicht mehr die Flaeche die Lesbarkeit,
+ * sondern ein kraeftigerer Schatten und kraeftigere Warnfarben aus
+ * metrics.js. Der Nutzer entscheidet damit selbst, ob ihm eine
+ * durchsichtige Anzeige wichtiger ist als der sichere Kontrast.
  */
 const DEFAULT_POPUP_OPACITY = 0.55;
+
+/*
+ * Schatten der Hover-Anzeige, solange eine Flaeche vorhanden ist.
+ * Groesserer Radius als im Desklet, da die Schrift hier bis 48 px
+ * gross wird.
+ */
+const SCHATTEN_MIT_FLAECHE = "0px 0px 8px rgba(0,0,0,0.9)";
 
 
 class AVincePulseApplet extends Applet.TextIconApplet {
@@ -161,7 +174,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             Settings.BindingDirection.IN,
             "popup-opacity",
             "popupOpacity",
-            this._applyPopupStyle.bind(this)
+            this._applyDeckkraft.bind(this)
         );
 
         this.settings.bindProperty(
@@ -170,6 +183,22 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             "panelSymbol",
             this._applyPanelSymbol.bind(this)
         );
+
+        // ERPROBUNG AP20: faellt nach der Entscheidung des Nutzers
+        // zusammen mit den Einstellungen wieder weg.
+        for (const [schluessel, eigenschaft] of [
+            ["erprobung-schatten", "erprobungSchatten"],
+            ["erprobung-warnfarben", "erprobungWarnfarben"],
+            ["erprobung-vorschau", "erprobungVorschau"],
+            ["erprobung-farben-immer", "erprobungFarbenImmer"]
+        ]) {
+            this.settings.bindProperty(
+                Settings.BindingDirection.IN,
+                schluessel,
+                eigenschaft,
+                this._applyPopupScale.bind(this)
+            );
+        }
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
@@ -1087,7 +1116,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.panelSymbol = symbol;
 
         this._applyPanelSymbol();
-        this._applyPopupStyle();
+        this._applyDeckkraft();
         this._baueZeilenNeu();
 
         this._statusAnzeige.zeige(
@@ -1109,23 +1138,64 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     }
 
     /*
+     * Eingestellte Deckkraft der Hintergrundflaeche in Prozent.
+     * Seit AP20 sind 0 bis 85 Prozent zulaessig; ein beschaedigter
+     * Wert faellt auf die Vorgabe zurueck.
+     */
+    _deckkraft() {
+        return Math.round(
+            this._gueltig(this.popupOpacity, 0, 85,
+                          DEFAULT_POPUP_OPACITY * 100)
+        );
+    }
+
+    /*
+     * Wird bei jeder Aenderung der Deckkraft gerufen (AP20).
+     *
+     * Neben der Flaeche muessen auch Schatten und Warnfarben neu
+     * gesetzt werden: Unterhalb von WARN_FLAECHE_GRENZE gelten die
+     * kraeftigeren Fassungen. Beides steckt in _applyPopupScale(),
+     * das die Zeilenstile neu aufbaut und _wendeStufeAn() ruft.
+     */
+    _applyDeckkraft() {
+        this._applyPopupStyle();
+        this._applyPopupScale();
+    }
+
+    /*
      * Setzt Hintergrundflaeche und Abstaende der Hover-Anzeige.
      * Die Deckkraft stammt aus den Einstellungen.
+     *
+     * Der Innenabstand bleibt auch bei 0 Prozent erhalten: Die
+     * Anzeige steht frei in der Bildschirmmitte und wird ueber ihre
+     * Gesamtgroesse mittig gesetzt, der Abstand wirkt also nach allen
+     * Seiten gleich.
      */
     _applyPopupStyle() {
         if (!this._popup)
             return;
 
-        const deckkraft =
-            this._gueltig(this.popupOpacity, 45, 85,
-                          DEFAULT_POPUP_OPACITY * 100) / 100;
-
         this._popup.set_style(
-            "background-color: rgba(0, 0, 0, " + deckkraft + ");" +
+            "background-color: rgba(0, 0, 0, " +
+            (this._deckkraft() / 100) + ");" +
             "border-radius: 18px;" +
             "padding: 28px 40px;" +
             "spacing: 8px;"
         );
+    }
+
+    /*
+     * ERPROBUNG AP20: Mit der Vorschau lassen sich die Warnfarben
+     * ansehen, ohne die Warnschwellen des Nutzers zu veraendern.
+     * Faellt nach der Entscheidung wieder weg.
+     */
+    _anzeigeStufe(item) {
+        const vorschau = String(this.erprobungVorschau || "aus");
+
+        if (vorschau === "warnung" || vorschau === "kritisch")
+            return vorschau;
+
+        return item.stufe;
     }
 
     /*
@@ -1375,11 +1445,15 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             Math.min(POPUP_MAX_FONT_SIZE, fontSize)
         );
 
+        // Der Schatten haengt von der Deckkraft ab: ohne Flaeche
+        // muss er die Lesbarkeit allein tragen (AP20).
         const commonStyle =
             "font-size: " + fontSize + "px;" +
             "font-weight: 700;" +
             "color: white;" +
-            "text-shadow: 0px 0px 8px rgba(0,0,0,0.9);";
+            "text-shadow: " +
+            schattenFuer(this._deckkraft(), this.erprobungSchatten,
+                         SCHATTEN_MIT_FLAECHE) + ";";
 
         const breiten = this._berechneSpaltenbreiten(fontSize);
 
@@ -1507,9 +1581,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         if (!item || item.wertStil === undefined)
             return;
 
-        const farbe = WARNFARBEN[item.stufe]
-            ? "color: " + WARNFARBEN[item.stufe] + ";"
-            : "";
+        const gewaehlt = warnfarbeFuer(
+            this._anzeigeStufe(item), this._deckkraft(),
+            this.erprobungWarnfarben, this.erprobungFarbenImmer === true);
+
+        const farbe = gewaehlt ? "color: " + gewaehlt + ";" : "";
 
         item.value.set_style(item.wertStil + farbe);
         item.unit.set_style(item.einheitStil + farbe);
@@ -1592,12 +1668,9 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._hidePopup();
 
-        const deckkraft =
-            this._gueltig(this.popupOpacity, 45, 85,
-                          DEFAULT_POPUP_OPACITY * 100) / 100;
-
-        this._statusAnzeige.zeige(
-            "Internet-Speedtest läuft …", deckkraft);
+        // Die Meldung verwendet eine feste Deckkraft, siehe
+        // StatusAnzeige.zeige() (Befund G3 aus AP19).
+        this._statusAnzeige.zeige("Internet-Speedtest läuft …");
 
         this._speedtest.starte(ergebnis => {
             // Nach dem Entfernen keine Meldung mehr (Befund M2).
@@ -1621,7 +1694,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             } else {
                 // Die Meldung bleibt kurz stehen, damit der Grund
                 // des Fehlschlags lesbar ist.
-                this._statusAnzeige.zeige(ergebnis.meldung, deckkraft);
+                this._statusAnzeige.zeige(ergebnis.meldung);
                 this._statusAnzeige.verbergeNach(8);
             }
         });

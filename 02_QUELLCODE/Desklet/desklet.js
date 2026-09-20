@@ -39,9 +39,24 @@ const METRIC_ORDER = Metrics.METRIC_ORDER;
 const standardMesswertListe = Metrics.standardMesswertListe;
 const ordneMesswerte = Metrics.ordneMesswerte;
 const WARNFARBEN = Metrics.WARNFARBEN;
+const schattenFuer = Metrics.schattenFuer;
+const warnfarbeFuer = Metrics.warnfarbeFuer;
 const standardWarnListe = Metrics.standardWarnListe;
 const ordneWarnschwellen = Metrics.ordneWarnschwellen;
 const bewerteStufe = Metrics.bewerteStufe;
+
+/*
+ * Hintergrundflaeche des Desklets (AP20).
+ *
+ * Vorgabe 0 Prozent: Das Desklet sieht nach dem Update aus wie
+ * bisher, die Flaeche wird bewusst eingeschaltet (Entscheidung des
+ * Nutzers vom 20.09.2026).
+ *
+ * Der Schatten gilt, solange eine Flaeche vorhanden ist; darunter
+ * liefert schattenFuer() die kraeftigere Fassung aus metrics.js.
+ */
+const DEFAULT_HINTERGRUND_DECKKRAFT = 0;
+const SCHATTEN_MIT_FLAECHE = "0px 0px 6px rgba(0,0,0,0.9)";
 
 // Einstellungsschluessel der Sensorauswahl je Sensorart
 // (siehe SENSOR_ARTEN in hardwareDetection.js).
@@ -112,10 +127,33 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
+            "hintergrund-deckkraft",
+            "hintergrundDeckkraft",
+            this._applyStyle.bind(this)
+        );
+
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
             "refresh-interval",
             "refreshInterval",
             this._onRefreshIntervalChanged.bind(this)
         );
+
+        // ERPROBUNG AP20: faellt nach der Entscheidung des Nutzers
+        // zusammen mit den Einstellungen wieder weg.
+        for (const [schluessel, eigenschaft] of [
+            ["erprobung-schatten", "erprobungSchatten"],
+            ["erprobung-warnfarben", "erprobungWarnfarben"],
+            ["erprobung-vorschau", "erprobungVorschau"],
+            ["erprobung-farben-immer", "erprobungFarbenImmer"]
+        ]) {
+            this.settings.bindProperty(
+                Settings.BindingDirection.IN,
+                schluessel,
+                eigenschaft,
+                this._applyStyle.bind(this)
+            );
+        }
 
         this.settings.bindProperty(
             Settings.BindingDirection.IN,
@@ -454,6 +492,61 @@ class AVinceHWMonitor extends Desklet.Desklet {
         };
     }
 
+    /*
+     * Eingestellte Deckkraft der Hintergrundflaeche in Prozent (AP20).
+     * Ein beschaedigter oder ausserhalb des Bereichs liegender Wert
+     * faellt auf die Vorgabe zurueck.
+     */
+    _deckkraft() {
+        return Math.round(
+            this._gueltig(this.hintergrundDeckkraft, 0, 85,
+                          DEFAULT_HINTERGRUND_DECKKRAFT)
+        );
+    }
+
+    /*
+     * Legt die abgedunkelte Flaeche hinter die Messwerte (AP20).
+     *
+     * Bei 0 Prozent bleibt das Desklet ohne Flaeche und ohne
+     * Innenabstand, also genau wie vor AP20. Ecken und Abstaende
+     * richten sich nach der Schriftgroesse, damit sie bei 10 px
+     * nicht klobig und bei 30 px nicht zu knapp wirken.
+     */
+    _setzeHintergrundflaeche(deckkraft, fontSize) {
+        if (!this._container)
+            return;
+
+        if (deckkraft <= 0) {
+            this._container.set_style(
+                "background-color: transparent;" +
+                "padding: 0;"
+            );
+
+            return;
+        }
+
+        this._container.set_style(
+            "background-color: rgba(0, 0, 0, " + (deckkraft / 100) + ");" +
+            "border-radius: " + Math.round(fontSize * 1.2) + "px;" +
+            "padding: " + Math.round(fontSize * 0.8) + "px " +
+            Math.round(fontSize * 1.1) + "px;"
+        );
+    }
+
+    /*
+     * ERPROBUNG AP20: Mit der Vorschau lassen sich die Warnfarben
+     * ansehen, ohne die Warnschwellen des Nutzers zu veraendern.
+     * Faellt nach der Entscheidung wieder weg.
+     */
+    _anzeigeStufe(item) {
+        const vorschau = String(this.erprobungVorschau || "aus");
+
+        if (vorschau === "warnung" || vorschau === "kritisch")
+            return vorschau;
+
+        return item.stufe;
+    }
+
     _applyStyle() {
         if (!this._rows)
             return;
@@ -467,9 +560,23 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         const breiten = this._berechneSpaltenbreiten(fontSize);
 
+        const deckkraft = this._deckkraft();
+
+        this._setzeHintergrundflaeche(deckkraft, fontSize);
+
+        /*
+         * Der Schatten haengt von der Deckkraft ab und wird deshalb
+         * hier gesetzt, nicht im Stylesheet (AP20). Das Stylesheet
+         * behaelt seinen Wert als Vorgabe, falls kein Stil gesetzt
+         * ist; eine Aenderung dort wuerde ausserdem einen Cinnamon-
+         * Neustart erfordern.
+         */
         const style =
             "font-size: " + fontSize + "px;" +
-            "font-weight: " + fontWeight + ";";
+            "font-weight: " + fontWeight + ";" +
+            "text-shadow: " +
+            schattenFuer(deckkraft, this.erprobungSchatten,
+                         SCHATTEN_MIT_FLAECHE) + ";";
 
         for (const id of METRIC_ORDER) {
             const item = this._rows[id];
@@ -573,9 +680,11 @@ class AVinceHWMonitor extends Desklet.Desklet {
         if (!item || item.wertStil === undefined)
             return;
 
-        const farbe = WARNFARBEN[item.stufe]
-            ? "color: " + WARNFARBEN[item.stufe] + ";"
-            : "";
+        const gewaehlt = warnfarbeFuer(
+            this._anzeigeStufe(item), this._deckkraft(),
+            this.erprobungWarnfarben, this.erprobungFarbenImmer === true);
+
+        const farbe = gewaehlt ? "color: " + gewaehlt + ";" : "";
 
         item.value.set_style(item.wertStil + farbe);
         item.unit.set_style(item.einheitStil + farbe);
@@ -1376,9 +1485,11 @@ class AVinceHWMonitor extends Desklet.Desklet {
         const schriftgroesse = 14;
         const schriftstaerke = "600";
         const intervall = 3;
+        const deckkraft = DEFAULT_HINTERGRUND_DECKKRAFT;
 
         this.settings.setValue("font-size", schriftgroesse);
         this.settings.setValue("font-weight", schriftstaerke);
+        this.settings.setValue("hintergrund-deckkraft", deckkraft);
         this.settings.setValue("refresh-interval", intervall);
 
         // Messwertliste: alle sichtbar, Reihenfolge und
@@ -1416,6 +1527,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         this.fontSize = schriftgroesse;
         this.fontWeight = schriftstaerke;
+        this.hintergrundDeckkraft = deckkraft;
         this.refreshInterval = intervall;
 
         this._baueZeilenNeu();

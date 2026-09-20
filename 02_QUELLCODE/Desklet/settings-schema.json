@@ -1,4 +1,47 @@
 {
+    "erprobung-kopf": {
+        "type": "header",
+        "description": "Erprobung AP20 – wird nach der Entscheidung wieder entfernt"
+    },
+    "erprobung-hinweis": {
+        "type": "label",
+        "description": "Nur zum Vergleich der Varianten auf hellem und dunklem Hintergrundbild. Schatten und Warnfarben wirken erst, wenn die Hintergrundfläche unter 45 Prozent steht. Die Vorschau färbt alle Messwerte ein, ohne die Warnschwellen zu verändern."
+    },
+    "erprobung-schatten": {
+        "type": "combobox",
+        "default": "A",
+        "description": "Schatten ohne Fläche",
+        "options": {
+            "A – weich, 8 px": "A",
+            "B – eng und hart, 3 px": "B",
+            "C – doppelt, 3 px und 9 px": "C"
+        }
+    },
+    "erprobung-warnfarben": {
+        "type": "combobox",
+        "default": "A",
+        "description": "Warnfarben ohne Fläche",
+        "options": {
+            "A – gedämpft (#E65100 / #C62828)": "A",
+            "B – wie bisher (#FFA726 / #FF5252)": "B",
+            "C – mittlerer Weg (#FF8F00 / #D50000)": "C"
+        }
+    },
+    "erprobung-farben-immer": {
+        "type": "switch",
+        "default": false,
+        "description": "Gewählte Warnfarben auch mit Hintergrundfläche verwenden"
+    },
+    "erprobung-vorschau": {
+        "type": "combobox",
+        "default": "aus",
+        "description": "Vorschau der Warnfarben",
+        "options": {
+            "aus": "aus",
+            "alle als Warnung": "warnung",
+            "alle als kritisch": "kritisch"
+        }
+    },
     "kopf-darstellung": {
         "type": "header",
         "description": "Darstellung"
@@ -22,6 +65,17 @@
             "Halbfett": "600",
             "Fett": "700"
         }
+    },
+    "hintergrund-deckkraft": {
+        "type": "scale",
+        "default": 0,
+        "min": 0,
+        "max": 85,
+        "step": 5,
+        "digits": 0,
+        "units": "%",
+        "description": "Hintergrundfläche",
+        "tooltip": "Deckkraft der Fläche hinter den Messwerten. 0 Prozent zeigt das Desklet ohne Fläche, so wie bisher. Je höher der Wert, desto dunkler die Fläche. Unter 45 Prozent werden Schriftschatten und Warnfarben automatisch kräftiger, damit die Anzeige auf hellem Hintergrund lesbar bleibt."
     },
     "refresh-interval": {
         "type": "spinbutton",
