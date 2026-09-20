@@ -1,12 +1,12 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 20.09.2026 (AP19 abgeschlossen, AP20 begonnen)  
+Stand: 20.09.2026 (AP20 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP19-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP18-END`  
-Versionsnummer in `metadata.json`: `0.1.0-dev.19` (Regel aus Abschnitt 9, Schritt 0)
+Aktueller Referenzstand: `0.1.0-dev_AP20-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP19-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.20` (Regel aus Abschnitt 9, Schritt 0)
 
 ## 1. Zweck dieses Dokuments
 
@@ -89,6 +89,7 @@ Tags:
 - `0.1.0-dev_AP17-END` – Entwicklungsstand nach Abschluss von AP17
 - `0.1.0-dev_AP18-END` – Entwicklungsstand nach Abschluss von AP18
 - `0.1.0-dev_AP19-END` – Entwicklungsstand nach Abschluss von AP19
+- `0.1.0-dev_AP20-END` – Entwicklungsstand nach Abschluss von AP20
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -355,7 +356,7 @@ Dass beide Komponenten bei gleichzeitigem Betrieb dieselben Sensoren lesen, ist 
 - Die Beschriftung `SPEED ↓` wurde zuvor abgeschnitten; die Spaltenbreiten skalieren nun mit der Schriftgröße.
 - Hinter der Anzeige liegt eine abgedunkelte Fläche mit abgerundeten Ecken. Die Schrift bleibt dadurch auf jedem Bildschirminhalt lesbar, ohne Schrift- und Schattenfarbe je nach Hintergrund umzuschalten.
 
-Zur Deckkraft siehe `POPUP_BACKGROUND_OPACITY` in `applet.js`. Der Standardwert 0.55 ergibt gegenüber weißer Schrift im ungünstigsten Fall – reinweißer Inhalt dahinter – einen Kontrast von 4.7 : 1. Werte unter 0.45 unterschreiten die Schwelle von 3.0 : 1 für große, fette Schrift und sollten auch später nicht einstellbar sein.
+Zur Deckkraft siehe `DEFAULT_POPUP_OPACITY` in `applet.js`. Der damalige Standardwert 0.55 ergibt gegenüber weißer Schrift im ungünstigsten Fall – reinweißer Inhalt dahinter – einen Kontrast von 4.7 : 1. **Abgelöst durch AP20:** Die Skala reicht dort von 0 bis 35 Prozent bei einer Vorgabe von 25 Prozent; die Lesbarkeit trägt seither der Schriftschatten, und die Warnfarben sind je nach Hintergrund wählbar.
 
 Eine Auswertung des tatsächlichen Bildschirminhalts über `global.stage.read_pixels` wäre technisch möglich, wurde aber verworfen: Unter einer großflächigen Anzeige liegt selten einheitlich Helles oder Dunkles, und die Umschaltung würde beim Verschieben von Fenstern springen.
 
@@ -388,10 +389,10 @@ Das Applet besaß bisher keine Einstellungen; alle Werte waren fest im Quelltext
 |---|---|---|---|
 | Aktualisierungsintervall | spinbutton | 1–30 s | 3 |
 | Anzeigegröße | scale | 40–90 % | 70 |
-| Deckkraft der Hintergrundfläche | scale | 45–85 % | 55 |
+| Deckkraft der Hintergrundfläche | scale | 45–85 % (seit AP20: 0–35 %) | 55 (seit AP20: 25) |
 | Panel-Symbol | combobox | vier Varianten | Logo farbig |
 
-Die Untergrenze der Deckkraft von 45 Prozent ist bewusst gesetzt: Darunter unterschreitet weiße Schrift auf hellem Bildschirminhalt den Mindestkontrast von 3.0 : 1. Zusätzlich begrenzt `_gueltig()` alle Werte im Code, sodass eine beschädigte oder von Hand bearbeitete Einstellungsdatei nicht zu einer unbrauchbaren Darstellung führt.
+Die Untergrenze der Deckkraft von 45 Prozent war bewusst gesetzt: Darunter unterschreitet weiße Schrift auf hellem Bildschirminhalt den Mindestkontrast von 3.0 : 1. **Abgelöst durch AP20:** Die Skala reicht dort von 0 bis 35 Prozent, die Vorgabe liegt bei 25 Prozent, und die Lesbarkeit trägt der Schriftschatten. Zusätzlich begrenzt `_gueltig()` alle Werte im Code, sodass eine beschädigte oder von Hand bearbeitete Einstellungsdatei nicht zu einer unbrauchbaren Darstellung führt.
 
 #### Panel-Symbol
 
@@ -926,6 +927,61 @@ Alle vom Nutzer freigegebenen Befunde wurden behoben und geprüft. Geändert wur
 - Ein CPU-Plateau von etwa 40 %, das während der Tests auffiel, stammt nachweislich **nicht** von aVincePulse (Gegenprobe mit entfernten Komponenten).
 - Die Einstellungen des Nutzers waren nach allen Tests unverändert (Wertevergleich).
 
+### AP20 – Lesbarkeit
+
+Abgeschlossen.
+
+Dateien: gemeinsame Module `metrics.js` (Schatten, Warnfarben) und `speedtest.js` (Meldungen), `applet.js`, `desklet.js`, beide `settings-schema.json`, `Desklet/stylesheet.css`.
+
+Ausgelöst durch Befund G9 aus AP19: Die Warnfarben des Desklets waren auf hellem Hintergrund schlecht lesbar, womit die Roadmap-Anforderung „Farben müssen auf hellem und dunklem Hintergrund lesbar bleiben“ nicht erfüllt war. Ziel, Akzeptanzkriterien und Verlauf stehen in Abschnitt 14.
+
+#### Hintergrundfläche
+
+Beide Komponenten haben jetzt die Einstellung „Hintergrundfläche“ mit einer Deckkraft von 0 bis 35 Prozent. Das Desklet bekommt damit erstmals eine abgedunkelte Fläche hinter den Messwerten; Ecken und Innenabstände richten sich nach der Schriftgröße, bei 0 Prozent sieht es aus wie vor AP20. Beim Applet ersetzt die Einstellung die frühere Skala von 45 bis 85 Prozent.
+
+Vorgaben: Applet 25 Prozent, Desklet 0 Prozent.
+
+Der Höchstwert von 35 Prozent kam aus der praktischen Erprobung. Über hellem Bildschirminhalt wird eine stärkere Fläche mittelgrau, und darauf verlieren gerade die Warnfarben: Bei 55 Prozent über reinweißem Inhalt erreicht `#FF5252` nur 1,49 : 1 und `#FFA726` nur 2,44 : 1.
+
+Damit ist die Festlegung aus AP09 („Deckkraft im Applet nicht unter 45 Prozent“) bewusst aufgehoben. Sie beruhte darauf, dass die Fläche allein die Lesbarkeit tragen sollte; diese Aufgabe hat seit AP20 der Schriftschatten.
+
+#### Schriftschatten
+
+`SCHRIFTSCHATTEN` in `metrics.js` gilt für beide Komponenten: `0px 0px 8px rgba(0,0,0,1)`. Bis AP19 lagen Desklet und Applet bei 6 bzw. 8 Pixeln mit 0.9. Der Wert steht im gemeinsamen Modul und wird im Code gesetzt, nicht im Stylesheet – so sehen beide Komponenten gleich aus, und eine Änderung erfordert keinen Cinnamon-Neustart. `stylesheet.css` behält eine gleichlautende Angabe für den Fall, dass noch kein Stil gesetzt ist.
+
+Erprobt wurden 8 px voll deckend, 3 px voll deckend und ein Doppelschatten aus beidem. Der Nutzer wählte auf hellem wie auf dunklem Hintergrund die erste Fassung.
+
+#### Warnfarben wählbar
+
+Neue Einstellung „Warnfarben“ je Komponente, im Abschnitt „Warnschwellen“ und abhängig vom Schalter „Warnfarben anzeigen“:
+
+| Auswahl | Warnung | Kritisch | gegen Weiß | gegen Schwarz |
+|---|---|---|---|---|
+| Für dunkle Hintergründe (leuchtend), Vorgabe | `#FFA726` | `#FF5252` | 1,94 / 3,19 : 1 | 10,81 / 6,58 : 1 |
+| Für helle Hintergründe (gedämpft) | `#E65100` | `#C62828` | 3,79 / 5,62 : 1 | 5,54 / 3,74 : 1 |
+
+Grund für eine Einstellung statt einer festen Farbe: Der Nutzer wählte bei der Erprobung auf hellem Hintergrund die gedämpfte und auf dunklem die leuchtende Fassung. aVincePulse kennt den Bildschirminhalt nicht – die Auswertung über `global.stage.read_pixels` wurde in AP08 bewusst verworfen, weil die Umschaltung beim Verschieben von Fenstern springen würde.
+
+Die Vorgabe „dunkel“ entspricht den Farben seit AP18; für Bestandsnutzer ändert sich damit nichts ungefragt.
+
+#### Meldungen (Befund G3)
+
+`StatusAnzeige.zeige()` verwendet jetzt immer 0,55 und nimmt keinen Deckkraftwert mehr entgegen. Zuvor übergaben nur zwei von zehn Aufrufen im Applet einen Wert, im Desklet keiner. Meldungen sind kurzlebig und wichtig; sie sollen unabhängig davon lesbar sein, wie durchsichtig die Anzeige eingestellt ist (Entscheidung vom 20.09.2026).
+
+#### Verworfen: Umschaltung bei 45 Prozent
+
+Ursprünglich sollte ab 45 Prozent die Fläche und darunter ein kräftigerer Schatten gelten. Mit dem Höchstwert von 35 Prozent wäre dieser Punkt nicht mehr erreichbar und damit toter Code. `WARN_FLAECHE_GRENZE`, `mitFlaeche()` und `schattenFuer()` aus der Erprobungsfassung wurden wieder entfernt.
+
+#### Vorgehen und Prüfung
+
+Die Varianten wurden zuerst in einer Erprobungsfassung installiert, mit vorübergehenden Einstellungen für Schatten, Warnfarben, eine Farbvorschau ohne Eingriff in die Warnschwellen und einen Schalter für die Farbvarianten mit Fläche. Der Nutzer verglich sie auf hellem und dunklem Hintergrundbild und entschied nach Augenschein; danach wurden die Erprobungseinstellungen restlos entfernt (Commit `6b42c7a` für die Erprobungsfassung, `37f0562` für die Endfassung).
+
+Geprüft: Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, Schemata als JSON, Verhalten der neuen Funktionen in `metrics.js` mit `cjs` einschließlich beschädigter Eingaben, Kontrastnachweis mit `06_TESTVERSIONEN/0.1.0-dev_AP20-PRUEFDATEN/kontrast.py`.
+
+Funktionstest durch den Nutzer am 20.09.2026, bestanden: Umschalten der Warnfarben wirkt sofort in beiden Komponenten; „Auf Standardwerte zurücksetzen“ stellt Deckkraft und Warnfarben mit zurück; die Warnschwellen-Liste blieb unverändert; ein gespeicherter Wert außerhalb der neuen Skala (Applet 55 Prozent) wird auf 35 begrenzt, Regler und Fläche passen dazu.
+
+Zum Wertevergleich: Nach den Tests standen alle 13 Werte je Komponente exakt auf den Vorgaben des Schemas. Die Abweichungen gegenüber der Sicherung – Applet 55 → 25 Prozent, Desklet 10 → 0 Prozent – stammen aus dem Funktionstest der Schaltfläche „Auf Standardwerte zurücksetzen“ und nicht aus einem ungewollten Eingriff.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1215,19 +1271,23 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP19 sind abgeschlossen.
+AP01 bis AP20 sind abgeschlossen.
 
-**In Arbeit: AP20 – Lesbarkeit.** Ziel und Akzeptanzkriterien wurden am 20.09.2026 schriftlich festgelegt und vom Nutzer freigegeben; sie stehen unten in diesem Abschnitt. Danach AP21 – Aktion bei Linksklick, dann das Arbeitspaket zum Speedtest-Programm, der Unterstützen-Hinweis und die Übersetzung.
+**Als Nächstes: AP21 – Aktion bei Linksklick auf das Applet.** Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen und vom Nutzer freizugeben. Inhalt nach der Festlegung vom 19.09.2026 (`ROADMAP_V2.md`, Abschnitt 24): Einstellung „Aktion bei Linksklick“ mit „Anzeige ein/aus“ (Vorgabe; die Hover-Anzeige bleibt stehen, schließen per Klick, Klick daneben oder `Esc`), „Systemüberwachung öffnen“ und „Nichts“. Begründung der Vorgabe: Das Referenzgerät ist ein 2-in-1 mit Touchscreen; ohne Maus gibt es kein Überfahren, die Anzeige war im Tablet-Betrieb bisher nicht erreichbar. Danach das Arbeitspaket zum Speedtest-Programm, der Unterstützen-Hinweis und die Übersetzung.
+
+**AP20 – Lesbarkeit: abgeschlossen am 20.09.2026.** Ergebnis in Abschnitt 6 unter „AP20“. Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf des Arbeitspakets fest.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-### AP20 – Lesbarkeit: Ziel und Akzeptanzkriterien (freigegeben am 20.09.2026)
+### AP20 – Lesbarkeit: Ziel und Akzeptanzkriterien (freigegeben am 20.09.2026, abgeschlossen am 20.09.2026)
 
 Grundlage: Befund G9 aus AP19 (Warnfarben im Desklet auf hellem Hintergrund schlecht lesbar), Entscheidung des Nutzers vom 19.09.2026, Roadmap Abschnitt 24.
 
 #### Ziel
 
-Applet und Desklet sollen auf jedem Bildschirminhalt lesbar sein – weiße Schrift **und** Warnfarben, auf hellem wie auf dunklem Hintergrundbild. Beide Komponenten erhalten dieselbe Einstellung „Hintergrundfläche“ mit einer Deckkraft von 0 bis 85 Prozent. Ab 45 Prozent trägt die abgedunkelte Fläche die Lesbarkeit; darunter übernehmen ein kräftigerer Schatten und angepasste Warnfarben, automatisch und ohne eigenen Schalter. Damit ist die Anforderung der Roadmap erfüllt: „Farben müssen auf hellem und dunklem Hintergrund lesbar bleiben.“
+Applet und Desklet sollen auf jedem Bildschirminhalt lesbar sein – weiße Schrift **und** Warnfarben, auf hellem wie auf dunklem Hintergrundbild. Damit ist die Anforderung der Roadmap erfüllt: „Farben müssen auf hellem und dunklem Hintergrund lesbar bleiben.“
+
+Der Weg dorthin stand am Anfang so fest: beide Komponenten erhalten dieselbe Einstellung „Hintergrundfläche“ mit einer Deckkraft von 0 bis 85 Prozent; ab 45 Prozent trägt die abgedunkelte Fläche die Lesbarkeit, darunter übernehmen ein kräftigerer Schatten und angepasste Warnfarben, automatisch und ohne eigenen Schalter. **Die Erprobung hat das geändert** – siehe „Ergebnis der Erprobung vom 20.09.2026“ weiter unten: Die Skala endet bei 35 Prozent, der Schatten ist fest, die Warnfarben sind wählbar, und die Umschaltung bei 45 Prozent entfällt. Das Ziel selbst blieb unverändert.
 
 #### Ausgangslage im Code (geprüft am 20.09.2026)
 
@@ -1346,7 +1406,7 @@ Weitere bekannte offene Punkte:
 
 - Erledigt mit AP19 (Befund M3): Das Desklet schreibt `/tmp/avince-hwmonitor-values` nicht mehr. Die alten Komponenten `avince-hwpopup@angelo` und `avince-hwmonitor@angelo` sind installiert, aber nicht aktiv; der Nutzer behält sie vorerst. Ihr Quellcode liegt in `05_DOKUMENTATION/QUELLCODE_VOR_AP05_SYNC_2026-09-16/`, eine Kopie ihres Einstellungsordners in `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/altstaende/`. **Achtung:** Beide Verzeichnisse sind per `.gitignore` von GitHub ausgeschlossen und liegen nur auf der NAS sowie in den Vollbackups (im Archiv `…_FINAL.tar.gz` enthalten, geprüft am 20.09.2026). Vor einer Deinstallation der Altstände ist das zu beachten.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
-- Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße. Die Deckkraft („Hintergrundfläche“) kommt mit AP20; eine Einstellung für die Anzeigegröße bleibt danach weiterhin offen.
+- Erledigt mit AP20: Das Desklet besitzt jetzt die Einstellung „Hintergrundfläche“. Eine Einstellung für die Anzeigegröße hat es weiterhin nicht; sie wird über Schriftgröße und Schriftstärke geregelt.
 - Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen. **Ergebnis der Vorprüfung vom 19.09.2026:** `librespeed-cli` ist kein Paket der Mint-Quellen, die Spices-Regeln verbieten aber Installationsanweisungen für Quellen außerhalb des Spices-Umfelds. Dafür ist ein eigenes Arbeitspaket vor der Veröffentlichung vorgesehen (`ROADMAP_V2.md`, Abschnitt 24, „Speedtest-Programm vor der Veröffentlichung“): `speedtest-cli` aus den Paketquellen unterstützen, `librespeed-cli` nur verwenden, wenn vorhanden.
 - Veröffentlichung, Sprachen und Unterstützen-Hinweis sind in `ROADMAP_V2.md`, Abschnitt 24, festgelegt: zwei Einreichungen bei Cinnamon Spices mit vorgegebener Ordnerstruktur, englische Ausgangstexte mit gettext und Sprachwahl über die Systemsprache, sowie ein dezenter Unterstützen-Hinweis (README, `FUNDING.yml`, Schaltfläche im Einstellungsfenster), abgewickelt über aVince Industrietechnik.
 - Ausblick: eine Windows-Fassung ist als eigenes Projekt nach der Veröffentlichung vorgesehen (`ROADMAP_V2.md`, Abschnitt 23, „Ausblick: aVincePulse für Windows“).
@@ -1354,16 +1414,17 @@ Weitere bekannte offene Punkte:
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
 - Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen. Dabei auch die englischen Reste im Hardwarebericht übersetzen („unlabeled“, „NOT FOUND“, „none“; Entscheidung vom 18.09.2026). Der Titelvergleich des Einstellungsfensters (AP15) ist dann anzupassen.
 - Tooltips an Schaltflächen im Einstellungsschema werden von Cinnamon nicht angezeigt (siehe AP17). Bei Gelegenheit entfernen oder durch Hinweistexte ersetzen.
-- Die in AP19 genannten veralteten Stellen dieses Dokuments (Abschnitt 5, 7, 7a, 8, 10, 12 sowie AP07, AP08, AP09) wurden am 19.09.2026 korrigiert.
+- Die in AP19 genannten veralteten Stellen dieses Dokuments (Abschnitt 5, 7, 7a, 8, 10, 12 sowie AP07, AP08, AP09) wurden am 19.09.2026 korrigiert. Die Angaben zur Deckkraft in AP08 und AP09 gelten seit AP20 nicht mehr; sie bleiben als Stand des jeweiligen Arbeitspakets stehen und sind dort als abgelöst gekennzeichnet.
+- Offen geblieben aus AP20: ob Cinnamon (St) mehrere Schatten je Text darstellt. Die Erprobungsvariante mit Doppelschatten wurde nicht gewählt, St-Quellen liegen auf dem Referenzgerät nicht vor. Ohne Bedeutung, solange ein einzelner Schatten genügt.
 
-Beginn von AP20 (20.09.2026):
+Ablauf von AP20 (20.09.2026, alle Schritte erledigt):
 
 1. erledigt – `PROJECT-STATUS.md`, `ROADMAP_V2.md` (Abschnitte 23 und 24) und `PRUEFBERICHT_AP19.md` gelesen
 2. erledigt – `git status` sauber, `main` und GitHub synchron (`3f904f6`), Version `0.1.0-dev.19`, Prüfsummen der vier gemeinsamen Module identisch, Testinstallation ohne Abweichung zum Repository
 3. erledigt – Ziel und Akzeptanzkriterien oben in diesem Abschnitt festgelegt und vom Nutzer freigegeben
-4. Snapshot `0.1.0-dev_AP20-START` anlegen, erst danach Code ändern
-5. nach jeder Änderung: Syntax (`cjs`), Namensprüfung, Prüfsummen der vier gemeinsamen Module, gezielter Test, Test durch den Nutzer
-6. Abschluss mit der Sicherungsroutine aus Abschnitt 9, Versionsnummer `0.1.0-dev.20`
+4. erledigt – Snapshot `0.1.0-dev_AP20-START` angelegt, erst danach Code geändert
+5. erledigt – nach jeder Änderung Syntax (`cjs`), Namensprüfung, Prüfsummen der vier gemeinsamen Module, gezielter Test, Test durch den Nutzer
+6. erledigt – Abschluss mit der Sicherungsroutine aus Abschnitt 9, Versionsnummer `0.1.0-dev.20`
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
@@ -1396,12 +1457,12 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP19:
+Erwarteter Ausgangspunkt nach AP20:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP19-END`, Versionsnummer `0.1.0-dev.19`
-- AP01 bis AP19 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` vorhanden
-- Laufendes Arbeitspaket: AP20 – Lesbarkeit; Ziel und Akzeptanzkriterien stehen in Abschnitt 14 und sind seit dem 20.09.2026 freigegeben
+- Referenz-Tag: `0.1.0-dev_AP20-END`, Versionsnummer `0.1.0-dev.20`
+- AP01 bis AP20 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` vorhanden
+- Nächstes Arbeitspaket: AP21 – Aktion bei Linksklick auf das Applet; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
 ---
 

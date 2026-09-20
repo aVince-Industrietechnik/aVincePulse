@@ -1687,8 +1687,8 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 4. AP17 – eingeschoben: Rückfrage vor dem Neu-Öffnen, Meldungen, Umlaute (abgeschlossen)
 5. AP18 – Warnschwellen mit Farbwechsel (abgeschlossen)
 6. AP19 – Zwischenprüfung (abgeschlossen am 20.09.2026)
-7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–85 % in Desklet und Applet, unter 45 % automatisch kräftigerer Schatten und angepasste Warnfarben (eingeschoben am 19.09.2026 aus Befund G9 von AP19, vor der Übersetzung wegen neuer Einstellungstexte; begonnen am 20.09.2026)
-8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026, vor der Übersetzung wegen neuer Einstellungstexte)
+7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–35 % in Desklet und Applet, fester kräftiger Schriftschatten, Warnfarben je nach Hintergrund wählbar (eingeschoben am 19.09.2026 aus Befund G9 von AP19; abgeschlossen am 20.09.2026)
+8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026, vor der Übersetzung wegen neuer Einstellungstexte; als Nächstes)
 9. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
