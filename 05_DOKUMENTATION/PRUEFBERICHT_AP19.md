@@ -1,6 +1,6 @@
 # aVincePulse – Prüfbericht AP19 (Zwischenprüfung)
 
-Stand: 19.09.2026 – **Phase 1 abgeschlossen**, Phase 2 wartet auf Freigabe je Befund (Abschnitt 8)
+Stand: 20.09.2026 – **AP19 abgeschlossen** (Phase 1 und Phase 2)
 Geprüfter Stand: Commit `0641eef` (Quellcode identisch mit `0.1.0-dev_AP18-END`)
 Snapshot vor Beginn: `06_TESTVERSIONEN/0.1.0-dev_AP19-START/`
 Prüfdaten (lokal, nicht versioniert): `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/`
@@ -420,6 +420,22 @@ Während dieses Tests reagierte der Rechner träge. Ursache: zwei versehentlich 
 
 **Zählverfahren nach M3:** Die Desklet-Schreibvorgänge entfallen als Zähler. Für den Nachtest zählt das Skript die Lesezugriffe beider Komponenten auf `speedtest-values` je Taktmarke; bei gleichem Intervall sind genau zwei je Takt zu erwarten (Applet und Desklet). Eine Vervielfachung in einer Komponente zeigt sich als mehr als zwei; welche Komponente betroffen ist, lässt sich dann durch vorübergehendes Entfernen einer Komponente feststellen.
 
+### Nachtest über Nacht (19.09.2026 16:49 – 20.09.2026 08:00)
+
+Aufzeichnung: `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/nachtest/nachtest.csv`, Skript `nachtest_beobachtung.py` (rein beobachtend, inotify und `/proc`). Gezählt werden die Lesezugriffe beider Komponenten auf `speedtest-values` je Taktmarke; Soll bei 3 s Intervall: 20 Marken je Minute mit je 2 Zugriffen. Vom Nutzer vor der Nacht ausgelöst: je ein Speedtest im Desklet (16:57:25) und im Applet (16:58:13).
+
+| Messgröße | Ergebnis |
+|---|---|
+| Dauer | 912 Minuten ohne Unterbrechung, Cinnamon ohne Neustart (PID 1714) |
+| Taktmarken je Minute | 20 (nur die angebrochene Startminute 12) |
+| Zugriffe je Marke | **höchstens 2, in keiner Minute mehr** – K1 bleibt behoben, auch nach den Speedtests |
+| Speicher Cinnamon | 394 → 419 MB (+25 MB in 15 h; in der zweiten Nachthälfte praktisch unverändert: 416 → 419 MB) |
+| CPU Cinnamon | abends 14–44 % (Nutzung und das bekannte Plateau), ab 22:49 Uhr **4–10 %**, ab 02:49 Uhr konstant **4 %** |
+| Protokollzeilen von aVincePulse | **0** |
+| Fehlerzeilen insgesamt | 64, alle `St.ScrollView … already disposed` aus einer anderen Erweiterung (aVincePulse verwendet keine ScrollView), gehäuft beim Öffnen von Menüs am Abend |
+
+**Ergebnis:** Keine vervielfachte Messschleife, kein Fehler, kein auffälliges Speicherwachstum. Das CPU-Plateau war nachts nicht mehr vorhanden (4 %), was den Befund aus Abschnitt 6 stützt: Es hängt an der Benutzung bzw. an einer anderen Erweiterung, nicht an aVincePulse.
+
 ## 9. Akzeptanzkriterien – Stand
 
 | Nr. | Kriterium | Stand |
@@ -431,5 +447,7 @@ Während dieses Tests reagierte der Rechner träge. Ursache: zwei versehentlich 
 | 5 | Langzeittest ausgewertet | erfüllt (Abschnitt 6); vervielfachte Messschleife gefunden (K1) |
 | 6 | Einstellungen nachweislich unverändert | erfüllt (Abschnitt 7); Abweichung `speedtest-values` dokumentiert, vom Nutzer so belassen |
 | 7 | Veraltete Stellen korrigiert | erfüllt (Abschnitt 7a) |
-| 8 | Phase 2 | offen |
-| 9 | Gemeinsame Module am Ende identisch | derzeit erfüllt (unverändert); am Ende von Phase 2 erneut zu prüfen |
+| 8 | Phase 2 | erfüllt: alle freigegebenen Befunde behoben, je Paket geprüft (Syntax, Namen, Prüfsummen, gezielter Test) und vom Nutzer im laufenden Cinnamon getestet; Nachtest über Nacht bestanden |
+| 9 | Gemeinsame Module am Ende identisch | erfüllt (SHA-256 nach der letzten Änderung geprüft) |
+
+**Nicht behobene Befunde** und ihre Einordnung stehen in Abschnitt 8, Gruppen B und C: G9 und G3 gehen in AP20, die Belegung des Linksklicks in AP21, das Speedtest-Programm in ein eigenes Arbeitspaket vor der Veröffentlichung, der Rest bleibt als Hinweis oder wird mit der Übersetzung erledigt.

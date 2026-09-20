@@ -1584,6 +1584,17 @@ Folgende Funktionen sind mögliche Erweiterungen nach Version 1.0 und gehören n
 
 Diese Liste ist offen und stellt keine Verpflichtung für eine bestimmte spätere Version dar.
 
+#### Ausblick: aVincePulse für Windows
+
+Aufgenommen am 19.09.2026 auf Wunsch des Nutzers, **nach** der Veröffentlichung der Linux-Fassung und als **eigenes Projekt**, nicht als Erweiterung dieses Repositorys.
+
+- **Nicht übertragbar** ist der Quellcode: Oberfläche (St/Clutter, Panel, Desklet-Ebene, xlet-settings) und Messwerterfassung (`/sys/class/hwmon`, `/proc`, `/sys/class/power_supply`) sind an Cinnamon und Linux gebunden.
+- **Übertragbar** sind Messwertmodell und Reihenfolge, die Logik der Warnschwellen einschließlich Puffer, Gestaltung, Logo sowie alle Texte und Übersetzungen.
+- **Form:** Symbol im Infobereich der Taskleiste (entspricht dem Applet) und ein Desktop-Widget (entspricht dem Desklet); unter Windows ist ein Programm mit beiden Anzeigen üblich, je einzeln abschaltbar.
+- **Technikvorschlag:** C#/.NET (WPF) mit LibreHardwareMonitor (MPL-2.0, mit GPL-3.0 vereinbar) für die Sensoren.
+- **Offene Risiken:** Sensorzugriff unter Windows erfordert häufig Administratorrechte und einen Treiber und kann Virenscanner auslösen; Codesignatur wegen SmartScreen; Verteilung über Microsoft Store, `winget` oder GitHub-Releases.
+- **Erster Schritt:** Machbarkeitstest auf echter Windows-Hardware (CPU-Temperatur, Lüfter, Akku). Die vorhandene Windows-11-VM eignet sich nur für die Oberfläche, nicht für Sensoren.
+
 ---
 
 ### Release-Regel
@@ -1726,6 +1737,42 @@ Festlegung des Nutzers:
 - Das Öffnen der Systemüberwachung geschieht nur nach einem Klick und entspricht damit der Fensterregel (`PROJECT-STATUS.md`, Abschnitt 8).
 
 Einordnung: OPTIONAL 1.0, als eigenes Paket AP21 direkt nach AP20. Ziel und Akzeptanzkriterien werden vor Beginn schriftlich festgelegt.
+
+### Speedtest-Programm vor der Veröffentlichung (eigenes Arbeitspaket)
+
+Aufgenommen am 19.09.2026. Die Einreichungsregeln von Cinnamon Spices (README von `linuxmint/cinnamon-spices-applets`, gelesen am 19.09.2026) verlangen: Nutzer dürfen nicht angewiesen werden, Code oder Funktionen von außerhalb des Spices-Umfelds zu installieren; Systempakete über `apt` sind zulässig, Downloads von Webseiten nicht.
+
+Befund: `librespeed-cli` ist **kein Paket der Mint-Quellen** (geprüft am Referenzgerät, dort unter `/usr/local/bin` von Hand installiert). `speedtest-cli` ist dagegen als Paket vorhanden.
+
+Zu entscheiden und umzusetzen vor der Veröffentlichung:
+
+- `speedtest-cli` (Ookla) als unterstütztes Programm aufnehmen, dessen Nutzungsbedingungen prüfen
+- `librespeed-cli` weiter verwenden, wenn es vorhanden ist
+- Verhalten, wenn kein Programm vorhanden ist: Speedtest-Zeilen und Schaltflächen ausblenden oder verständlich hinweisen, ohne Installationsanleitung für Fremdquellen
+- Lizenz- und Verteilbarkeitsprüfung von LibreSpeed (bereits als offener Punkt geführt)
+
+### Veröffentlichung über Cinnamon Spices
+
+Aufgenommen am 19.09.2026, Grundlage ist die oben genannte README.
+
+- Zwei getrennte Einreichungen: `cinnamon-spices-applets` und `cinnamon-spices-desklets`, jeweils als Pull Request auf einen Fork.
+- Struktur je Komponente: `UUID/info.json` (GitHub-Benutzername des Autors), `UUID/screenshot.png`, `UUID/README.md`, `UUID/files/UUID/…` mit `metadata.json`, Quellcode, `icon.png`, `settings-schema.json` und `po/`.
+- Weitere Regeln: keine vorkompilierten Programme außer Bildern, kein Nachladen fremden Codes zur Laufzeit, Einstellungen nur über die Cinnamon-Einstellungsoberfläche, keine GSettings-Schemas.
+- Updates laufen später als weitere Pull Requests; Übersetzungen und Fehlerkorrekturen anderer werden auch ohne Zustimmung des Autors aufgenommen.
+- Vor der Einreichung sind die dann gültigen Regeln erneut zu prüfen.
+
+**Sprachen:** Ausgangstexte in Englisch, Übersetzung über gettext (`cinnamon-xlet-makepot`, auf dem Referenzgerät vorhanden), `po/`-Verzeichnis je Komponente. Die angezeigte Sprache folgt der **Systemsprache**; ein eigener Sprachumschalter ist bei Cinnamon nicht vorgesehen. Geplant: Englisch und Deutsch geprüft, dazu eine erste Auswahl weiterer Sprachen (Spanisch, Französisch, Portugiesisch (BR), Italienisch, Niederländisch, Polnisch, Russisch, Ukrainisch, Türkisch, Chinesisch (vereinfacht), Japanisch) mit dem Hinweis im README, dass Korrekturen willkommen sind.
+
+### Unterstützen-Hinweis (Vorbereitung der Veröffentlichung, vor der Übersetzung)
+
+Festgelegt am 19.09.2026, ergänzt den Abschnitt „Kostenmodell“.
+
+- Orte: Abschnitt „Support“ im README, `.github/FUNDING.yml` für den Sponsor-Knopf auf GitHub, sowie ganz unten im Einstellungsfenster beider Komponenten ein kurzer Hinweis mit der Schaltfläche „Unterstützen …“, die den Browser **nur nach einem Klick** öffnet.
+- Bewusst nicht: Einblendungen, Benachrichtigungen, zeitgesteuerte Hinweise oder eine Nutzungszählung.
+- Wortwahl „Unterstützung“ statt „Spende“, da es sich nicht um Spenden im steuerlichen Sinn handelt.
+- Abwicklung als Unternehmer über aVince Industrietechnik (Entscheidung vom 19.09.2026): Geschäftskonto bei der gewählten Plattform, Impressum auf der Unterstützerseite, Klärung von Einnahmen, Umsatzsteuer und Datenschutz mit dem Steuerberater.
+- Plattform noch offen; Vorschlag: ein Hauptweg (Ko-fi oder Liberapay), im README zusätzlich GitHub Sponsors oder PayPal (Geschäftskonto, nicht „Freunde und Familie“).
+- Die Texte gehen in die Übersetzung ein, deshalb vor der Übersetzung umsetzen.
 
 ### Abschlussprüfung vor der Veröffentlichung
 

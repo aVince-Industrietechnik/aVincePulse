@@ -1,11 +1,12 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 19.09.2026 (AP19, Phase 1 abgeschlossen)  
+Stand: 20.09.2026 (AP19 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP18-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP17-END`
+Aktueller Referenzstand: `0.1.0-dev_AP19-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP18-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.19` (Regel aus Abschnitt 9, Schritt 0)
 
 ## 1. Zweck dieses Dokuments
 
@@ -87,6 +88,7 @@ Tags:
 - `0.1.0-dev_AP16-END` – Entwicklungsstand nach Abschluss von AP16
 - `0.1.0-dev_AP17-END` – Entwicklungsstand nach Abschluss von AP17
 - `0.1.0-dev_AP18-END` – Entwicklungsstand nach Abschluss von AP18
+- `0.1.0-dev_AP19-END` – Entwicklungsstand nach Abschluss von AP19
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -475,7 +477,7 @@ Die Anzeige liegt bewusst im gemeinsamen Modul, damit der Ablauf unabhängig von
 
 #### Bedienung
 
-- Applet: Klick auf das Panel-Symbol, zusätzlich eine Schaltfläche in den Einstellungen
+- Applet: Klick auf das Panel-Symbol, zusätzlich eine Schaltfläche in den Einstellungen (seit AP19, Befund H14: nicht mehr per Klick, sondern über den Eintrag „Internet-Speedtest starten“ im Rechtsklick-Menü)
 - Desklet: Kontextmenü über Rechtsklick, zusätzlich eine Schaltfläche in den Einstellungen
 
 Auf einen Klick auf das Desklet wurde bewusst verzichtet, da ein Desklet häufiger verschoben als gemessen wird und ein versehentlich ausgelöster Test Zeit und Bandbreite kostet.
@@ -883,6 +885,47 @@ Ein zusätzliches Zeichen für Farbenblinde wurde vorerst nicht umgesetzt (Entsc
 - In Cinnamon: Einfärbung in beiden Komponenten, Schalter aus, Aktiv aus, Akku im Netzbetrieb, Schriftschatten gemessen; Ergänzen fehlender Zeilen mit Sicherung und Vergleich der gespeicherten Werte
 - Funktionstest durch den Nutzer in Applet und Desklet, einschließlich Akku im Akkubetrieb
 
+### AP19 – Zwischenprüfung
+
+Abgeschlossen.
+
+Vollständiger Prüfbericht: `05_DOKUMENTATION/PRUEFBERICHT_AP19.md` (Befunde, Testprotokolle, Freigaben). Prüfdaten und Sicherungen lokal unter `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/`.
+
+#### Phase 1 – Prüfen ohne Codeänderung
+
+Code-Durchsicht durch Claude und einen unabhängigen Prüfer, Langzeittest über Nacht, Funktionstest jeder Einstellung und Schaltfläche in beiden Komponenten (A1–A13, D1–D10) sowie sechs Robustheitsfälle (R1–R6). Ergebnis: 29 Befunde, davon 1 kritisch, 5 mittel, 9 gering und 14 Hinweise.
+
+#### Phase 2 – Behobene Befunde
+
+Alle vom Nutzer freigegebenen Befunde wurden behoben und geprüft. Geändert wurden `applet.js`, `desklet.js`, das gemeinsame Modul `speedtest.js` und das Applet-Schema.
+
+- **K1 (kritisch):** Jeder Speedtest startete eine zusätzliche, dauerhaft laufende Messschleife. Folgen: falsche CPU-Last und Netzwerkwerte im Applet, Fehlalarme der Warnfarben, nach dem Entfernen des Desklets etwa 20 MB Fehlerzeilen je Stunde im Sitzungsprotokoll. Behoben durch `_starteMessungNeu()`, das den laufenden Zeitgeber immer zuerst entfernt.
+- **G2:** Der nächste Takt wird in `finally` gesetzt; ein Fehler beim Messen beendet die Anzeige nicht mehr.
+- **M1:** Das Desklet meldet seine Einstellungen beim Entfernen ab (`settings.finalize()`), wie das Applet.
+- **M2:** Speedtest mit Zeitgrenze (120 s), `Gio.Cancellable` und `verwerfe()` beim Entfernen; Rückmeldung außerhalb des `try`.
+- **M3:** Das Desklet schreibt `/tmp/avince-hwmonitor-values` nicht mehr.
+- **G1:** Sperrdatei `~/.local/share/avincepulse/speedtest.lock` verhindert gleichzeitige Tests aus Applet und Desklet.
+- **G5:** Fehlt die Icondatei, erscheint das Textkürzel „aVP“ statt einer leeren Stelle.
+- **G6:** Fensterzeitgeber und das Signal `unmanaged` werden beim Neu-Öffnen und beim Entfernen aufgeräumt.
+- **G8:** Die Maussignale des Panel-Symbols werden beim Entfernen getrennt.
+- **G10:** Die alte Ablage aus der Baseline wird nur noch übernommen, wenn die neue Datei fehlt; unbrauchbare Werte und ein fehlender Zeitstempel erscheinen als `--`.
+- **H1:** Das Desklet prüft Schriftgröße, Schriftstärke und Intervall auf ihren zulässigen Bereich.
+- **H6:** „popup scaled“ wird nur noch bei geänderter Skalierung protokolliert.
+- **H14:** Der Speedtest des Applets startet nicht mehr per Linksklick, sondern über das Rechtsklick-Menü und die Schaltfläche in den Einstellungen, wie beim Desklet seit AP11.
+- **H15:** Nach „Jetzt neu öffnen“ erscheint die Meldung erst, wenn das neue Einstellungsfenster wieder steht.
+
+#### Nicht in AP19 behoben
+
+- **G9** (Warnfarben im Desklet auf hellem Hintergrund schlecht lesbar) und **G3** (Deckkraft der Meldungen) gehen in **AP20 – Lesbarkeit**.
+- **H14** hat den Linksklick frei gemacht; seine Belegung ist **AP21**.
+- Übrige Hinweise siehe Prüfbericht, Abschnitt 8, Gruppe C.
+
+#### Nachweis
+
+- Nachtest 19.09. 16:49 bis 20.09. 08:00: 912 Minuten, in keiner Minute mehr als zwei Messdurchläufe je Taktmarke, keine Protokollzeile von aVincePulse, Speicher 394 → 419 MB, CPU nachts konstant 4 %.
+- Ein CPU-Plateau von etwa 40 %, das während der Tests auffiel, stammt nachweislich **nicht** von aVincePulse (Gegenprobe mit entfernten Komponenten).
+- Die Einstellungen des Nutzers waren nach allen Tests unverändert (Wertevergleich).
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1172,11 +1215,13 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP18 sind abgeschlossen.
+AP01 bis AP19 sind abgeschlossen.
+
+**Als Nächstes: AP20 – Lesbarkeit.** Ziel und Akzeptanzkriterien sind vor Beginn schriftlich festzulegen und vom Nutzer freizugeben. Inhalt nach der Entscheidung vom 19.09.2026: Einstellung „Hintergrundfläche“ (Deckkraft 0–85 %) in Desklet und Applet; ab 45 % abgedunkelte Fläche, darunter automatisch kräftigerer Schatten und angepasste Warnfarben; Erprobung der Varianten auf hellem und dunklem Hintergrund; dabei auch Befund G3 (Deckkraft der Meldungen im Applet). Danach AP21 – Aktion bei Linksklick, dann das Arbeitspaket zum Speedtest-Programm, der Unterstützen-Hinweis und die Übersetzung.
 
 Die Reihenfolge der nächsten Arbeitspakete ist in `ROADMAP_V2.md`, Abschnitt 24, festgelegt (18.09.2026).
 
-**AP19 – Zwischenprüfung: Phase 1 abgeschlossen (19.09.2026), Phase 2 wartet auf Freigabe je Befund.**
+**AP19 – Zwischenprüfung: abgeschlossen am 20.09.2026.** Ergebnis und behobene Befunde stehen in Abschnitt 6 unter „AP19“, alle Einzelheiten im Prüfbericht. Die folgenden Absätze halten den Ablauf und die Festlegungen des Arbeitspakets fest.
 
 Stand Phase 1:
 
@@ -1230,23 +1275,26 @@ Danach: AP20 – Lesbarkeit, AP21 – Aktion bei Linksklick, anschließend laut 
 
 Weitere bekannte offene Punkte:
 
-- Das Desklet schreibt weiterhin `/tmp/avince-hwmonitor-values`. Das alte Applet `avince-hwpopup@angelo` ist installiert, aber nicht aktiv (geprüft 19.09.2026); die Datei liest damit niemand mehr (Befund M3 aus AP19). Der Langzeittest von AP19 nutzt sie als Zähler.
+- Erledigt mit AP19 (Befund M3): Das Desklet schreibt `/tmp/avince-hwmonitor-values` nicht mehr. Die alten Komponenten `avince-hwpopup@angelo` und `avince-hwmonitor@angelo` sind installiert, aber nicht aktiv; der Nutzer behält sie vorerst. Ihr Quellcode liegt versioniert in `05_DOKUMENTATION/QUELLCODE_VOR_AP05_SYNC_2026-09-16/`, eine Kopie ihres Einstellungsordners in `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/altstaende/`.
 - Eine selbsttätige Erkennung heller Panel-Themes gibt es weiterhin nicht. Sie ist entbehrlich geworden, da die Fassung seit AP09 über die Einstellungen wählbar ist.
 - Das Desklet besitzt noch keine Einstellungen für Deckkraft und Anzeigegröße. Die Deckkraft kommt mit AP20.
-- Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen.
+- Die Speedtest-Lösung LibreSpeed ist vor einer Veröffentlichung auf Lizenz, Verteilbarkeit und Cinnamon-Spices-Konformität zu prüfen. **Ergebnis der Vorprüfung vom 19.09.2026:** `librespeed-cli` ist kein Paket der Mint-Quellen, die Spices-Regeln verbieten aber Installationsanweisungen für Quellen außerhalb des Spices-Umfelds. Dafür ist ein eigenes Arbeitspaket vor der Veröffentlichung vorgesehen (`ROADMAP_V2.md`, Abschnitt 24, „Speedtest-Programm vor der Veröffentlichung“): `speedtest-cli` aus den Paketquellen unterstützen, `librespeed-cli` nur verwenden, wenn vorhanden.
+- Veröffentlichung, Sprachen und Unterstützen-Hinweis sind in `ROADMAP_V2.md`, Abschnitt 24, festgelegt: zwei Einreichungen bei Cinnamon Spices mit vorgegebener Ordnerstruktur, englische Ausgangstexte mit gettext und Sprachwahl über die Systemsprache, sowie ein dezenter Unterstützen-Hinweis (README, `FUNDING.yml`, Schaltfläche im Einstellungsfenster), abgewickelt über aVince Industrietechnik.
+- Ausblick: eine Windows-Fassung ist als eigenes Projekt nach der Veröffentlichung vorgesehen (`ROADMAP_V2.md`, Abschnitt 23, „Ausblick: aVincePulse für Windows“).
 - GPU-Temperatur und GPU-Auslastung fehlen weiterhin im Messwertmodell. Auf dem Latitude-5285 stellt die Intel-iGPU keinen eigenen Temperatursensor bereit; `coretemp / Package id 0` ist dort bereits die GPU-Temperatur. Eine belastbare Auslastungsanzeige ist über die reinen Kernel-Schnittstellen nicht möglich, `/sys/class/drm/card1` liefert nur Taktfrequenzen. Dieses Thema sollte an einem Gerät mit dedizierter AMD- oder NVIDIA-Grafik bearbeitet werden.
 - Das C-1-Iconset liegt als PNG-Entwurfsmaterial vor. Ein eigenständiges Vektorlogo (SVG) und die Lizenz- und Rechteprüfung stehen noch aus. Als Panel-Symbol ist es seit AP09 eingebunden.
 - Übersetzung Deutsch/Englisch über gettext. Cinnamon übersetzt auch das Einstellungsfenster, wenn die Komponente eigene Übersetzungsdateien mitbringt; es folgt dabei immer der Systemsprache. Cinnamon Spices erwartet üblicherweise englische Ausgangstexte, derzeit sind sie deutsch. Sinnvoll erst nach AP14, da dort weitere Texte entstehen. Dabei auch die englischen Reste im Hardwarebericht übersetzen („unlabeled“, „NOT FOUND“, „none“; Entscheidung vom 18.09.2026). Der Titelvergleich des Einstellungsfensters (AP15) ist dann anzupassen.
 - Tooltips an Schaltflächen im Einstellungsschema werden von Cinnamon nicht angezeigt (siehe AP17). Bei Gelegenheit entfernen oder durch Hinweistexte ersetzen.
 - Die in AP19 genannten veralteten Stellen dieses Dokuments (Abschnitt 5, 7, 7a, 8, 10, 12 sowie AP07, AP08, AP09) wurden am 19.09.2026 korrigiert.
 
-Fortsetzung von AP19 (Phase 2):
+Vor Beginn von AP20 (neue Sitzung empfohlen):
 
-1. `PROJECT-STATUS.md`, `ROADMAP_V2.md` und `PRUEFBERICHT_AP19.md` lesen
+1. `PROJECT-STATUS.md`, `ROADMAP_V2.md` (Abschnitte 23 und 24) und `PRUEFBERICHT_AP19.md` lesen
 2. `git status` prüfen, `main` und GitHub synchron
-3. Befunde nur nach Freigabe des Nutzers je Befund beheben; Freigaben im Prüfbericht vermerken
-4. nach jeder Änderung: Syntax (`cjs`), Namensprüfung, Prüfsummen der vier gemeinsamen Module, gezielter Test, Test durch den Nutzer
-5. Abschluss mit der Sicherungsroutine aus Abschnitt 9, erstmals mit Versionsnummer `0.1.0-dev.19`
+3. Ziel und Akzeptanzkriterien für AP20 schriftlich festlegen und freigeben lassen
+4. Snapshot `0.1.0-dev_AP20-START` anlegen, erst danach Code ändern
+5. nach jeder Änderung: Syntax (`cjs`), Namensprüfung, Prüfsummen der vier gemeinsamen Module, gezielter Test, Test durch den Nutzer
+6. Abschluss mit der Sicherungsroutine aus Abschnitt 9, Versionsnummer `0.1.0-dev.20`
 
 Keine Aufgabe aus Vermutungen ableiten, wenn sie noch nicht gemeinsam festgelegt wurde.
 
@@ -1279,13 +1327,12 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt während AP19:
+Erwarteter Ausgangspunkt nach AP19:
 
-- Branch: `main`
-- Arbeitsverzeichnis: sauber
-- Referenz-Tag: `0.1.0-dev_AP18-END` (Quellcode unverändert seit AP18)
-- AP19 Phase 1 abgeschlossen, Prüfbericht und Dokumentation committet
-- AP19 Phase 2: Behebung nach Freigabe je Befund, siehe Abschnitt 14 und `PRUEFBERICHT_AP19.md`
+- Branch: `main`, Arbeitsverzeichnis sauber
+- Referenz-Tag: `0.1.0-dev_AP19-END`, Versionsnummer `0.1.0-dev.19`
+- AP01 bis AP19 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` vorhanden
+- Nächstes Arbeitspaket: AP20 – Lesbarkeit; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
 ---
 
