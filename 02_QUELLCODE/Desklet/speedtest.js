@@ -19,20 +19,177 @@ const Mainloop = imports.mainloop;
 const ByteArray = imports.byteArray;
 
 /*
- * Moegliche Ablageorte des Speedtest-Programms.
- * Zuerst wird der Suchpfad des Systems durchsucht; diese Liste
- * dient als Ergaenzung fuer Installationen ausserhalb davon.
+ * Unterstuetzte Speedtest-Programme (AP22).
+ *
+ * Die Reihenfolge bestimmt den Vorrang bei der automatischen Wahl.
+ * librespeed-cli steht vorn: Es misst gegen die freien Server von
+ * LibreSpeed, liefert das Ergebnis bereits in MBit/s und ist das
+ * einzige der beiden, das einen Jitter-Wert kennt.
+ *
+ * speedtest-cli stammt aus den Paketquellen von Mint und Ubuntu
+ * (Paket "speedtest-cli", Apache-2.0, sivel/speedtest-cli). Es ist
+ * damit das Programm, das ein Nutzer ohne Fremdquelle bekommt -
+ * Voraussetzung fuer die Einreichung bei Cinnamon Spices.
+ *
+ * Nicht aufgenommen ist der offizielle CLI von Ookla ("speedtest").
+ * Er wird ausschliesslich ueber ein eigenes Paket-Repository von
+ * Ookla verteilt; Cinnamon Spices untersagt es, Nutzer auf solche
+ * Fremdquellen zu verweisen.
+ *
+ * Je Programm:
+ *   id       - stabiler Schluessel fuer die Einstellung
+ *   name     - Programmname im Suchpfad des Systems
+ *   anzeige  - lesbarer Name fuer das Auswahlfeld
+ *   pfade    - zusaetzliche Ablageorte ausserhalb des Suchpfads
+ *   jitter   - ob das Programm einen Jitter-Wert liefert
+ *   hinweis  - Einschraenkung fuer den Bericht, oder ""
+ *   argumente(zeitgrenze) - Aufrufparameter
+ *   werteAus(stdout)      - Messwerte als Text, wirft bei Unsinn
  */
-const PROGRAMM_NAMEN = [
-    "librespeed-cli"
+const PROGRAMME = [
+    {
+        id: "librespeed-cli",
+        name: "librespeed-cli",
+        anzeige: "librespeed-cli (LibreSpeed)",
+        pfade: [
+            "/usr/local/bin/librespeed-cli",
+            "/usr/bin/librespeed-cli",
+            "/opt/librespeed/librespeed-cli",
+            "/snap/bin/librespeed-cli"
+        ],
+        jitter: true,
+        hinweis: "",
+
+        argumente: () => ["--json"],
+
+        /*
+         * Ausgabe ist ein Array mit einem Objekt; Geschwindigkeiten
+         * bereits in MBit/s, Ping und Jitter in ms.
+         *
+         * Uebernommen werden ausschliesslich die vier Messwerte.
+         * Die Ausgabe enthaelt daneben Angaben zum Server und zum
+         * Anschluss; sie werden bewusst nicht gespeichert (AP22,
+         * Kriterium 16).
+         */
+        werteAus: (stdout) => {
+            const ausgabe = JSON.parse(stdout);
+            const daten = Array.isArray(ausgabe) ? ausgabe[0] : ausgabe;
+
+            if (!daten)
+                throw new Error("Die Messdaten sind unvollständig.");
+
+            return {
+                SPEED_DOWN: zahlOderFehler(daten.download, "Download"),
+                SPEED_UP: zahlOderFehler(daten.upload, "Upload"),
+                PING: zahlOderFehler(daten.ping, "Ping"),
+                JITTER: zahlOderFehler(daten.jitter, "Jitter")
+            };
+        }
+    },
+    {
+        id: "speedtest-cli",
+        name: "speedtest-cli",
+        anzeige: "speedtest-cli (Speedtest.net)",
+        pfade: [
+            "/usr/bin/speedtest-cli",
+            "/usr/local/bin/speedtest-cli"
+        ],
+        jitter: false,
+        hinweis:
+            "speedtest-cli liefert keinen Jitter-Wert und misst bei " +
+            "schnellen Anschlüssen ungenauer.",
+
+        /*
+         * --secure erzwingt HTTPS; ohne diese Option spricht
+         * speedtest-cli 2.1.3 unverschluesselt ueber HTTP.
+         *
+         * --timeout bleibt beim Standard von 10 Sekunden. Es ist ein
+         * Zeitlimit je HTTP-Abruf, nicht fuer den gesamten Test; ein
+         * hoher Wert wuerde einen haengenden Abruf nur verlaengern.
+         * Fuer den Gesamtablauf gilt weiterhin ZEITGRENZE_SEKUNDEN.
+         */
+        argumente: () => ["--json", "--secure"],
+
+        /*
+         * Ausgabe ist ein Objekt. Geschwindigkeiten in Bit/s, auch
+         * mit --bytes; Ping in ms. Einen Jitter-Wert gibt es nicht -
+         * die Zeichenkette kommt im ganzen Programm nicht vor.
+         *
+         * Die Ausgabe enthaelt unter "client" die oeffentliche
+         * IP-Adresse, ungefaehre Koordinaten und den Anbieter sowie
+         * unter "server" dessen Standort. Nichts davon wird
+         * uebernommen (AP22, Kriterium 16).
+         */
+        werteAus: (stdout) => {
+            const daten = JSON.parse(stdout);
+
+            if (!daten || Array.isArray(daten))
+                throw new Error("Die Messdaten sind unvollständig.");
+
+            const bitProSekunde = (wert, was) =>
+                (Number(zahlOderFehler(wert, was)) / 1000000).toFixed(2);
+
+            return {
+                SPEED_DOWN: bitProSekunde(daten.download, "Download"),
+                SPEED_UP: bitProSekunde(daten.upload, "Upload"),
+                PING: zahlOderFehler(daten.ping, "Ping"),
+
+                // Kein Messwert, kein Fehler: Die Zeile bleibt
+                // sichtbar und zeigt "--" (AP22, Kriterium 5).
+                JITTER: "--"
+            };
+        }
+    }
 ];
 
-const ZUSAETZLICHE_PFADE = [
-    "/usr/local/bin/librespeed-cli",
-    "/usr/bin/librespeed-cli",
-    "/opt/librespeed/librespeed-cli",
-    "/snap/bin/librespeed-cli"
-];
+/*
+ * Prueft einen Einzelwert aus der Ausgabe eines Speedtest-Programms.
+ * Rueckgabe mit zwei Nachkommastellen, oder Fehler.
+ */
+function zahlOderFehler(wert, bezeichnung) {
+    /*
+     * Number() allein genuegt nicht: null, true, false, ein leerer
+     * Text und ein leeres Array ergeben damit 0 und wuerden als
+     * gueltige Messung durchgehen. Ein fehlendes Feld in der
+     * Programmausgabe waere dann als "0.00 MBit/s" erschienen
+     * statt als Fehler (beim Test der Auswertung aufgefallen).
+     */
+    const brauchbar =
+        (typeof wert === "number") ||
+        (typeof wert === "string" && wert.trim() !== "");
+
+    const zahl = brauchbar ? Number(wert) : NaN;
+
+    if (!Number.isFinite(zahl) || zahl < 0) {
+        throw new Error(
+            "Der Messwert " + bezeichnung + " fehlt oder ist unbrauchbar."
+        );
+    }
+
+    return zahl.toFixed(2);
+}
+
+// Kennung fuer die automatische Wahl in der Einstellung.
+const PROGRAMM_AUTOMATISCH = "auto";
+
+/*
+ * Wortlaut, wenn kein Speedtest-Programm vorhanden ist.
+ *
+ * Er nennt die beiden unterstuetzten Programme, damit der Nutzer
+ * weiss, wonach er suchen muss. Bewusst ohne Installationsbefehl,
+ * ohne Paketquelle und ohne Verweis auf eine Webseite: Die
+ * Einreichungsregeln von Cinnamon Spices untersagen es, Nutzer zur
+ * Installation von Software ausserhalb des Spices-Umfelds
+ * anzuleiten (AP22).
+ *
+ * Die Konstante liegt hier, damit Meldung und Hinweis im
+ * Einstellungsfenster in beiden Komponenten gleich lauten.
+ */
+var KEIN_PROGRAMM_MELDUNG =
+    "Für den Internet-Speedtest wird eines der Programme " +
+    "librespeed-cli oder speedtest-cli benötigt. Auf diesem " +
+    "Rechner wurde keines davon gefunden.\n\n" +
+    "Alle übrigen Messwerte sind davon nicht betroffen.";
 
 // Messwerte der Ablage; jeder muss als Zahl vorliegen.
 const WERTE_SCHLUESSEL = ["SPEED_DOWN", "SPEED_UP", "PING", "JITTER"];
@@ -60,6 +217,10 @@ var SpeedtestRunner = class SpeedtestRunner {
         this._laeuft = false;
         this._quelle = "";
 
+        // Gewaehltes Speedtest-Programm, "auto" bis die Komponente
+        // die Einstellung uebergibt (AP22).
+        this._programmWahl = PROGRAMM_AUTOMATISCH;
+
         // Laufender Test (Befund M2): Prozess, Abbruch, Zeitgrenze.
         this._prozess = null;
         this._abbruch = null;
@@ -69,21 +230,22 @@ var SpeedtestRunner = class SpeedtestRunner {
     }
 
     /*
-     * Sucht das Speedtest-Programm.
+     * Sucht ein einzelnes Programm.
      *
      * Ein fest verdrahteter Pfad wuerde nur auf Rechnern
      * funktionieren, auf denen das Programm genau dort liegt.
+     * Zuerst der Suchpfad des Systems, danach die Ablageorte der
+     * Programmdefinition.
+     *
      * Rueckgabe: Pfad oder null.
      */
-    findeProgramm() {
-        for (const name of PROGRAMM_NAMEN) {
-            const gefunden = GLib.find_program_in_path(name);
+    _suchePfad(def) {
+        const gefunden = GLib.find_program_in_path(def.name);
 
-            if (gefunden)
-                return gefunden;
-        }
+        if (gefunden)
+            return gefunden;
 
-        for (const pfad of ZUSAETZLICHE_PFADE) {
+        for (const pfad of def.pfade) {
             if (GLib.file_test(pfad, GLib.FileTest.IS_EXECUTABLE))
                 return pfad;
         }
@@ -91,8 +253,125 @@ var SpeedtestRunner = class SpeedtestRunner {
         return null;
     }
 
+    /*
+     * Alle auf diesem Rechner vorhandenen Programme, in der
+     * Reihenfolge des Vorrangs aus PROGRAMME.
+     *
+     * Rueckgabe: Array aus { def, pfad }.
+     */
+    verfuegbareProgramme() {
+        const gefunden = [];
+
+        for (const def of PROGRAMME) {
+            const pfad = this._suchePfad(def);
+
+            if (pfad)
+                gefunden.push({ def: def, pfad: pfad });
+        }
+
+        return gefunden;
+    }
+
+    /*
+     * Das Programm, mit dem tatsaechlich gemessen wird.
+     *
+     * Beruecksichtigt die Einstellung: Ist ein bestimmtes Programm
+     * gewaehlt und vorhanden, gilt dieses. Ist es nicht vorhanden,
+     * gilt die automatische Wahl - die Einstellung bleibt dabei
+     * gespeichert und greift wieder, sobald das Programm zurueck
+     * ist (wie bei Sensoren und Laufwerken seit AP14 und AP16).
+     *
+     * Rueckgabe: { def, pfad, automatisch } oder null.
+     */
+    programmInfo() {
+        const vorhanden = this.verfuegbareProgramme();
+
+        if (vorhanden.length === 0)
+            return null;
+
+        if (this._programmWahl && this._programmWahl !== PROGRAMM_AUTOMATISCH) {
+            for (const eintrag of vorhanden) {
+                if (eintrag.def.id === this._programmWahl) {
+                    return {
+                        def: eintrag.def,
+                        pfad: eintrag.pfad,
+                        automatisch: false
+                    };
+                }
+            }
+        }
+
+        return {
+            def: vorhanden[0].def,
+            pfad: vorhanden[0].pfad,
+            automatisch: true
+        };
+    }
+
+    /*
+     * Pfad des Programms, mit dem gemessen wird, oder null.
+     */
+    findeProgramm() {
+        const info = this.programmInfo();
+
+        return info ? info.pfad : null;
+    }
+
     istVerfuegbar() {
-        return this.findeProgramm() !== null;
+        return this.programmInfo() !== null;
+    }
+
+    /*
+     * Waehlt das Programm. "auto" oder ein unbekannter Wert
+     * bedeuten automatische Wahl (Kriterium 10 aus AP21 sinngemaess:
+     * ein beschaedigter Wert faellt auf die Vorgabe zurueck).
+     */
+    setzeProgramm(id) {
+        this._programmWahl =
+            (typeof id === "string" && id !== "") ? id : PROGRAMM_AUTOMATISCH;
+    }
+
+    /*
+     * Angebot fuer das Auswahlfeld der Einstellungen.
+     *
+     * Die Liste kann nicht im Schema stehen, da sie davon abhaengt,
+     * welche Programme auf dem Rechner vorhanden sind. Aufbau wie
+     * bei den Sensoren seit AP14:
+     *   - erster Eintrag "Automatisch (...)" mit dem Programm, das
+     *     die automatische Wahl gerade verwenden wuerde
+     *   - danach jedes vorhandene Programm
+     *   - ein gewaehltes, aber nicht vorhandenes Programm erscheint
+     *     als "Nicht gefunden: ...", damit die Wahl sichtbar bleibt
+     *
+     * Rueckgabe: Objekt { Beschriftung: Wert } fuer setOptions().
+     */
+    getProgrammOptionen(gewaehlt) {
+        const optionen = {};
+        const vorhanden = this.verfuegbareProgramme();
+
+        if (vorhanden.length === 0) {
+            optionen["Kein Speedtest-Programm gefunden"] = PROGRAMM_AUTOMATISCH;
+            return optionen;
+        }
+
+        optionen["Automatisch (" + vorhanden[0].def.anzeige + ")"] =
+            PROGRAMM_AUTOMATISCH;
+
+        for (const eintrag of vorhanden)
+            optionen[eintrag.def.anzeige] = eintrag.def.id;
+
+        if (gewaehlt && gewaehlt !== PROGRAMM_AUTOMATISCH) {
+            const da = vorhanden.some(e => e.def.id === gewaehlt);
+
+            if (!da) {
+                const def = PROGRAMME.find(d => d.id === gewaehlt);
+
+                optionen["Nicht gefunden: " + (def ? def.anzeige : gewaehlt)] =
+                    gewaehlt;
+            }
+        }
+
+        return optionen;
     }
 
     istAktiv() {
@@ -202,6 +481,11 @@ var SpeedtestRunner = class SpeedtestRunner {
             if (roh.QUELLE)
                 werte.QUELLE = roh.QUELLE;
 
+            // Seit AP22: Womit gemessen wurde. Aeltere Dateien
+            // kennen den Schluessel nicht; das ist kein Fehler.
+            if (roh.PROGRAMM)
+                werte.PROGRAMM = roh.PROGRAMM;
+
             return werte;
 
         } catch (e) {
@@ -247,6 +531,7 @@ var SpeedtestRunner = class SpeedtestRunner {
                 "#\n" +
                 "# Gemessen am : " + zeitpunkt + "\n" +
                 "# Gemessen von: " + (werte.QUELLE || "unbekannt") + "\n" +
+                "# Programm    : " + (werte.PROGRAMM || "unbekannt") + "\n" +
                 "#\n" +
                 "# SPEED_DOWN und SPEED_UP in MBit/s, PING und JITTER in ms.\n" +
                 "# TIMESTAMP ist der Messzeitpunkt in Sekunden seit 1970.\n" +
@@ -259,7 +544,8 @@ var SpeedtestRunner = class SpeedtestRunner {
                 "PING=" + werte.PING + "\n" +
                 "JITTER=" + werte.JITTER + "\n" +
                 "TIMESTAMP=" + (werte.TIMESTAMP || "") + "\n" +
-                "QUELLE=" + (werte.QUELLE || "") + "\n";
+                "QUELLE=" + (werte.QUELLE || "") + "\n" +
+                "PROGRAMM=" + (werte.PROGRAMM || "") + "\n";
 
             GLib.file_set_contents(this.datenPfad(), text);
             return true;
@@ -281,7 +567,7 @@ var SpeedtestRunner = class SpeedtestRunner {
      *
      * Rueckgabe: Pfad oder null.
      */
-    _schreibeBericht(werte) {
+    _schreibeBericht(werte, info) {
         try {
             const verzeichnis = GLib.build_filenamev([
                 GLib.get_user_data_dir(),
@@ -317,20 +603,57 @@ var SpeedtestRunner = class SpeedtestRunner {
                 kuerzel + "-speedtest-bericht_" + stempel + ".txt"
             ]);
 
-            const text =
+            /*
+             * Der Bericht nennt das verwendete Programm, seit AP22
+             * mit lesbarem Namen und Pfad. Vom Messserver steht
+             * nichts darin: Standort, Anbieter und die oeffentliche
+             * IP-Adresse aus der Programmausgabe werden bewusst
+             * nicht uebernommen, da die Berichte dauerhaft liegen
+             * bleiben (AP22, Kriterium 16).
+             */
+            const def = info ? info.def : null;
+
+            const programmZeile = def
+                ? def.anzeige + "  (" + info.pfad + ")"
+                : (this.findeProgramm() || "unbekannt");
+
+            const herkunft = info
+                ? (info.automatisch ? "automatisch gewählt" : "manuell gewählt")
+                : "unbekannt";
+
+            /*
+             * Ein nicht gemessener Wert bekommt keine Einheit.
+             * "Jitter : -- ms" las sich im Bericht wie ein Fehler
+             * (beim Funktionstest am 20.09.2026 aufgefallen).
+             */
+            const mitEinheit = (wert, einheit) =>
+                (wert === "--") ? "nicht gemessen" : (wert + " " + einheit);
+
+            let text =
                 "aVincePulse - Internet-Speedtest\n" +
                 "================================\n" +
                 "\n" +
                 "Gemessen am  : " + jetzt.toLocaleString() + "\n" +
                 "Gemessen von : " + quelle + "\n" +
-                "Programm     : " + (this.findeProgramm() || "unbekannt") + "\n" +
+                "Programm     : " + programmZeile + "\n" +
+                "Programmwahl : " + herkunft + "\n" +
                 "\n" +
                 "Ergebnis\n" +
                 "--------\n" +
-                "Download : " + werte.SPEED_DOWN + " MBit/s\n" +
-                "Upload   : " + werte.SPEED_UP + " MBit/s\n" +
-                "Ping     : " + werte.PING + " ms\n" +
-                "Jitter   : " + werte.JITTER + " ms\n";
+                "Download : " + mitEinheit(werte.SPEED_DOWN, "MBit/s") + "\n" +
+                "Upload   : " + mitEinheit(werte.SPEED_UP, "MBit/s") + "\n" +
+                "Ping     : " + mitEinheit(werte.PING, "ms") + "\n" +
+                "Jitter   : " + mitEinheit(werte.JITTER, "ms") + "\n";
+
+            // Einschraenkungen des Programms, etwa der fehlende
+            // Jitter-Wert von speedtest-cli.
+            if (def && def.hinweis) {
+                text +=
+                    "\n" +
+                    "Hinweis zum Programm\n" +
+                    "--------------------\n" +
+                    def.hinweis + "\n";
+            }
 
             GLib.file_set_contents(pfad, text);
 
@@ -412,15 +735,23 @@ var SpeedtestRunner = class SpeedtestRunner {
             return;
         }
 
-        const programm = this.findeProgramm();
+        const info = this.programmInfo();
 
-        if (!programm) {
+        /*
+         * Ohne Programm kein Test. Die Meldung nennt die beiden
+         * unterstuetzten Programme als reine Tatsachenangabe und
+         * enthaelt bewusst keinen Installationsbefehl, keine
+         * Paketquelle und keinen Verweis auf eine Webseite: Cinnamon
+         * Spices untersagt es, Nutzer zur Installation aus
+         * Fremdquellen anzuleiten (AP22).
+         *
+         * Im Regelfall kommt es dazu gar nicht, da Schaltflaeche und
+         * Menueeintrag dann nicht anwaehlbar sind.
+         */
+        if (!info) {
             rueckmeldung({
                 erfolg: false,
-                meldung:
-                    "Für den Internet-Speedtest wird das Programm " +
-                    "librespeed-cli benötigt. Es wurde auf diesem " +
-                    "Rechner nicht gefunden."
+                meldung: KEIN_PROGRAMM_MELDUNG
             });
             return;
         }
@@ -447,7 +778,7 @@ var SpeedtestRunner = class SpeedtestRunner {
 
         try {
             const prozess = Gio.Subprocess.new(
-                [programm, "--json"],
+                [info.pfad].concat(info.def.argumente()),
                 Gio.SubprocessFlags.STDOUT_PIPE |
                 Gio.SubprocessFlags.STDERR_PIPE
             );
@@ -502,26 +833,29 @@ var SpeedtestRunner = class SpeedtestRunner {
                         );
                     }
 
-                    const ausgabe = JSON.parse(stdout);
-                    const daten = Array.isArray(ausgabe) ? ausgabe[0] : ausgabe;
-
-                    if (
-                        !daten ||
-                        !Number.isFinite(Number(daten.download)) ||
-                        !Number.isFinite(Number(daten.upload)) ||
-                        !Number.isFinite(Number(daten.ping)) ||
-                        !Number.isFinite(Number(daten.jitter))
-                    ) {
-                        throw new Error("Die Messdaten sind unvollständig.");
-                    }
+                    /*
+                     * Die Auswertung gehoert zum Programm, da sich
+                     * Aufbau und Einheiten unterscheiden: librespeed-cli
+                     * liefert ein Array und MBit/s, speedtest-cli ein
+                     * Objekt und Bit/s ohne Jitter.
+                     *
+                     * Uebernommen werden ausschliesslich die vier
+                     * Messwerte. Beide Programme melden daneben
+                     * Angaben zum Anschluss - bei speedtest-cli unter
+                     * anderem die oeffentliche IP-Adresse, ungefaehre
+                     * Koordinaten und den Anbieter. Nichts davon wird
+                     * gespeichert (AP22, Kriterium 16).
+                     */
+                    const gemessen = info.def.werteAus(stdout);
 
                     const werte = {
-                        SPEED_DOWN: Number(daten.download).toFixed(2),
-                        SPEED_UP: Number(daten.upload).toFixed(2),
-                        PING: Number(daten.ping).toFixed(2),
-                        JITTER: Number(daten.jitter).toFixed(2),
+                        SPEED_DOWN: gemessen.SPEED_DOWN,
+                        SPEED_UP: gemessen.SPEED_UP,
+                        PING: gemessen.PING,
+                        JITTER: gemessen.JITTER,
                         TIMESTAMP: String(Math.floor(Date.now() / 1000)),
-                        QUELLE: this._quelle || "unbekannt"
+                        QUELLE: this._quelle || "unbekannt",
+                        PROGRAMM: info.def.id
                     };
 
                     if (!this._schreibeWerte(werte))
@@ -530,7 +864,7 @@ var SpeedtestRunner = class SpeedtestRunner {
                     // Zusaetzlich zur Wertedatei, die stets den
                     // aktuellen Stand enthaelt, einen bleibenden
                     // Bericht ablegen.
-                    const bericht = this._schreibeBericht(werte);
+                    const bericht = this._schreibeBericht(werte, info);
 
                     antwort = {
                         erfolg: true,

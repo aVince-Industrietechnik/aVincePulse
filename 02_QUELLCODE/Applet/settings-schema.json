@@ -373,13 +373,39 @@
     },
     "hinweis-speedtest": {
         "type": "label",
-        "description": "Rechtsklick auf das Panel-Symbol öffnet das Menü mit dem Eintrag „Internet-Speedtest starten“."
+        "description": "Rechtsklick auf das Panel-Symbol öffnet das Menü mit dem Eintrag „Internet-Speedtest starten“.",
+        "dependency": "speedtest-vorhanden"
+    },
+    "speedtest-vorhanden": {
+        "type": "generic",
+        "default": true
+    },
+    "speedtest-programm": {
+        "type": "combobox",
+        "default": "auto",
+        "description": "Speedtest-Programm",
+        "options": {
+            "Automatisch": "auto"
+        },
+        "tooltip": "Womit gemessen wird. „Automatisch“ wählt das beste vorhandene Programm. Ein gewähltes Programm, das später fehlt, erscheint als „Nicht gefunden“; gemessen wird dann automatisch, und die Wahl greift wieder, sobald das Programm zurück ist.",
+        "dependency": "speedtest-vorhanden"
+    },
+    "hinweis-speedtest-programm": {
+        "type": "label",
+        "description": "aVincePulse kann mit librespeed-cli oder mit speedtest-cli messen. „Automatisch“ nimmt librespeed-cli, sofern vorhanden: Es misst gegen die freien Server von LibreSpeed und liefert als einziges der beiden einen Jitter-Wert. Bei speedtest-cli bleibt die Jitter-Zeile deshalb auf „--“. Angeboten wird nur, was auf diesem Rechner vorhanden ist.",
+        "dependency": "speedtest-vorhanden"
+    },
+    "hinweis-kein-speedtest": {
+        "type": "label",
+        "description": "Für den Internet-Speedtest wird eines der Programme librespeed-cli oder speedtest-cli benötigt. Auf diesem Rechner wurde keines davon gefunden. Die Zeilen SPEED, PING, JITTER und LAST bleiben deshalb auf „--“. Alle übrigen Messwerte sind davon nicht betroffen.",
+        "dependency": "!speedtest-vorhanden"
     },
     "btn-speedtest": {
         "type": "button",
         "description": "Speedtest jetzt starten",
         "callback": "on_speedtest_starten",
-        "tooltip": "Der Test dauert etwa 20 Sekunden. Das Ergebnis wird gespeichert und steht auch der jeweils anderen Komponente zur Verfügung."
+        "tooltip": "Der Test dauert etwa 20 Sekunden. Das Ergebnis wird gespeichert und steht auch der jeweils anderen Komponente zur Verfügung.",
+        "dependency": "speedtest-vorhanden"
     },
     "btn-berichte-speedtest": {
         "type": "button",

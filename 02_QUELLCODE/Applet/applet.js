@@ -339,6 +339,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         this._applet_context_menu.addMenuItem(this._menuEintragSpeedtest);
 
+        // Ohne Speedtest-Programm bleibt der Eintrag verborgen
+        // (AP22). Der Aufruf in _aktualisiereSensorOptionen() kam
+        // dafuer zu frueh: Das Menue entsteht erst hier.
+        this._aktualisiereSpeedtestVerfuegbarkeit();
+
         this._update();
     }
 
@@ -521,9 +526,36 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._quellenAuswahlGeaendert.bind(this)
         );
 
+        // Speedtest-Programm (AP22). Die Wahl wirkt beim naechsten
+        // Test; ein laufender Test wird nicht umgeschaltet.
+        this.settings.bindProperty(
+            Settings.BindingDirection.IN,
+            "speedtest-programm",
+            "speedtestProgramm",
+            this._speedtestProgrammGeaendert.bind(this)
+        );
+
         this._uebernehmeQuellenAuswahl();
+        this._uebernehmeSpeedtestProgramm();
         this._detector.setzeAuswahl(this._sensorAuswahl());
         this._aktualisiereSensorOptionen();
+    }
+
+    /*
+     * Uebergibt die Programmwahl an den Speedtest (AP22).
+     */
+    _uebernehmeSpeedtestProgramm() {
+        if (this._speedtest)
+            this._speedtest.setzeProgramm(this.speedtestProgramm);
+    }
+
+    /*
+     * Eine geaenderte Programmwahl wirkt beim naechsten Test. Die
+     * Anzeige bleibt unberuehrt: Gespeicherte Werte eines anderen
+     * Programms behalten ihre Gueltigkeit (AP22, Kriterium 7).
+     */
+    _speedtestProgrammGeaendert() {
+        this._uebernehmeSpeedtestProgramm();
     }
 
     _uebernehmeQuellenAuswahl() {
@@ -576,6 +608,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         angebote["laufwerk-free"] = () =>
             this._measurement.getLaufwerkOptionen(this.laufwerkWahl);
 
+        // Welche Speedtest-Programme auf diesem Rechner liegen, steht
+        // ebenso wenig im Schema fest wie die Sensoren (AP22).
+        angebote["speedtest-programm"] = () =>
+            this._speedtest.getProgrammOptionen(this.speedtestProgramm);
+
         const geschrieben = {};
 
         for (const schluessel in angebote) {
@@ -587,8 +624,52 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             }
         }
 
+        this._aktualisiereSpeedtestVerfuegbarkeit();
+
         // Merkt sich, was das Einstellungsfenster jetzt anbietet.
         this._geschriebeneAuswahl = this._auswahlKennzeichen(geschrieben);
+    }
+
+    /*
+     * Haelt fest, ob ueberhaupt ein Speedtest-Programm vorhanden ist
+     * (AP22, Kriterien 8 und 9).
+     *
+     * Der Wert steuert ueber "dependency" im Schema, was das
+     * Einstellungsfenster zeigt: mit Programm die Programmwahl, den
+     * Bedienhinweis und die Schaltflaeche "Speedtest jetzt starten",
+     * ohne Programm stattdessen einen erklaerenden Hinweis. Die
+     * Schaltflaeche zum Oeffnen der Berichte bleibt in beiden Faellen
+     * sichtbar, da aeltere Berichte weiterhin lesbar sein sollen.
+     *
+     * Warum eine Einstellung und keine Abfrage im Fenster: Cinnamon
+     * bietet keine Moeglichkeit, ein Bedienelement zur Laufzeit
+     * auszublenden. "dependency" wertet ausschliesslich gespeicherte
+     * Einstellungswerte aus. Der Schluessel ist deshalb vom Typ
+     * "generic" und hat kein eigenes Bedienelement.
+     *
+     * Ebenso wird der Menueeintrag ein- und ausgeblendet, damit ein
+     * Klick nicht ins Leere laeuft.
+     */
+    _aktualisiereSpeedtestVerfuegbarkeit() {
+        if (!this._speedtest)
+            return;
+
+        const vorhanden = this._speedtest.istVerfuegbar();
+
+        try {
+            if (this.settings.getValue("speedtest-vorhanden") !== vorhanden)
+                this.settings.setValue("speedtest-vorhanden", vorhanden);
+        } catch (e) {
+            global.logError(e);
+        }
+
+        if (this._menuEintragSpeedtest) {
+            try {
+                this._menuEintragSpeedtest.actor.visible = vorhanden;
+            } catch (e) {
+                global.logError(e);
+            }
+        }
     }
 
     /*
@@ -1152,6 +1233,11 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this.netzWahl = "auto";
         this.laufwerkWahl = "auto";
         this._uebernehmeQuellenAuswahl();
+
+        // Speedtest-Programm wieder automatisch (AP22).
+        this.settings.setValue("speedtest-programm", "auto");
+        this.speedtestProgramm = "auto";
+        this._uebernehmeSpeedtestProgramm();
 
         // Warnschwellen: eingeschaltet, Vorgaben.
         const warnListe = standardWarnListe();

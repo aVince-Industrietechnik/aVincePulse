@@ -1,12 +1,12 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 20.09.2026 (AP21 abgeschlossen)  
+Stand: 20.09.2026 (AP22 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP21-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP20-END`  
-Versionsnummer in `metadata.json`: `0.1.0-dev.21` (Regel aus Abschnitt 9, Schritt 0)
+Aktueller Referenzstand: `0.1.0-dev_AP22-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP21-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.22` (Regel aus Abschnitt 9, Schritt 0)
 
 ## 1. Zweck dieses Dokuments
 
@@ -91,6 +91,7 @@ Tags:
 - `0.1.0-dev_AP19-END` – Entwicklungsstand nach Abschluss von AP19
 - `0.1.0-dev_AP20-END` – Entwicklungsstand nach Abschluss von AP20
 - `0.1.0-dev_AP21-END` – Entwicklungsstand nach Abschluss von AP21
+- `0.1.0-dev_AP22-END` – Entwicklungsstand nach Abschluss von AP22
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1065,6 +1066,131 @@ Kein hängender Tastaturgriff, keine Protokollzeile von aVincePulse, das Applet 
 
 Die Einstellungen des Nutzers waren nach allen Tests unverändert; hinzugekommen ist allein der neue Schlüssel `linksklick-aktion`.
 
+### AP22 – Speedtest-Programm vor der Veröffentlichung
+
+Abgeschlossen.
+
+Dateien: gemeinsames Modul `speedtest.js`, `applet.js`, `desklet.js`, beide `settings-schema.json`, beide `metadata.json`. Neu: `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`.
+
+Ziel, Akzeptanzkriterien und Verlauf stehen in Abschnitt 14.
+
+#### Warum
+
+`librespeed-cli` ist kein Paket der Mint-Quellen; auf dem Referenzgerät liegt es von Hand unter `/usr/local/bin`. Die Einreichungsregeln von Cinnamon Spices verbieten es, Nutzer zur Installation aus Fremdquellen anzuleiten. Ohne ein Programm aus den Paketquellen wäre eine Veröffentlichung nicht möglich gewesen.
+
+#### Berichtigung: `speedtest-cli` stammt nicht von Ookla
+
+Die Roadmap sprach von „`speedtest-cli` (Ookla)". Das trifft nicht zu und wurde am 20.09.2026 berichtigt.
+
+Das Paket `speedtest-cli` 2.1.3-2 aus `universe` ist `sivel/speedtest-cli` von Matt Martz, in Python, unter Apache-2.0. Es nutzt die Server von Speedtest.net als **inoffizieller** Client. Ooklas eigener Befehlszeilenclient heißt `speedtest` und kommt ausschließlich aus einem Paket-Repository von Ookla – also aus genau der Art Fremdquelle, die ausgeschlossen ist. Er scheidet damit aus.
+
+`speedtest-cli` ist zugleich das **einzige** Speedtest-Werkzeug in den Quellen von Mint und Ubuntu (geprüft mit `apt-cache search speedtest` sowie gezielt für `librespeed`, `librespeed-cli`, `speedtest`, `fast-cli`, `python3-speedtest-cli`).
+
+#### Unterstützte Programme
+
+`speedtest.js` führt die Programme nun in einer Liste `PROGRAMME`, deren Reihenfolge den Vorrang bestimmt. Je Programm stehen dort Name, Ablageorte, Aufrufparameter und eine eigene Auswertefunktion.
+
+| | librespeed-cli | speedtest-cli |
+|---|---|---|
+| Vorrang | 1 | 2 |
+| Aufruf | `--json` | `--json --secure` |
+| Ausgabe | Array | Objekt |
+| Geschwindigkeit | MBit/s | **Bit/s** |
+| Jitter | ja | **nein** |
+| Lizenz | LGPL-3.0 | Apache-2.0 |
+| In den Paketquellen | nein | ja |
+
+Der Vorrang von `librespeed-cli` hat drei Gründe: freie Server, Ergebnis bereits in MBit/s und als einziges ein Jitter-Wert. Hinzu kommt die Genauigkeit – Paketbeschreibung und Projekt von `speedtest-cli` warnen selbst, dass die Messung über HTTP bei schnellen Anschlüssen zunehmend ungenau wird. Zwei Läufe innerhalb weniger Minuten am 20.09.2026 zeigten das deutlich:
+
+| Programm | Download | Upload | Ping | Jitter |
+|---|---|---|---|---|
+| librespeed-cli | 57,94 MBit/s | 12,37 MBit/s | 13,36 ms | 0,87 ms |
+| speedtest-cli | 33,35 MBit/s | 11,25 MBit/s | 56,38 ms | – |
+
+`--secure` ist bei `speedtest-cli` nötig, da es sonst unverschlüsselt über HTTP misst. `--timeout` bleibt beim Standard von 10 Sekunden: Es begrenzt den einzelnen HTTP-Abruf, nicht den gesamten Test; ein hoher Wert würde einen hängenden Abruf nur verlängern. Für den Gesamtablauf gilt weiterhin die Zeitgrenze von 120 Sekunden aus AP19 (Befund M2).
+
+#### Jitter bei `speedtest-cli`
+
+Die Zeichenkette `jitter` kommt im gesamten Programm nicht vor; die Ergebnisstruktur führt nur `download`, `upload`, `ping`, `server`, `timestamp`, `bytes_sent`, `bytes_received`, `share` und `client`.
+
+Die Jitter-Zeile bleibt deshalb sichtbar und zeigt `--`. Sie auszublenden hätte die Zeilenzahl vom verwendeten Programm abhängig gemacht – genau das, was AP07 für die Speedtest-Zeilen bewusst vermeidet, damit das Desklet seine Höhe nicht ändert. Ein Eigenbau-Jitter aus mehreren Pings wurde verworfen.
+
+#### Auswahl des Programms
+
+Neue Einstellung „Speedtest-Programm" je Komponente, im Abschnitt „Internet-Speedtest". Aufbau wie die Sensorauswahl seit AP14: Die Liste kann nicht im Schema stehen, da sie vom Rechner abhängt, und wird über `setOptions()` geschrieben – beim Laden und nach „Hardware neu erkennen".
+
+- erster Eintrag „Automatisch (…)" mit dem Programm, das die automatische Wahl gerade verwendet
+- danach jedes vorhandene Programm
+- ein gewähltes, aber nicht vorhandenes Programm erscheint als „Nicht gefunden: …"; die Wahl bleibt gespeichert und greift wieder, sobald das Programm zurück ist
+- ein beschädigter Wert fällt auf „Automatisch" zurück
+- „Zurücksetzen" stellt „Automatisch" wieder her
+
+#### Verhalten ohne Programm
+
+`istVerfuegbar()` war seit AP11 vorhanden, wurde aber **nirgends aufgerufen** – es gab also gar keine Verfügbarkeitsprüfung. Das ist behoben.
+
+Cinnamon bietet keine Möglichkeit, ein Bedienelement zur Laufzeit auszublenden; `setSensitive` oder `setVisible` gibt es in der Einstellungs-API nicht. Ausgewertet wird ausschließlich `dependency` im Schema, und zwar gegen gespeicherte Einstellungswerte – über einen `Gtk.Revealer`, der ein- und ausblendet, statt auszugrauen. Negation mit `!schluessel` wird unterstützt (`JSONSettingsRevealer` in `/usr/share/cinnamon/cinnamon-settings/bin/JsonSettingsWidgets.py`).
+
+Deshalb gibt es den Schlüssel `speedtest-vorhanden` vom Typ `generic`, also ohne eigenes Bedienelement. `_aktualisiereSpeedtestVerfuegbarkeit()` setzt ihn. Daran hängen:
+
+| Element | mit Programm | ohne Programm |
+|---|---|---|
+| Auswahlfeld „Speedtest-Programm" | sichtbar | verborgen |
+| Bedienhinweis (Rechtsklick …) | sichtbar | verborgen |
+| „Speedtest jetzt starten" | sichtbar | verborgen |
+| Hinweis, dass ein Programm fehlt | verborgen | sichtbar |
+| „Speedtest-Berichte öffnen" | sichtbar | sichtbar |
+
+Die Berichte bleiben erreichbar, damit ältere Messungen lesbar sind. Ebenso wird der Menüeintrag „Internet-Speedtest starten" ein- und ausgeblendet, damit ein Klick nicht ins Leere läuft. Der Aufruf dafür steht nach dem Menüaufbau: `_aktualisiereSensorOptionen()` läuft früher, das Menü entsteht erst danach.
+
+Der Hinweistext nennt beide Programmnamen als reine Tatsachenangabe – **ohne** Installationsbefehl, Paketquelle oder Verweis auf eine Webseite. Die Zeilen SPEED, PING, JITTER und LAST bleiben sichtbar; sie haben in `metrics.js` ohnehin `defaultValue: "--"`.
+
+#### Datensparsamkeit
+
+Die Ausgabe von `speedtest-cli` enthält im Feld `client` die **öffentliche IP-Adresse**, ungefähre Koordinaten und den Anbieter, im Feld `server` dessen Standort und Kennung. `librespeed-cli` führt dieselben Felder, füllt sie ohne Telemetrie aber nicht.
+
+Das ist erheblich, weil Speedtest-Berichte seit AP12 dauerhaft und ungelöscht unter `~/.local/share/avincepulse/berichte/Speedtest/` liegen. Übernommen werden ausschließlich Download, Upload, Ping und Jitter. Weder Wertedatei noch Bericht enthalten Angaben zum Anschluss oder zum Messserver. Der bisherige Code war zufällig sauber, weil er vier Felder herausgriff; das ist nun festgeschrieben und geprüft.
+
+#### Bericht und Wertedatei
+
+Beide vermerken zusätzlich das verwendete Programm. Der Bericht nennt es mit lesbarem Namen und Pfad, dazu die Herkunft der Wahl („automatisch gewählt" bzw. „manuell gewählt"), und hängt bei `speedtest-cli` einen Absatz über dessen Einschränkungen an. Eine ältere Wertedatei ohne den Schlüssel `PROGRAMM` bleibt gültig.
+
+#### Fehler während der Umsetzung
+
+- **`Number(null)` ist `0`.** Die erste Fassung prüfte Messwerte mit `Number(wert)`. Da `null`, `true`, `false`, ein leerer Text und ein leeres Array damit zu `0` werden, wäre ein fehlendes Feld in der Programmausgabe als „0.00 MBit/s" erschienen statt als Fehler. Beim Test der Auswertung aufgefallen und behoben: Nur Zahlen und nicht leere Texte gelten noch als brauchbar. **Regel für künftige Arbeiten:** `Number()` allein genügt nie zur Prüfung fremder Eingaben.
+- **`Jitter : -- ms`** las sich im Bericht wie ein Fehler. Im Funktionstest aufgefallen; ein nicht gemessener Wert erscheint nun als „nicht gemessen" ohne Einheit.
+
+#### Prüfung
+
+Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, beide Schemata als JSON. Die verwendeten Namen `settings.getValue()` und `PopupBaseMenuItem.actor` wurden in den Cinnamon-Quellen belegt statt angenommen (`settings.js` Zeile 494, `popupMenu.js` Zeile 110).
+
+121 Prüfungen mit `cjs`, alle bestanden, Skripte unter `06_TESTVERSIONEN/0.1.0-dev_AP22-PRUEFDATEN/`:
+
+| Prüfung | Zahl |
+|---|---|
+| Auswertung gegen erdachte und beschädigte Ausgaben | 49 |
+| Programmsuche, Vorrang, Wahl, Angebot | 30 |
+| Auswertung gegen die **echten** Ausgaben beider Programme | 14 |
+| Verhalten ohne Programm | 13 |
+| Ältere Wertedatei ohne `PROGRAMM` | 6 |
+| Berichtstext mit und ohne Jitter | 9 |
+
+Für die Prüfung der Programmauswahl wurde die ganze `speedtest.js` verwendet; ersetzt wurden nur die drei Cinnamon-Importe `St`, `Main` und `Mainloop` durch Attrappen. Die echten Programmausgaben liegen anonymisiert unter `rohausgaben/` – die IP-Adresse ist durch `203.0.113.7` aus dem Dokumentationsbereich nach RFC 5737 ersetzt, Koordinaten und Anbieter durch Platzhalter.
+
+Funktionstest durch den Nutzer am 20.09.2026 im Applet, alle sechs Punkte bestanden: Auswahlfeld und Hinweis im Einstellungsfenster; Messung mit `speedtest-cli` einschließlich Jitter `--` und passendem Bericht; Messung mit „Automatisch" und wieder vorhandenem Jitter; **beide Programme beiseitegeschoben** und „Hardware neu erkennen" – Auswahlfeld, Bedienhinweis, Schaltfläche und Menüeintrag verschwunden, Hinweis erschienen, Berichte weiter erreichbar, übrige Messwerte unberührt; Programme zurück und alles wieder da; Zurücksetzen.
+
+Im **Desklet** anschließend geprüft: Auswahlfeld und Hinweis wie im Applet; eine Messung mit von Hand gewähltem `speedtest-cli` über das Rechtsklick-Menü. Der Bericht wies `Gemessen von : aVincePulse Desklet`, `Programm : speedtest-cli (Speedtest.net)`, `Programmwahl : manuell gewählt` und `Jitter : nicht gemessen` aus; die Wertedatei enthielt `PROGRAMM=speedtest-cli` und `JITTER=--`.
+
+Die Einstellungen des Nutzers waren nach allen Tests unverändert; hinzugekommen sind allein die beiden neuen Schlüssel `speedtest-programm` und `speedtest-vorhanden`, beide auf `auto`.
+
+#### Lizenz- und Rechteprüfung
+
+`08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md` (Kriterium 11). Kernpunkte:
+
+- aVincePulse **verteilt** keines der beiden Programme, sondern ruft ein vorhandenes Systemprogramm als eigenen Prozess auf. Eine Lizenzkopplung entsteht dadurch nicht; GPL-3.0 für den eigenen Code bleibt möglich. LGPL-3.0 und Apache-2.0 wären ohnehin beide GPLv3-vereinbar.
+- **Offen geblieben:** Der Wortlaut der Nutzungsbedingungen von Ookla konnte am 20.09.2026 nicht geprüft werden – weder `speedtest.net/about/terms` noch `ookla.com/terms-of-use` waren aus der Entwicklungsumgebung erreichbar. Bewertung: Das Risiko liegt beim Betreiber des Programms, nicht beim Aufrufer; die Beziehung besteht zwischen dem Nutzer und Ookla. Vor der Einreichung nachzuholen.
+- **Offen geblieben:** Das Projekt `sivel/speedtest-cli` wurde am **30.04.2026 archiviert** und wird nicht mehr gepflegt. Ändert Ookla seine Schnittstelle, hört es auf zu arbeiten. Das Ubuntu-Paket bleibt davon zunächst unberührt, und für aVincePulse ist der Ausfall verkraftbar – dann greift genau das Verhalten, das AP22 geschaffen hat.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1073,7 +1199,7 @@ Wesentliche Dateien:
 - `metrics.js` – Messwertmodell und Reihenfolge
 - `measurement.js` – Messlogik und Laufzeitwerte
 - `hardwareDetection.js` – dynamische Hardware-/Sensorerkennung, Akku- und Netzteilerkennung, Verfügbarkeitsmeldung
-- `speedtest.js` – Ausführung, Ablage und Rückmeldung des Internet-Speedtests
+- `speedtest.js` – Ausführung, Ablage und Rückmeldung des Internet-Speedtests; kennt seit AP22 mehrere unterstützte Programme mit je eigener Auswertung
 - `settings-schema.json` – Einstellungen
 - `stylesheet.css` – Darstellung
 - `metadata.json` – Cinnamon-Metadaten
@@ -1134,9 +1260,38 @@ cjs /tmp/syntaxcheck.js && echo "SYNTAX OK"
 
 Diese Prüfung ersetzt keinen Funktionstest im laufenden Cinnamon.
 
+### Prüfung fremder Eingaben
+
+`Number()` allein genügt nie, um einen Wert aus einer fremden Quelle zu
+prüfen: `Number(null)`, `Number(false)`, `Number("")` und `Number([])`
+ergeben jeweils `0`. Ein fehlendes Feld in der Ausgabe eines externen
+Programms erschiene damit als gültige Null. Zu prüfen ist zusätzlich der
+Typ – Zahl oder nicht leerer Text. Festgestellt in AP22 beim Test der
+Speedtest-Auswertung.
+
 ### Fenster
 
 Festgelegt vom Nutzer am 18.09.2026: aVincePulse öffnet oder schließt Fenster nur nach einer Benutzeraktion und nur mit vorherigem Hinweis bzw. Rückfrage. Meldungen in der Bildschirmmitte (`StatusAnzeige`) sind davon ausgenommen. Die Regel gilt auch für künftige Funktionen, etwa den zeitgesteuerten Speedtest oder Benachrichtigungen.
+
+### Bedienelemente der Einstellungen ein- und ausblenden
+
+Cinnamon bietet keine Möglichkeit, ein Bedienelement des
+Einstellungsfensters zur Laufzeit auszublenden oder auszugrauen;
+`setSensitive` und `setVisible` gibt es in der Einstellungs-API nicht
+(`/usr/share/cinnamon/js/ui/settings.js` kennt nur `getValue`,
+`setValue` und `setOptions`).
+
+Ausgewertet wird ausschließlich `dependency` im Schema, und zwar gegen
+gespeicherte Einstellungswerte. Dahinter steht ein `Gtk.Revealer`, der
+ein- und ausblendet statt auszugrauen; Negation mit `!schluessel` und
+Vergleiche wie `schluessel=wert` werden unterstützt
+(`JSONSettingsRevealer` in
+`/usr/share/cinnamon/cinnamon-settings/bin/JsonSettingsWidgets.py`).
+
+Soll etwas von einem Zustand abhängen, den nur der Code kennt, braucht
+es deshalb einen Schlüssel vom Typ `generic` – ohne eigenes
+Bedienelement –, den die Komponente mit `setValue()` setzt. So gelöst in
+AP22 für `speedtest-vorhanden`.
 
 ### Sichtbare Texte
 
@@ -1363,17 +1518,74 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP21 sind abgeschlossen.
+AP01 bis AP22 sind abgeschlossen.
 
-**Als Nächstes** stehen laut `ROADMAP_V2.md`, Abschnitt 24, noch drei Pakete vor der Veröffentlichung an. Ihre Reihenfolge ist nicht festgelegt und mit dem Nutzer zu klären:
+**Als Nächstes** stehen laut `ROADMAP_V2.md`, Abschnitt 24, noch zwei Pakete vor der Veröffentlichung an:
 
-- **Speedtest-Programm** – `speedtest-cli` aus den Paketquellen unterstützen, `librespeed-cli` nur verwenden, wenn vorhanden, und ein verständliches Verhalten, wenn kein Programm da ist. Notwendig, weil `librespeed-cli` kein Paket der Mint-Quellen ist und Cinnamon Spices keine Installationsanweisungen für Fremdquellen erlaubt.
 - **Unterstützen-Hinweis** – README, `FUNDING.yml` und eine Schaltfläche im Einstellungsfenster. Vor der Übersetzung, da die Texte mit übersetzt werden.
 - **Übersetzung Deutsch/Englisch** über gettext, mit englischen Ausgangstexten.
 
 Danach folgt die Abschlussprüfung vor der Einreichung bei Cinnamon Spices.
 
+Aus AP22 offen geblieben und dort erneut zu bewerten:
+
+- Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` (Seiten am 20.09.2026 nicht erreichbar).
+- `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt.
+
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
+
+**AP22 – Speedtest-Programm: abgeschlossen am 20.09.2026.** Ergebnis in Abschnitt 6 unter „AP22". Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf fest.
+
+### AP22 – Speedtest-Programm: Ziel und Akzeptanzkriterien (freigegeben und abgeschlossen am 20.09.2026)
+
+Grundlage: `ROADMAP_V2.md`, Abschnitt 24, „Speedtest-Programm vor der Veröffentlichung", Festlegung vom 19.09.2026.
+
+#### Ziel
+
+aVincePulse soll den Internet-Speedtest ohne ein Programm aus Fremdquellen anbieten können. Dazu wird `speedtest-cli` aus den Paketquellen als zweites unterstütztes Programm aufgenommen, `librespeed-cli` bleibt bevorzugt, wenn es vorhanden ist. Fehlt beides, verhält sich aVincePulse verständlich und ohne Installationsanleitung für Fremdquellen. Damit fällt das letzte technische Hindernis für die Einreichung bei Cinnamon Spices.
+
+#### Ausgangslage im Code (geprüft am 20.09.2026)
+
+- `PROGRAMM_NAMEN` in `speedtest.js` enthielt nur `librespeed-cli`, dazu vier feste Ablageorte. Der Aufruf lautete fest `[programm, "--json"]`, die Auswertung erwartete `{download, upload, ping, jitter}` in MBit/s.
+- Die Fehlermeldung bei fehlendem Programm nannte „librespeed-cli" namentlich.
+- **`istVerfuegbar()` war definiert, wurde aber in keiner Komponente aufgerufen.** Eine Verfügbarkeitsprüfung gab es also nicht.
+- Die Speedtest-Zeilen werden seit AP07 bewusst nie ausgeblendet, damit das Desklet seine Höhe nicht ändert; alle fünf haben `defaultValue: "--"`.
+
+#### Akzeptanzkriterien
+
+1. **Programmliste statt festem Namen** in `speedtest.js`, mit je eigenem Aufruf und eigener Auswertung. Vorrang: `librespeed-cli`, danach `speedtest-cli`.
+2. **Suche** zuerst über `GLib.find_program_in_path()`, danach in den üblichen Ablageorten.
+3. **Neue Einstellung „Speedtest-Programm"** je Komponente, gefüllt über `setOptions()` wie die Sensorauswahl seit AP14. Ein gespeichertes, nicht vorhandenes Programm fällt auf „Automatisch" zurück, bleibt aber gespeichert.
+4. **Eigene Auswertefunktion je Programm.** Für `speedtest-cli`: `--json`, Umrechnung von Bit/s in MBit/s.
+5. **Jitter bei `speedtest-cli`** erscheint als `--`, die Zeile bleibt sichtbar. Kein Eigenbau-Jitter.
+6. **Wertedatei und Bericht** vermerken das verwendete Programm; der Bericht nennt bei `speedtest-cli` dessen Einschränkungen.
+7. **Ein Programmwechsel** macht gespeicherte Werte nicht ungültig.
+8. **`istVerfuegbar()` wird verwendet.** Ohne Programm sind Schaltfläche und Menüeintrag nicht anwählbar.
+9. **Hinweis im Einstellungsfenster** als `label`, nennt die Programmnamen ohne Installationsbefehl, Paketquelle oder Link.
+10. **Die Speedtest-Zeilen bleiben sichtbar** und zeigen `--`; alles Übrige läuft unverändert.
+11. **Schriftliche Lizenz- und Rechteprüfung** in `08_LIZENZEN_RECHTE/` zu LibreSpeed, `speedtest-cli` und den Nutzungsbedingungen von Speedtest.net.
+12. **Ergibt Kriterium 11 ein Hindernis**, wird das Ergebnis vorgelegt, bevor `speedtest-cli` eingebaut bleibt.
+13. **Die Roadmap wird berichtigt** („speedtest-cli (Ookla)").
+14. **Prüfung:** Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, Schemata als JSON, beide JSON-Formate gegen aufgezeichnete Beispiele einschließlich beschädigter Antworten; Einstellungen unmittelbar vor jedem Eingriff sichern und danach vergleichen.
+15. **Funktionstest** durch den Nutzer in beiden Komponenten. Version `0.1.0-dev.22`, Snapshot, Fortschreibung der Dokumentation, Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
+16. **Datensparsamkeit** (ergänzt am 20.09.2026 nach Durchsicht des Programmquelltextes): Übernommen werden ausschließlich Download, Upload, Ping und Jitter. IP-Adresse, Koordinaten, Anbieter, Servername und Serverstandort erscheinen weder in `speedtest-values` noch im Bericht. Geprüft gegen eine echte JSON-Antwort beider Programme.
+17. **Verschlüsselte Verbindung** (ebenfalls ergänzt am 20.09.2026): `speedtest-cli` wird mit `--secure` aufgerufen, da es sonst über HTTP misst.
+
+#### Abweichung von Kriterium 17
+
+`--timeout` wurde nicht auf die Zeitgrenze von 120 Sekunden gesetzt, sondern beim Standard von 10 Sekunden belassen. Grund: Die Option begrenzt den einzelnen HTTP-Abruf, nicht die Gesamtlaufzeit; ein hoher Wert würde einen hängenden Abruf nur verlängern statt ihn zu beenden. Für den Gesamtablauf gilt weiterhin `ZEITGRENZE_SEKUNDEN`.
+
+#### Nicht Bestandteil von AP22
+
+Manuelle Serverauswahl, zeitgesteuerter Speedtest (beide OPTIONAL 1.0), ein eigener HTTP-Speedtest in GJS ohne externes Programm, Änderungen an Messwertmodell oder Anzeige.
+
+#### Geprüft und bewusst verworfen (20.09.2026)
+
+**Ooklas offizieller CLI `speedtest`.** Wird ausschließlich über ein Paket-Repository von Ookla verteilt und scheidet damit nach den Regeln von Cinnamon Spices aus.
+
+**Ein eigener Speedtest in GJS ohne externes Programm.** Technisch möglich über HTTP-Download und -Upload gegen die öffentlichen LibreSpeed-Server; es würde die Abhängigkeit vollständig beseitigen. **Entscheidung des Nutzers: abgelehnt**, wegen des erheblichen Umbaus, der selbst zu pflegenden Serverliste und der Fragen zu Datenschutz und Fairness gegenüber fremden Servern. Bleibt als Rückfallebene im ungünstigsten Fall vermerkt.
+
+**Die Jitter-Zeile bei `speedtest-cli` ausblenden.** Verworfen, da die Zeilenzahl dann vom verwendeten Programm abhinge – genau das, was AP07 für die Speedtest-Zeilen vermeidet.
 
 **AP21 – Aktion bei Linksklick: abgeschlossen am 20.09.2026.** Ergebnis in Abschnitt 6 unter „AP21“. Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf fest.
 
@@ -1616,12 +1828,12 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP21:
+Erwarteter Ausgangspunkt nach AP22:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP21-END`, Versionsnummer `0.1.0-dev.21`
-- AP01 bis AP21 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` vorhanden
-- Nächstes Arbeitspaket: noch zu wählen – Speedtest-Programm, Unterstützen-Hinweis oder Übersetzung; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
+- Referenz-Tag: `0.1.0-dev_AP22-END`, Versionsnummer `0.1.0-dev.22`
+- AP01 bis AP22 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` und Lizenzprüfung `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md` vorhanden
+- Nächstes Arbeitspaket: Unterstützen-Hinweis, danach Übersetzung Deutsch/Englisch; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
 ---
 

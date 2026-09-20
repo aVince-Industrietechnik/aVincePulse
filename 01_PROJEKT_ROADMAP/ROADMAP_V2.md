@@ -1689,7 +1689,8 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 6. AP19 – Zwischenprüfung (abgeschlossen am 20.09.2026)
 7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–55 % im Applet und 0–35 % im Desklet, fester kräftiger Schriftschatten, Warnfarben je nach Hintergrund wählbar (eingeschoben am 19.09.2026 aus Befund G9 von AP19; abgeschlossen am 20.09.2026)
 8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026; abgeschlossen am 20.09.2026)
-9. Übersetzung Deutsch/Englisch
+9. AP22 – Speedtest-Programm vor der Veröffentlichung (abgeschlossen am 20.09.2026)
+10. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1761,10 +1762,49 @@ Befund: `librespeed-cli` ist **kein Paket der Mint-Quellen** (geprüft am Refere
 
 Zu entscheiden und umzusetzen vor der Veröffentlichung:
 
-- `speedtest-cli` (Ookla) als unterstütztes Programm aufnehmen, dessen Nutzungsbedingungen prüfen
+- `speedtest-cli` als unterstütztes Programm aufnehmen, dessen Nutzungsbedingungen prüfen
 - `librespeed-cli` weiter verwenden, wenn es vorhanden ist
 - Verhalten, wenn kein Programm vorhanden ist: Speedtest-Zeilen und Schaltflächen ausblenden oder verständlich hinweisen, ohne Installationsanleitung für Fremdquellen
 - Lizenz- und Verteilbarkeitsprüfung von LibreSpeed (bereits als offener Punkt geführt)
+
+**Berichtigung vom 20.09.2026 (AP22):** Der Punkt lautete zuvor
+„`speedtest-cli` (Ookla)". Das ist unzutreffend. Das Paket
+`speedtest-cli` aus `universe` stammt **nicht von Ookla**, sondern
+von Matt Martz (`sivel/speedtest-cli`, Apache-2.0, in Python); es
+nutzt die Server von Speedtest.net als inoffizieller Client.
+Ooklas eigener Befehlszeilenclient heißt `speedtest` und wird
+ausschließlich über ein Paket-Repository von Ookla verteilt — also
+über genau die Art von Fremdquelle, auf die Nutzer laut den Regeln
+von Cinnamon Spices nicht verwiesen werden dürfen. Er scheidet
+damit aus.
+
+Daraus folgende Einschränkungen, alle am 20.09.2026 am
+Referenzgerät belegt:
+
+- `speedtest-cli` liefert **keinen Jitter-Wert**; die Zeichenkette
+  kommt im Programm nicht vor. Die Jitter-Zeile bleibt bei diesem
+  Programm auf `--`.
+- Geschwindigkeiten kommen in **Bit/s**, nicht in MBit/s.
+- Es misst über HTTP; für HTTPS ist `--secure` nötig.
+- Die Ausgabe enthält die öffentliche IP-Adresse, ungefähre
+  Koordinaten und den Anbieter. Übernommen werden ausschließlich
+  die vier Messwerte.
+- Genauigkeit: Paketbeschreibung und Projekt warnen selbst vor
+  Ungenauigkeit bei schnellen Anschlüssen.
+- Das Projekt wurde am **30.04.2026 archiviert** und wird nicht
+  mehr gepflegt; das Ubuntu-Paket bleibt davon zunächst unberührt.
+
+Deshalb hat `librespeed-cli` Vorrang, wenn es vorhanden ist.
+`speedtest-cli` ist die Rückfallebene, die eine Veröffentlichung
+ohne Fremdquelle überhaupt erst möglich macht. Es ist zugleich das
+einzige Speedtest-Werkzeug in den Quellen von Mint und Ubuntu.
+
+Ergebnis der Lizenz- und Rechteprüfung:
+`08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`.
+
+Umgesetzt als AP22, abgeschlossen am 20.09.2026. Ziel und
+Akzeptanzkriterien stehen in `05_DOKUMENTATION/PROJECT-STATUS.md`,
+Abschnitt 14.
 
 ### Veröffentlichung über Cinnamon Spices
 
