@@ -1,12 +1,13 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 20.09.2026 (AP22 abgeschlossen)  
+Stand: 21.09.2026 (AP23 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP22-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP21-END`  
-Versionsnummer in `metadata.json`: `0.1.0-dev.22` (Regel aus Abschnitt 9, Schritt 0)
+Aktueller Referenzstand: `0.1.0-dev_AP23-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP22-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.23` (Regel aus Abschnitt 9, Schritt 0)  
+Lizenz: GPL-3.0 (seit AP23, Datei `LICENSE` im Wurzelverzeichnis)
 
 ## 1. Zweck dieses Dokuments
 
@@ -45,6 +46,10 @@ Die Git-Repository-Wurzel ist:
 `aVincePulse_Development/`
 
 Struktur:
+
+Im Wurzelverzeichnis liegen seit AP23 zusätzlich `LICENSE` (GPL-3.0),
+`README.md` (Englisch), `README.de.md` (Deutsch), `.github/FUNDING.yml`
+und `docs/` für die Screenshots des README.
 
 - `01_PROJEKT_ROADMAP/` – Projektplanung und Roadmap
 - `02_QUELLCODE/` – aktueller Master-Quellcode
@@ -92,6 +97,7 @@ Tags:
 - `0.1.0-dev_AP20-END` – Entwicklungsstand nach Abschluss von AP20
 - `0.1.0-dev_AP21-END` – Entwicklungsstand nach Abschluss von AP21
 - `0.1.0-dev_AP22-END` – Entwicklungsstand nach Abschluss von AP22
+- `0.1.0-dev_AP23-END` – Entwicklungsstand nach Abschluss von AP23
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1191,6 +1197,114 @@ Die Einstellungen des Nutzers waren nach allen Tests unverändert; hinzugekommen
 - **Offen geblieben:** Der Wortlaut der Nutzungsbedingungen von Ookla konnte am 20.09.2026 nicht geprüft werden – weder `speedtest.net/about/terms` noch `ookla.com/terms-of-use` waren aus der Entwicklungsumgebung erreichbar. Bewertung: Das Risiko liegt beim Betreiber des Programms, nicht beim Aufrufer; die Beziehung besteht zwischen dem Nutzer und Ookla. Vor der Einreichung nachzuholen.
 - **Offen geblieben:** Das Projekt `sivel/speedtest-cli` wurde am **30.04.2026 archiviert** und wird nicht mehr gepflegt. Ändert Ookla seine Schnittstelle, hört es auf zu arbeiten. Das Ubuntu-Paket bleibt davon zunächst unberührt, und für aVincePulse ist der Ausfall verkraftbar – dann greift genau das Verhalten, das AP22 geschaffen hat.
 
+### AP23 – Unterstützen-Hinweis, README und Lizenz
+
+Abgeschlossen.
+
+Dateien: `LICENSE` (neu), `README.md` und `README.de.md` (neu), `.github/FUNDING.yml` (neu), `docs/LIESMICH-SCREENSHOTS.txt` (neu), gemeinsames Modul `metrics.js`, `applet.js`, `desklet.js`, beide `settings-schema.json`, beide `metadata.json`.
+
+Ziel, Akzeptanzkriterien und Verlauf stehen in Abschnitt 14.
+
+#### Warum
+
+Für eine Veröffentlichung fehlten die Projektunterlagen: Das Repository hatte **kein README und keine Lizenz** (`gh repo view` meldete `licenseInfo: null`). Ohne Lizenz gilt das volle Urheberrecht – niemand hätte den Code verwenden dürfen, und Cinnamon Spices nimmt nur freie Software auf. Die Texte entstehen vor der Übersetzung, weil sie mitübersetzt werden.
+
+#### Lizenz
+
+`LICENSE` enthält den unveränderten Text der GNU General Public License Version 3, 674 Zeilen. Die Fassung stammt aus `/usr/share/common-licenses/GPL-3` und wurde gegen `gnu.org/licenses/gpl-3.0.txt` geprüft: bitgenau identisch, SHA-256 `3972dc97…`.
+
+Jede der zehn Quelldateien trägt nun einen Lizenzkopf mit Urheberzeile und der üblichen Kurzform. Gewählt wurde **GPL-3.0-only** – „version 3, as published by the Free Software Foundation", ohne die verbreitete Ergänzung „or any later version". Das entspricht genau dem, was der Nutzer freigegeben hat, und bindet nicht an künftige Lizenzfassungen, die heute niemand kennt.
+
+Urheberzeile: `Copyright (C) 2026 Angelo Vincenti - aVince Industrietechnik`.
+
+Nach dem Einsetzen sind die vier gemeinsamen Module weiterhin bitgenau identisch.
+
+#### README in zwei Sprachen
+
+`README.md` auf Englisch, `README.de.md` auf Deutsch, gegenseitig verlinkt. Englisch als Hauptfassung, weil GitHub und Cinnamon Spices es als Ausgangssprache erwarten; die deutsche Fassung ist die maßgebliche für den Nutzer.
+
+Inhalt beider: Kurzbeschreibung, die beiden Bestandteile, Tabelle aller 15 Messwerte mit Quelle, Funktionsumfang, Warnschwellen, Voraussetzungen, der Speedtest und seine beiden Programme, Installation und Deinstallation, Ablageorte, Einstellungen, Support, Mitwirken, Lizenz.
+
+Ausdrücklich genannt wird der Entwicklungsstand: Entwicklungsfassung, bisher nur auf einem Gerät geprüft, Oberfläche derzeit nur Deutsch, noch nicht eingereicht.
+
+Die Installationsanleitung wurde trocken geprüft – lokaler Clone, die genannten Befehle ausgeführt, Ergebnis mit den erwarteten Dateien verglichen, Testverzeichnis wieder entfernt.
+
+Die Screenshots fehlen noch. Ihre Bildverweise stehen in HTML-Kommentaren, damit GitHub keine kaputten Bilder anzeigt; `docs/LIESMICH-SCREENSHOTS.txt` sagt, welche Dateien erwartet werden und was danach zu tun ist.
+
+#### Unterstützen-Hinweis
+
+Neuer Abschnitt „Unterstützung" ganz unten in beiden Einstellungsfenstern, nach „Zurücksetzen": ein erklärendes `label` und die Schaltfläche „Unterstützen …". Kein Tooltip, da dieser bei Schaltflächen nie angezeigt wird (Befund aus AP17).
+
+Der Browser öffnet nur nach einem Klick, über `Gio.AppInfo.launch_default_for_uri`. Das entspricht der Fensterregel aus Abschnitt 8 und der Regel von Cinnamon Spices, die einen Unterstützen-Link ausdrücklich erlaubt, sofern er den Benutzer nicht unterbricht: „no nag screens, pop-ups, repeated prompts, or features held back behind it inside the spice itself."
+
+Sonst erscheint der Hinweis nirgends – keine Einblendung, keine Benachrichtigung, kein zeitgesteuerter Hinweis, keine Nutzungszählung, keine gesperrte Funktion.
+
+Die Adresse steht als `UNTERSTUETZEN_URL` in `metrics.js` und damit an genau einer Stelle im Code, damit Applet und Desklet nicht auseinanderlaufen können.
+
+`unterstuetzenUrlFehlt()` prüft den **Aufbau** der Adresse, nicht ihre Erreichbarkeit: Das Programm ruft nichts ab, um festzustellen, ob es etwas anzeigen darf. Ist die Adresse unbrauchbar, meldet die Schaltfläche das, statt einen Browser irgendwohin zu schicken.
+
+#### Plattform
+
+Ko-fi, Seite `ko-fi.com/avince`, Anzeigename „aVince Industrietechnik" (Entscheidung des Nutzers vom 20./21.09.2026). Die Abwicklung läuft über aVince Industrietechnik; **deutsche Umsatzsteuer fällt an**. Daraus folgt die durchgängige Wortwahl „Unterstützung" statt „Spende" – es handelt sich ohnehin nicht um eine Spende im steuerlichen Sinn.
+
+Gegen Liberapay sprach, dass es laut eigener Auskunft nur für echte Spenden gedacht ist und nicht für Geschäftstransaktionen. Gegen GitHub Sponsors sprach der Zwang zu Stripe. Ko-fi nimmt auf Trinkgelder keine Plattformgebühr und lässt PayPal wie Stripe zu.
+
+Der Benutzername ist bewusst `avince` und nicht `avincepulse`: Die Seite soll auch künftige Projekte tragen. Ebenso bewusst kleingeschrieben, da die Adresse dauerhaft in veröffentlichtem Code steht; die Schreibweise „aVince" erscheint im Anzeigenamen.
+
+Als Profilbild dient das V-Signal-Logo aus `01_PNG_Iconset/aVincePulse_icon_512x512.png`. Der runde Beschnitt, den Ko-fi anwendet, wurde vorher nachgestellt und geprüft. Das Firmenlogo von avince.de schied aus: Es ist ein reiner Schriftzug, breit angelegt, und wäre im Kreis unlesbar.
+
+**Zum Zeitpunkt des Abschlusses ist bei Ko-fi noch keine Zahlungsmethode verbunden.** Die Seite besteht, die Adresse ist gültig; Zahlungen sind erst möglich, wenn der Nutzer Stripe oder PayPal verbindet. Auf die Arbeit an aVincePulse hat das keinen Einfluss.
+
+#### Nebenbefund zu Cinnamon
+
+Cinnamon bietet keine Möglichkeit, ein Bedienelement des Einstellungsfensters zur Laufzeit auszublenden oder auszugrauen. Das ist in Abschnitt 8 unter „Bedienelemente der Einstellungen ein- und ausblenden" festgehalten; in AP23 wurde es nicht gebraucht, da der Unterstützen-Abschnitt immer sichtbar ist.
+
+#### Prüfung
+
+Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, beide Schemata und `metadata.json` als JSON, `FUNDING.yml` als YAML.
+
+Belegt statt angenommen: dass eine `function`-Deklaration in `metrics.js` wirklich aus dem Modul heraus erreichbar ist. Geprüft wurde das nicht am Vorbild bestehender Exporte allein, sondern durch Laden des Moduls mit `cjs`.
+
+29 Prüfungen mit `cjs`, alle bestanden:
+
+| Prüfung | Zahl |
+|---|---|
+| Modulexporte und Adresse, übrige Exporte unberührt | 16 |
+| Neue Prüfung der Adresse, einschließlich unbrauchbarer Werte | 13 |
+
+Beide READMEs wurden auf ihre Verweise geprüft: Jeder Verweis auf eine Datei im Repository trifft ein vorhandenes Ziel, und kein Bildverweis steht außerhalb eines Kommentars – die noch fehlenden Screenshots können deshalb keine kaputten Bilder erzeugen.
+
+Funktionstest durch den Nutzer am 20./21.09.2026 in Applet und Desklet, alle vier Punkte bestanden: Abschnitt „Unterstützung" vorhanden und an der richtigen Stelle; Schaltfläche meldete bei noch fehlender Adresse verständlich, dass die Seite nicht eingerichtet ist, ohne einen Browser zu öffnen; „Zurücksetzen" lässt den Abschnitt unberührt; im laufenden Betrieb drängt sich nichts auf.
+
+Die Einstellungen des Nutzers waren nach allen Tests unverändert. Eine Abweichung – Deckkraft der Hintergrundfläche im Desklet von 30 auf 0 Prozent – stammt nachweislich aus dem Funktionstest der Schaltfläche „Auf Standardwerte zurücksetzen"; danach standen alle 13 Werte genau auf den Vorgaben des Schemas.
+
+#### Befund während des Funktionstests: das Mausrad verstellt Auswahlfelder
+
+Der Wertevergleich nach dem Test zeigte zwei Änderungen, die weder
+geplant noch bewusst vorgenommen waren: Im Applet stand `sensor-cpu`
+auf `pch_skylake` und `sensor-storage` auf `coretemp` statt jeweils auf
+„Automatisch". Das Applet zeigte damit als „SSD" die CPU-Temperatur.
+
+Ursache: Beim Scrollen zum Unterstützen-Abschnitt lief das Mausrad über
+die Auswahlfelder. Vom Nutzer bestätigt. Einzelheiten und Folgen für
+künftige Arbeiten stehen in Abschnitt 8 unter „Das Mausrad verstellt
+Auswahlfelder".
+
+Behoben durch „Auf Standardwerte zurücksetzen" in beiden Bestandteilen;
+danach standen alle 16 bzw. 15 Werte genau auf den Schema-Vorgaben.
+
+Der Befund ist keine Folge von AP23 – er bestand seit AP09, als die
+ersten Auswahlfelder hinzukamen, und fiel erst jetzt auf, weil das
+Einstellungsfenster durch den neuen Abschnitt am unteren Ende länger
+wurde und deshalb gescrollt werden musste.
+
+#### Offen geblieben
+
+- **Screenshots** für beide READMEs; der Nutzer liefert sie nach. Bis dahin sind die Bildverweise auskommentiert.
+- **Zahlungsmethode bei Ko-fi** noch nicht verbunden.
+- **Changelog** bewusst nicht angelegt; die GitHub-Releases erfüllen den Zweck vorläufig.
+- **`Entwicklungsstand: 0.1.0-dev`** steht unverändert im Kopf aller zehn Quelldateien und ist seit AP01 nicht mitgezogen worden. Die richtige Version steht in `metadata.json`. Vorschlag für ein späteres Paket: die Zeile ersatzlos streichen, statt sie bei jedem Arbeitspaket an zehn Stellen nachzuziehen.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1272,6 +1386,40 @@ Speedtest-Auswertung.
 ### Fenster
 
 Festgelegt vom Nutzer am 18.09.2026: aVincePulse öffnet oder schließt Fenster nur nach einer Benutzeraktion und nur mit vorherigem Hinweis bzw. Rückfrage. Meldungen in der Bildschirmmitte (`StatusAnzeige`) sind davon ausgenommen. Die Regel gilt auch für künftige Funktionen, etwa den zeitgesteuerten Speedtest oder Benachrichtigungen.
+
+### Das Mausrad verstellt Auswahlfelder
+
+Festgestellt am 21.09.2026 in AP23, vom Nutzer bestätigt.
+
+Fährt das Mausrad im Einstellungsfenster über ein Auswahlfeld, einen
+Regler oder ein Zahlenfeld, **verstellt es dessen Wert**, statt die
+Seite zu scrollen. Das ist Standardverhalten von GTK3 und betrifft
+jedes Spice; Cinnamon unternimmt nichts dagegen. In
+`JsonSettingsWidgets.py`, `SettingsWidgets.py` und `xlet-settings.py`
+gibt es keine einzige Behandlung von Scroll-Ereignissen.
+
+aVincePulse ist davon besonders betroffen: Das Applet hat neun
+Auswahlfelder und drei Regler bzw. Zahlenfelder, das Desklet acht und
+drei, alle in einem scrollbaren Fenster.
+
+Der Fall in AP23: Beim Scrollen zum Unterstützen-Abschnitt sprang
+`sensor-cpu` auf den letzten Eintrag seiner Liste (`pch_skylake`) und
+`sensor-storage` zwei Einträge weiter auf `coretemp`. Das Applet zeigte
+danach als „SSD" die CPU-Temperatur — 77 statt 38 °C, was zusätzlich
+die Warnschwelle der SSD (70/80 °C) grundlos ausgelöst hätte.
+
+**Behebbar ist das in aVincePulse nicht.** Das Einstellungsfenster
+gehört Cinnamon; das Projekt liefert nur das Schema.
+
+Folgen für die Arbeit:
+
+- **Beim Testen nicht mit dem Mausrad im Einstellungsfenster scrollen.**
+  Stattdessen den Rollbalken ziehen oder das Fenster vergrößern.
+- **Nach jedem Test im Einstellungsfenster die gespeicherten Werte
+  gegen die Schema-Vorgaben vergleichen**, nicht nur gegen die
+  Sicherung. Sonst bleibt eine versehentliche Verstellung unbemerkt.
+- Vor der Einreichung zu bewerten, ob sich die Zahl der Auswahlfelder
+  verringern lässt oder ob ein Hinweis im README angebracht ist.
 
 ### Bedienelemente der Einstellungen ein- und ausblenden
 
@@ -1383,6 +1531,7 @@ Aus AP16 bis AP18 abgeleitet, verbindlich:
 - **Abläufe über denselben Weg auslösen wie der Nutzer:** über die Schaltfläche und eine echte bzw. realistisch nachgestellte Änderung, nicht durch direkten Aufruf innerer Funktionen (AP16).
 - **Sichtbares messen, nicht nur Inhalte:** Größe, Position und Deckkraft einer Anzeige prüfen; kurzlebige Überlagerungen durch Aufzeichnung der sichtbaren Flächen in `Main.uiGroup` (AP17).
 - **Nach Änderungen an gemeinsamen Modulen oder am Stylesheet** ist ein Cinnamon-Neustart nötig (`Alt+F2`, `r`); das Neuladen einer Komponente über `ReloadExtension` genügt nur für `desklet.js`/`applet.js` und die Schemata. Den Neustart löst der Nutzer aus.
+- **Im Einstellungsfenster nicht mit dem Mausrad scrollen** (AP23): Das Rad verstellt Auswahlfelder, Regler und Zahlenfelder, statt zu scrollen. Rollbalken ziehen oder Fenster vergrößern. Nach dem Test die gespeicherten Werte **gegen die Schema-Vorgaben** vergleichen, nicht nur gegen die Sicherung; siehe Abschnitt 8.
 - **Sichern direkt vor dem Eingriff** (AP19): Eine Sicherung, die vor weiteren Tests angelegt wurde, kann beim Zurückspielen neuere Stände überschreiben (so geschehen mit `speedtest-values`).
 - **Messschleife von außen zählen** (AP19): Jeder Durchlauf von Applet und Desklet liest `~/.local/share/avincepulse/speedtest-values` einmal, das Desklet schreibt zusätzlich `/tmp/avince-hwmonitor-values`. Beides lässt sich per inotify zählen, ohne in Cinnamon einzugreifen (Skripte in `06_TESTVERSIONEN/0.1.0-dev_AP19-PRUEFDATEN/langzeit/`). Soll bei gleichem Intervall: je Taktmarke ein Durchlauf je Komponente. Entfällt das Schreiben der `/tmp`-Datei (Befund M3), ist die Zählung anzupassen.
 - **Kurzlebige Anzeigen** (AP19): Wiederholte lesende `Eval`-Abfragen aus Python erreichen etwa 300 Abfragen je Sekunde und erfassen auch Ein- und Ausblendvorgänge. Sie belasten aber Cinnamon selbst: nur **eine** solche Aufzeichnung gleichzeitig und nur für die Dauer des Tests laufen lassen, danach beenden (am 19.09.2026 liefen versehentlich zwei parallel, der Rechner reagierte träge). Neben `Main.uiGroup` auch die Fenster (`global.get_window_actors()`) mit aufzeichnen; ein durchscheinendes Fenster hinter einer halbtransparenten Meldung wirkt für den Nutzer wie „anderer Text in der Meldung“ (H15).
@@ -1518,21 +1667,76 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP22 sind abgeschlossen.
+AP01 bis AP23 sind abgeschlossen.
 
-**Als Nächstes** stehen laut `ROADMAP_V2.md`, Abschnitt 24, noch zwei Pakete vor der Veröffentlichung an:
+**Als Nächstes** steht laut `ROADMAP_V2.md`, Abschnitt 24, noch ein Paket vor der Veröffentlichung an:
 
-- **Unterstützen-Hinweis** – README, `FUNDING.yml` und eine Schaltfläche im Einstellungsfenster. Vor der Übersetzung, da die Texte mit übersetzt werden.
-- **Übersetzung Deutsch/Englisch** über gettext, mit englischen Ausgangstexten.
+- **Übersetzung Deutsch/Englisch** über gettext (`cinnamon-xlet-makepot`), mit englischen Ausgangstexten und einem `po/`-Verzeichnis je Bestandteil. Betroffen sind alle sichtbaren Texte in Applet, Desklet, beiden Schemata und den Meldungen – derzeit durchgängig Deutsch.
 
-Danach folgt die Abschlussprüfung vor der Einreichung bei Cinnamon Spices.
+Danach folgt die Abschlussprüfung vor der Einreichung bei Cinnamon Spices, einschließlich der komponentenweisen `info.json`, `README.md` und `screenshot.png` im Einreichungspaket.
 
-Aus AP22 offen geblieben und dort erneut zu bewerten:
+Offene Punkte aus den letzten Paketen:
 
-- Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` (Seiten am 20.09.2026 nicht erreichbar).
-- `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt.
+- **Aus AP22:** Der Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` war am 20.09.2026 nicht abrufbar; `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt. Beides vor der Einreichung erneut bewerten.
+- **Aus AP23:** Screenshots für beide READMEs fehlen noch; bei Ko-fi ist noch keine Zahlungsmethode verbunden; ein Changelog wurde bewusst nicht angelegt; die Zeile `Entwicklungsstand: 0.1.0-dev` im Kopf aller zehn Quelldateien ist veraltet und sollte gestrichen werden.
+- **Aus AP23, für die Abschlussprüfung:** Das Mausrad verstellt im Einstellungsfenster Auswahlfelder und Regler (Abschnitt 8). In aVincePulse nicht behebbar, da das Fenster Cinnamon gehört. Zu bewerten ist, ob sich die Zahl der Auswahlfelder verringern lässt oder ob ein Hinweis im README angebracht ist.
 
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
+
+**AP23 – Unterstützen-Hinweis, README und Lizenz: abgeschlossen am 21.09.2026.** Ergebnis in Abschnitt 6 unter „AP23". Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf fest.
+
+### AP23 – Unterstützen-Hinweis, README und Lizenz: Ziel und Akzeptanzkriterien (freigegeben und abgeschlossen am 21.09.2026)
+
+Grundlage: `ROADMAP_V2.md`, Abschnitt 24, „Unterstützen-Hinweis", Festlegung vom 19.09.2026, sowie Abschnitt 9 „Lizenz und Rechte".
+
+#### Ziel
+
+aVincePulse bekommt die Projektunterlagen, die für eine Veröffentlichung nötig sind: eine Lizenz, ein vollständiges README und einen dezenten Unterstützen-Hinweis. Die Texte entstehen jetzt, weil sie in der Übersetzung mitlaufen. Der Hinweis erscheint ausschließlich dort, wo der Nutzer ihn sucht.
+
+#### Ausgangslage (geprüft am 20.09.2026)
+
+- **Kein README** im Repository, nur die GitHub-Beschreibung.
+- **Keine Lizenzdatei**; `gh repo view` meldete `licenseInfo: null`. Damit galt das volle Urheberrecht, und eine Einreichung bei Cinnamon Spices wäre abgelehnt worden.
+- Kein `.github/`, keine `FUNDING.yml`, keine Screenshots des laufenden Programms.
+- Die Einreichungsregeln von Cinnamon Spices erlauben einen Unterstützen-Link ausdrücklich, sofern er nicht unterbricht.
+
+#### Entscheidungen des Nutzers vom 20./21.09.2026
+
+- **Plattform Ko-fi**, Seite `ko-fi.com/avince`, deutsche Umsatzsteuer fällt an.
+- **GPL-3.0** wird in diesem Paket mit angelegt.
+- **README zweisprachig**, Englisch als Hauptfassung.
+- **Screenshots** werden nachgeliefert; das README entsteht mit Platzhaltern.
+- Der Ko-fi-Name lautet `avince`, nicht `avincepulse`, damit die Seite auch künftige Projekte trägt.
+
+#### Akzeptanzkriterien
+
+1. **`LICENSE`** im Wurzelverzeichnis, unveränderter Text der GPL-3.
+2. **Lizenzkopf in jeder Quelldatei**, die vier gemeinsamen Module danach bitgenau identisch.
+3. **Urheberzeile** `Copyright (C) 2026 Angelo Vincenti - aVince Industrietechnik`.
+4. **`README.md`** mit Kurzbeschreibung, Screenshots, Funktionsumfang, Voraussetzungen, Installation, Speedtest, Einstellungen, Entwicklungsstand, Support, Lizenz, Mitwirken.
+5. **Abschnitt „Support"** nennt den Ko-fi-Link und sagt, dass aVincePulse kostenlos und vollständig bleibt.
+6. **Ehrlicher Entwicklungsstand** im README: Entwicklungsfassung, ein Gerät, Oberfläche Deutsch.
+7. **Abschnitt „Unterstützung"** ganz unten in beiden Einstellungsfenstern, mit `label` und Schaltfläche, ohne Tooltip.
+8. **Der Browser öffnet nur nach einem Klick**; schlägt es fehl, erscheint eine verständliche Meldung.
+9. **Nichts sonst:** keine Einblendung, Benachrichtigung, Zeitsteuerung, Zählung oder gesperrte Funktion.
+10. **Die Adresse steht an genau einer Stelle im Code**, im gemeinsamen Modul.
+11. **`.github/FUNDING.yml`** mit `ko_fi`.
+12. **Repository-Angaben:** GitHub erkennt die Lizenz.
+13. **Prüfung:** Syntax, Namen, Prüfsummen, Schemata als JSON, `FUNDING.yml` als YAML. Der Link wird geprüft, ohne ihn abzurufen.
+14. **Funktionstest** durch den Nutzer in beiden Bestandteilen.
+15. **Abschluss:** Version `0.1.0-dev.23`, Snapshot, Dokumentation, Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
+
+#### Nicht Bestandteil von AP23
+
+Changelog, die komponentenweisen `README.md` und `info.json` für die Spices-Einreichung, die Übersetzung selbst, Änderungen an der Messfunktion.
+
+#### Geprüft und bewusst verworfen
+
+**Liberapay und GitHub Sponsors** als Plattform. Liberapay ist laut eigener Auskunft nur für echte Spenden gedacht und nicht für Geschäftstransaktionen; GitHub Sponsors setzt Stripe zwingend voraus. Ko-fi erlaubt beides und nimmt auf Trinkgelder keine Plattformgebühr.
+
+**Das Firmenlogo von avince.de als Profilbild.** Es ist ein reiner Schriftzug in breiter Anlage. Ko-fi beschneidet Profilbilder rund; ein Schriftzug wäre darin entweder winzig oder angeschnitten und in der kleinen Darstellung unlesbar. Stattdessen das V-Signal-Logo, dessen runder Beschnitt vorher nachgestellt und geprüft wurde.
+
+**`GPL-3.0-or-later`.** Die von der FSF empfohlene Ergänzung „or any later version" wurde weggelassen, da der Nutzer „GPL-3.0" freigegeben hat und eine Bindung an künftige, heute unbekannte Lizenzfassungen nicht Teil dieser Freigabe war.
 
 **AP22 – Speedtest-Programm: abgeschlossen am 20.09.2026.** Ergebnis in Abschnitt 6 unter „AP22". Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf fest.
 
@@ -1828,12 +2032,12 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP22:
+Erwarteter Ausgangspunkt nach AP23:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP22-END`, Versionsnummer `0.1.0-dev.22`
-- AP01 bis AP22 abgeschlossen, Prüfbericht `PRUEFBERICHT_AP19.md` und Lizenzprüfung `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md` vorhanden
-- Nächstes Arbeitspaket: Unterstützen-Hinweis, danach Übersetzung Deutsch/Englisch; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
+- Referenz-Tag: `0.1.0-dev_AP23-END`, Versionsnummer `0.1.0-dev.23`
+- AP01 bis AP23 abgeschlossen; Prüfbericht `PRUEFBERICHT_AP19.md`, Lizenzprüfung `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE` und beide READMEs vorhanden
+- Nächstes Arbeitspaket: Übersetzung Deutsch/Englisch über gettext; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
 ---
 

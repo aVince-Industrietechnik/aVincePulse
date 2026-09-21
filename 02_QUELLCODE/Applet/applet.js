@@ -2,6 +2,21 @@
  * aVincePulse
  * Applet – Panel-Symbol und zentrale Hover-Anzeige
  *
+ * Copyright (C) 2026 Angelo Vincenti - aVince Industrietechnik
+ *
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License,
+ * version 3, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see
+ * <https://www.gnu.org/licenses/>.
+ *
  * Entwicklungsstand: 0.1.0-dev
  *
  * Das Applet ist eigenständig lauffähig und benötigt weder ein
@@ -48,6 +63,8 @@ const warnfarbeFuer = Metrics.warnfarbeFuer;
 const standardWarnListe = Metrics.standardWarnListe;
 const ordneWarnschwellen = Metrics.ordneWarnschwellen;
 const bewerteStufe = Metrics.bewerteStufe;
+const UNTERSTUETZEN_URL = Metrics.UNTERSTUETZEN_URL;
+const unterstuetzenUrlFehlt = Metrics.unterstuetzenUrlFehlt;
 
 // Einstellungsschluessel der Sensorauswahl je Sensorart
 // (siehe SENSOR_ARTEN in hardwareDetection.js).
@@ -1194,6 +1211,43 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
     on_berichte_speedtest_oeffnen() {
         this._oeffneBerichte("Speedtest");
+    }
+
+    /*
+     * Oeffnet die Unterstuetzerseite im Browser (AP23).
+     *
+     * Nur nach einem Klick des Benutzers, entsprechend der
+     * Fensterregel aus Abschnitt 8 der Projektdokumentation und der
+     * Regel von Cinnamon Spices, dass ein Unterstuetzen-Hinweis den
+     * Benutzer nicht unterbrechen darf. Das Programm oeffnet von
+     * sich aus nie etwas.
+     *
+     * Die Adresse steht in metrics.js, damit Applet und Desklet
+     * nicht auseinanderlaufen koennen.
+     */
+    on_unterstuetzen() {
+        // Ohne brauchbare Adresse waere der Browser irgendwohin
+        // geschickt worden.
+        if (unterstuetzenUrlFehlt()) {
+            this._statusAnzeige.zeige(
+                "Die Unterstützerseite ist noch nicht eingerichtet.\n\n" +
+                "Diese Entwicklungsfassung enthält noch keine Adresse."
+            );
+            this._statusAnzeige.verbergeNachLesezeit();
+            return;
+        }
+
+        try {
+            Gio.AppInfo.launch_default_for_uri(UNTERSTUETZEN_URL, null);
+
+        } catch (e) {
+            global.logError(e);
+
+            this._statusAnzeige.zeige(
+                "Die Unterstützerseite konnte nicht geöffnet werden."
+            );
+            this._statusAnzeige.verbergeNach(8);
+        }
     }
 
     on_standardwerte_zuruecksetzen() {

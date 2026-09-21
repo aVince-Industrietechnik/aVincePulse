@@ -2,6 +2,21 @@
  * aVincePulse
  * Zentrale Definition der Messwerte
  *
+ * Copyright (C) 2026 Angelo Vincenti - aVince Industrietechnik
+ *
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License,
+ * version 3, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see
+ * <https://www.gnu.org/licenses/>.
+ *
  * Entwicklungsstand: 0.1.0-dev
  *
  * Diese Datei enthält ausschließlich die Beschreibung der Messwerte.
@@ -466,4 +481,46 @@ function bewerteStufe(wert, schwelle, vorher) {
         return "warnung";
 
     return "normal";
+}
+
+
+/*
+ * Unterstuetzung (AP23).
+ *
+ * aVincePulse ist und bleibt kostenlos und vollstaendig. Der Hinweis
+ * erscheint ausschliesslich an einer Stelle, die der Benutzer von
+ * sich aus aufsucht: ganz unten im Einstellungsfenster. Keine
+ * Einblendung, keine Benachrichtigung, kein zeitgesteuerter Hinweis,
+ * keine Zaehlung, keine gesperrte Funktion. Das entspricht sowohl der
+ * Festlegung des Nutzers vom 19.09.2026 als auch der Regel von
+ * Cinnamon Spices: "That link must not interrupt the user - no nag
+ * screens, pop-ups, repeated prompts, or features held back behind
+ * it inside the spice itself."
+ *
+ * Die Adresse steht hier und nur hier, damit Applet und Desklet nicht
+ * auseinanderlaufen koennen. Weitere Stellen ausserhalb des Codes:
+ * .github/FUNDING.yml, README.md und README.de.md.
+ */
+var UNTERSTUETZEN_URL = "https://ko-fi.com/avince";
+
+/*
+ * Wahr, wenn die hinterlegte Adresse unbrauchbar ist.
+ *
+ * Geprueft wird der Aufbau, nicht die Erreichbarkeit: Das Programm
+ * ruft nichts ab, um festzustellen, ob es etwas anzeigen darf.
+ * Bis zum 21.09.2026 stand hier ein Platzhalter, und die Pruefung
+ * fing genau den ab; sie bleibt als Absicherung gegen eine geleerte
+ * oder beschaedigte Konstante bestehen.
+ *
+ * Trifft sie zu, melden die Komponenten beim Klick, dass die Seite
+ * nicht eingerichtet ist, statt einen Browser irgendwohin zu
+ * schicken.
+ */
+function unterstuetzenUrlFehlt() {
+    if (typeof UNTERSTUETZEN_URL !== "string")
+        return true;
+
+    // Nur eine verschluesselte Ko-fi-Adresse mit nicht leerem Namen
+    // gilt als brauchbar.
+    return !/^https:\/\/ko-fi\.com\/[A-Za-z0-9_.-]+$/.test(UNTERSTUETZEN_URL);
 }

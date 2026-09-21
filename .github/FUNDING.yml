@@ -1,0 +1,7 @@
+# aVincePulse - freiwillige Unterstuetzung
+#
+# Diese Datei schaltet den Sponsor-Knopf am GitHub-Repository frei.
+# Dieselbe Adresse steht in UNTERSTUETZEN_URL (metrics.js, in Applet
+# und Desklet bitgenau identisch) sowie in README.md und README.de.md.
+
+ko_fi: avince

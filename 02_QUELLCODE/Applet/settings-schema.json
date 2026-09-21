@@ -442,5 +442,18 @@
         "description": "Auf Standardwerte zurücksetzen",
         "callback": "on_standardwerte_zuruecksetzen",
         "tooltip": "Setzt Aktualisierungsintervall, Anzeigegröße, Deckkraft und Panel-Symbol auf die Auslieferungswerte zurück."
+    },
+    "kopf-unterstuetzung": {
+        "type": "header",
+        "description": "Unterstützung"
+    },
+    "hinweis-unterstuetzung": {
+        "type": "label",
+        "description": "aVincePulse ist kostenlos und vollständig – es gibt keine Bezahlversion und keine gesperrten Funktionen. Wenn es dir nützt, kannst du die Weiterentwicklung freiwillig unterstützen. Die Schaltfläche öffnet die Unterstützerseite im Browser; sonst geschieht nichts."
+    },
+    "btn-unterstuetzen": {
+        "type": "button",
+        "description": "Unterstützen …",
+        "callback": "on_unterstuetzen"
     }
 }

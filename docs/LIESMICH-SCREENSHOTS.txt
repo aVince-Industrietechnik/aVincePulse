@@ -1,0 +1,29 @@
+Screenshots fuer das README
+===========================
+
+Hierher gehoeren die drei Bilder, auf die README.md und README.de.md
+verweisen. Solange sie fehlen, sind die Bildverweise in beiden Dateien
+auskommentiert; GitHub zeigt deshalb keine kaputten Bilder an.
+
+Erwartete Dateinamen:
+
+  docs/screenshot-applet.png     Applet im Panel mit geoeffneter
+                                 Hover-Anzeige
+  docs/screenshot-desklet.png    Desklet auf dem Schreibtisch
+  docs/screenshot-settings.png   Einstellungsfenster
+
+Sobald die Bilder hier liegen, sind in README.md und README.de.md die
+drei Zeilen der Form
+
+    <!-- ![...](docs/screenshot-....png) -->
+
+von den Kommentarzeichen zu befreien. Die umgebenden Hinweiszeilen
+koennen dabei entfernt werden.
+
+Hinweise zur Aufnahme
+---------------------
+- Kein persoenlicher Inhalt im Bild: keine Dateinamen, keine
+  Browserfenster mit erkennbaren Seiten, keine Mailadressen.
+- Fuer die spaetere Einreichung bei Cinnamon Spices wird zusaetzlich
+  je Bestandteil ein screenshot.png gebraucht. Das kann dasselbe Bild
+  sein; es wird im Einreichungspaket abgelegt.

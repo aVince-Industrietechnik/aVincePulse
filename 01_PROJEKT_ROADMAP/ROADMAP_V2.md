@@ -143,6 +143,15 @@ Keine Verletzung von Rechten Dritter.
 
 Als mögliche Projektlizenz wird GPL-3.0 geprüft.
 
+**Entschieden am 21.09.2026 (AP23):** aVincePulse steht unter
+**GPL-3.0-only**. Die Datei `LICENSE` liegt im Wurzelverzeichnis, jede
+Quelldatei trägt einen Lizenzkopf. Die Lizenzen der beiden
+Speedtest-Programme sind in
+`08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md` geprüft; sie werden nicht
+mitgeliefert, sondern nur aufgerufen, sodass keine Lizenzkopplung
+entsteht. Noch offen sind die Rechte an den Grafiken und die
+Marken- und Namensfrage.
+
 ## 10. Kostenloses Projekt / Unterstützung
 
 aVincePulse soll grundsätzlich kostenlos nutzbar sein.
@@ -1690,7 +1699,8 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 7. AP20 – Lesbarkeit: Hintergrundfläche mit Deckkraft 0–55 % im Applet und 0–35 % im Desklet, fester kräftiger Schriftschatten, Warnfarben je nach Hintergrund wählbar (eingeschoben am 19.09.2026 aus Befund G9 von AP19; abgeschlossen am 20.09.2026)
 8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026; abgeschlossen am 20.09.2026)
 9. AP22 – Speedtest-Programm vor der Veröffentlichung (abgeschlossen am 20.09.2026)
-10. Übersetzung Deutsch/Englisch
+10. AP23 – Unterstützen-Hinweis, README und Lizenz (abgeschlossen am 21.09.2026)
+11. Übersetzung Deutsch/Englisch
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1828,6 +1838,34 @@ Festgelegt am 19.09.2026, ergänzt den Abschnitt „Kostenmodell“.
 - Abwicklung als Unternehmer über aVince Industrietechnik (Entscheidung vom 19.09.2026): Geschäftskonto bei der gewählten Plattform, Impressum auf der Unterstützerseite, Klärung von Einnahmen, Umsatzsteuer und Datenschutz mit dem Steuerberater.
 - Plattform noch offen; Vorschlag: ein Hauptweg (Ko-fi oder Liberapay), im README zusätzlich GitHub Sponsors oder PayPal (Geschäftskonto, nicht „Freunde und Familie“).
 - Die Texte gehen in die Übersetzung ein, deshalb vor der Übersetzung umsetzen.
+
+**Umgesetzt als AP23, abgeschlossen am 21.09.2026.** Entscheidungen des
+Nutzers vom 20./21.09.2026:
+
+- **Plattform: Ko-fi**, Seite `ko-fi.com/avince`, Anzeigename
+  „aVince Industrietechnik". Abwicklung über aVince Industrietechnik,
+  **deutsche Umsatzsteuer fällt an**. Liberapay schied aus, da laut
+  eigener Auskunft nur für echte Spenden und nicht für
+  Geschäftstransaktionen gedacht; GitHub Sponsors setzt Stripe
+  zwingend voraus. Ko-fi nimmt auf Trinkgelder keine Plattformgebühr
+  und lässt PayPal wie Stripe zu.
+- Der Name lautet `avince` und nicht `avincepulse`, damit die Seite
+  auch künftige Projekte trägt.
+- Ein zweiter Weg im README wurde nicht eingerichtet; ein Hauptweg
+  genügt.
+- **Zusätzlich in AP23 angelegt**, da beides für die Veröffentlichung
+  fehlte und das README ohne Lizenzangabe nicht stimmig wäre:
+  `LICENSE` mit der **GPL-3.0** (Abschnitt 9 dieser Roadmap, dort
+  bisher als „wird geprüft" geführt) sowie ein Lizenzkopf in jeder
+  Quelldatei. Gewählt wurde GPL-3.0-only, ohne die Ergänzung „or any
+  later version".
+- **README zweisprachig:** `README.md` auf Englisch als Hauptfassung,
+  `README.de.md` auf Deutsch, gegenseitig verlinkt.
+
+Offen geblieben: Screenshots für beide READMEs, die Verbindung einer
+Zahlungsmethode bei Ko-fi und ein Changelog. Ziel und
+Akzeptanzkriterien stehen in `05_DOKUMENTATION/PROJECT-STATUS.md`,
+Abschnitt 14.
 
 ### Abschlussprüfung vor der Veröffentlichung
 
