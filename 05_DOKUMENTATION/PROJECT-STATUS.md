@@ -1298,6 +1298,83 @@ ersten Auswahlfelder hinzukamen, und fiel erst jetzt auf, weil das
 Einstellungsfenster durch den neuen Abschnitt am unteren Ende länger
 wurde und deshalb gescrollt werden musste.
 
+#### Nachtrag vom 21.09.2026: README-Prüfung und Bereinigung
+
+Auf Wunsch des Nutzers wurden beide READMEs Abschnitt für Abschnitt
+gegen den Quellcode geprüft. Struktur, Umfang und Stil blieben
+unverändert; geändert wurde nur, wo eine Aussage nicht stimmte oder zu
+weit ging. Dabei fielen drei Sachfehler auf.
+
+**Die Installationsanleitung war fehlerhaft.** `cp -r quelle ziel`
+kopiert **in** das Ziel hinein, sobald dieses existiert. Beim zweiten
+Aufruf – also bei jedem Update – entstand ein Unterverzeichnis
+`Applet/` bzw. `Desklet/` mit einer vollständigen zweiten Kopie.
+Praktisch nachgestellt:
+
+```
+1. Aufruf:  …/avincepulse-applet@avince/applet.js          richtig
+2. Aufruf:  …/avincepulse-applet@avince/Applet/applet.js   verschachtelt
+```
+
+Ersetzt durch `rsync -a --delete` mit abschließenden Schrägstrichen.
+Das löst zugleich das zweite Problem: Dateien, die es in einer neuen
+Fassung nicht mehr gibt, blieben bisher liegen. Dass `rsync` auf Mint
+ab Werk vorhanden ist, wurde über `/var/log/installer/initial-status.gz`
+belegt. Einstellungen, Berichte und Speedtest-Werte sind nicht
+gefährdet, da sie außerhalb der Programmverzeichnisse liegen.
+
+**Widerspruch beim Jitter.** Die READMEs sagten, aVincePulse übernehme
+„ausschließlich die vier Messwerte". Bei `speedtest-cli` werden aber
+nur drei gemessen; `JITTER` wird als `"--"` geschrieben. Jetzt
+präzisiert: Download, Upload und Ping sowie Jitter, sofern verfügbar.
+
+**„Speicher-Temperatur" war zu eng und mehrdeutig.** Die
+Sensorbewertung erkennt neben `nvme` auch den Chip `drivetemp`, also
+SATA-SSDs und klassische Festplatten. Zudem stand der Begriff direkt
+neben „Arbeitsspeicher". Jetzt **„Datenträgertemperatur"**.
+
+Weiter ergänzt: die Einschränkung, dass `Alt`+`F2`, `r` unter Wayland
+nicht funktioniert (belegt in `/usr/share/cinnamon/js/ui/main.js:1616`,
+„Cinnamon restart not supported with Wayland") und dass nur X11 geprüft
+ist; die Sperrdatei und die beiden Berichtsunterordner in der
+Ablagetabelle; ein Absatz dazu, was Cinnamon beim Entfernen mit den
+Einstellungen macht (sie bleiben beim Entfernen aus dem Panel, da
+`max-instances` 1 ist, und werden beim vollständigen Entladen
+gelöscht). Die Formulierung „Auf jedem Hintergrund lesbar" wurde
+zurückgenommen – ein absolutes Versprechen, das die Kontrastmessungen
+aus AP20 nicht decken.
+
+Die englische Fassung wich an zwei Stellen inhaltlich ab: Sie kündigte
+„English **and German** translations" an, obwohl Deutsch bereits
+vorliegt, und beschrieb die Touchscreen-Bedienung unnatürlich. Beides
+an die deutsche Master-Fassung angeglichen. Geprüft wurde außerdem die
+Sprachvariante: durchgängig britisch (`colour`, `centre`; die drei
+„license"-Treffer sind das Verb, der Eigenname der GPL und der
+Dateiname).
+
+**Codeänderung: Zugriff auf einen fremden Einstellungsordner
+entfernt.** `speedtest.js` las bei fehlender eigener Wertedatei aus
+`~/.config/cinnamon/spices/avince-hwmonitor@angelo/speedtest-values` –
+dem Altstand der Baseline. Das war eine Übergangshilfe für die
+Entwicklungsmaschine; auf jedem anderen Rechner existiert das
+Verzeichnis nicht, und in den Einstellungsordner eines fremden Xlets zu
+greifen wäre für eine Einreichung bei Cinnamon Spices nicht angebracht.
+`leseWerte()` schrumpft damit von zwölf auf eine Zeile, `_alterPfad()`
+entfällt. Fehlt die eigene Datei, wird schlicht noch nichts angezeigt.
+
+Geprüft: Syntax, vier gemeinsame Module weiterhin bitgenau identisch,
+fünf `cjs`-Prüfungen für `leseWerte()` einschließlich des Falls, dass
+die Datei fehlt; Installationsbefehle gegen einen frischen Clone
+zweimal hintereinander ausgeführt; Abschnittsvergleich beider READMEs
+(13 Abschnitte, gleiche Reihenfolge, gleiche Zahl an Tabellen,
+Codeblöcken und Verweisen). Funktionstest durch den Nutzer: Nach einem
+Cinnamon-Neustart zeigten Applet und Desklet die gespeicherten
+Speedtest-Werte unverändert, keine Zeile sprang auf `--`.
+
+Version, Tag und Backup bleiben unberührt: Das Backup von 06:51 Uhr
+enthält den Code bereits, und die Änderung ist zu klein für ein eigenes
+Arbeitspaket (Vorgehen wie beim Nachtrag zu AP20).
+
 #### Offen geblieben
 
 - **Screenshots** für beide READMEs; der Nutzer liefert sie nach. Bis dahin sind die Bildverweise auskommentiert.
@@ -1386,6 +1463,21 @@ Speedtest-Auswertung.
 ### Fenster
 
 Festgelegt vom Nutzer am 18.09.2026: aVincePulse öffnet oder schließt Fenster nur nach einer Benutzeraktion und nur mit vorherigem Hinweis bzw. Rückfrage. Meldungen in der Bildschirmmitte (`StatusAnzeige`) sind davon ausgenommen. Die Regel gilt auch für künftige Funktionen, etwa den zeitgesteuerten Speedtest oder Benachrichtigungen.
+
+### Verzeichnisse kopieren: `cp -r` ist nicht wiederholbar
+
+Festgestellt am 21.09.2026 bei der Prüfung der Installationsanleitung.
+
+`cp -r quelle ziel` legt das Ziel an, wenn es fehlt – kopiert aber
+**in** das Ziel hinein, sobald es existiert. Ein zweiter Aufruf erzeugt
+deshalb `ziel/quelle/…`. Für Anleitungen, die auch als Update taugen
+sollen, ist der Befehl damit ungeeignet. Ebenso wenig entfernt er
+Dateien, die es in der neuen Fassung nicht mehr gibt.
+
+Richtig ist `rsync -a --delete quelle/ ziel/` mit abschließenden
+Schrägstrichen: Er kopiert den Inhalt, räumt Veraltetes weg und liefert
+bei jedem Aufruf dasselbe Ergebnis. `rsync` gehört auf Linux Mint zur
+Erstinstallation (nachprüfbar in `/var/log/installer/initial-status.gz`).
 
 ### Das Mausrad verstellt Auswahlfelder
 
@@ -1678,6 +1770,7 @@ Danach folgt die Abschlussprüfung vor der Einreichung bei Cinnamon Spices, eins
 Offene Punkte aus den letzten Paketen:
 
 - **Aus AP22:** Der Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` war am 20.09.2026 nicht abrufbar; `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt. Beides vor der Einreichung erneut bewerten.
+- **Erledigt am 21.09.2026:** Der Zugriff auf den Einstellungsordner des Altstands (`avince-hwmonitor@angelo`) ist aus `speedtest.js` entfernt; beide READMEs wurden gegen den Code geprüft und abgeglichen.
 - **Aus AP23:** Screenshots für beide READMEs fehlen noch; bei Ko-fi ist noch keine Zahlungsmethode verbunden; ein Changelog wurde bewusst nicht angelegt; die Zeile `Entwicklungsstand: 0.1.0-dev` im Kopf aller zehn Quelldateien ist veraltet und sollte gestrichen werden.
 - **Aus AP23, für die Abschlussprüfung:** Das Mausrad verstellt im Einstellungsfenster Auswahlfelder und Regler (Abschnitt 8). In aVincePulse nicht behebbar, da das Fenster Cinnamon gehört. Zu bewerten ist, ob sich die Zahl der Auswahlfelder verringern lässt oder ob ein Hinweis im README angebracht ist.
 

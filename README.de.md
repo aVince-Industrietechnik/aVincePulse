@@ -47,7 +47,7 @@ verschiebbar:
 | CPU-Temperatur | `CPU` | `/sys/class/hwmon` |
 | CPU-Auslastung | `LOAD` | `/proc/stat` |
 | Arbeitsspeicher | `RAM` | `/proc/meminfo` |
-| Speicher-Temperatur | `SSD` | `/sys/class/hwmon` |
+| Datenträgertemperatur | `SSD` | `/sys/class/hwmon` |
 | Freier Speicherplatz | `FREE ⛁` | gewähltes Laufwerk |
 | Lüfterdrehzahl | `FAN` | `/sys/class/hwmon` |
 | Akku-Ladezustand | `BATT` | `/sys/class/power_supply` |
@@ -85,7 +85,7 @@ Schwelle erreicht. Die Schwellen bestimmst du:
 | Wert | Warnung | Kritisch |
 |---|---|---|
 | CPU-Temperatur | 80 °C | 90 °C |
-| Speicher-Temperatur | 70 °C | 80 °C |
+| Datenträgertemperatur | 70 °C | 80 °C |
 | CPU-Auslastung | 85 % | 95 % |
 | Arbeitsspeicher | 85 % | 95 % |
 | Freier Speicherplatz | unter 10 % | unter 5 % |
@@ -95,9 +95,10 @@ Es gibt zwei Farbsätze — leuchtend für dunkle Hintergrundbilder,
 gedämpft für helle —, weil das Programm nicht wissen kann, was hinter
 seiner Anzeige liegt.
 
-**Auf jedem Hintergrund lesbar.** Die Lesbarkeit trägt ein kräftiger
-Schriftschatten; eine abgedunkelte Fläche hinter der Schrift lässt sich
-zusätzlich verstärken oder ganz abschalten.
+**Für helle und dunkle Hintergründe ausgelegt.** Für gute Lesbarkeit
+sorgt ein kräftiger Schriftschatten. Zusätzlich lässt sich eine
+abgedunkelte Fläche hinter der Schrift verstärken oder ganz
+abschalten.
 
 **Beide Teile laufen im Gleichtakt.** Der Messtakt richtet sich nach
 der Systemuhr. Bei gleichem Intervall messen Applet und Desklet im
@@ -131,10 +132,11 @@ verwendet. **Ist keines installiert, verschwindet die Speedtest-
 Schaltfläche einfach**, und alles andere läuft weiter — der Speedtest
 ist eine Zugabe, keine Voraussetzung.
 
-aVincePulse übernimmt von dem Programm, das gemessen hat, ausschließlich
-die vier Messwerte. Die IP-Adresse, die ungefähren Koordinaten und den
-Anbieter, die `speedtest-cli` mitliefert, speichert es nie — weder in
-den gespeicherten Werten noch in den bleibenden Berichten.
+aVincePulse übernimmt von dem verwendeten Programm ausschließlich die
+Messwerte für Download, Upload und Ping sowie – sofern verfügbar –
+Jitter. Die IP-Adresse, ungefähre Koordinaten und Anbieterinformationen
+werden nicht gespeichert, weder in den gespeicherten Werten noch in den
+bleibenden Berichten.
 
 ## Installation
 
@@ -144,14 +146,27 @@ Verzeichnisse von Hand kopiert:
 ```bash
 git clone https://github.com/aVince-Industrietechnik/aVincePulse.git
 cd aVincePulse
-mkdir -p ~/.local/share/cinnamon/applets ~/.local/share/cinnamon/desklets
-cp -r 02_QUELLCODE/Applet  ~/.local/share/cinnamon/applets/avincepulse-applet@avince
-cp -r 02_QUELLCODE/Desklet ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince
+mkdir -p ~/.local/share/cinnamon/applets/avincepulse-applet@avince
+mkdir -p ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince
+rsync -a --delete 02_QUELLCODE/Applet/  ~/.local/share/cinnamon/applets/avincepulse-applet@avince/
+rsync -a --delete 02_QUELLCODE/Desklet/ ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince/
 ```
+
+Dieselben Befehle gelten für ein Update: Ein `git pull` holt die neue
+Fassung, danach werden sie einfach erneut ausgeführt. `rsync` ersetzt
+geänderte Dateien und entfernt solche, die es nicht mehr gibt. Die
+abschließenden Schrägstriche sind wichtig — sie sorgen dafür, dass der
+*Inhalt* der Verzeichnisse kopiert wird und nicht die Verzeichnisse
+selbst. Deine Einstellungen, Berichte und Speedtest-Werte liegen
+außerhalb dieser Verzeichnisse und werden dabei nicht berührt.
 
 Danach Cinnamon neu starten (`Alt`+`F2`, dann `r`, dann Eingabetaste)
 und das Applet bzw. Desklet wie gewohnt über *Systemeinstellungen →
 Applets* oder *Desklets* hinzufügen.
+
+In einer Wayland-Sitzung ist dieser Neustart nicht möglich; dort
+stattdessen abmelden und neu anmelden. Geprüft ist aVincePulse
+ausschließlich unter X11.
 
 Du brauchst nur den Teil, den du wirklich willst — für das Applet
 genügt das Applet-Verzeichnis.
@@ -159,10 +174,17 @@ genügt das Applet-Verzeichnis.
 ### Wieder entfernen
 
 Applet oder Desklet über die Systemeinstellungen entfernen, dann das
-kopierte Verzeichnis löschen. aVincePulse legt außerdem einige Dateien
-unter `~/.local/share/avincepulse/` ab — das letzte Speedtest-Ergebnis
-und die geschriebenen Berichte. Wer nichts zurücklassen will, löscht
-dieses Verzeichnis; am übrigen System wird nichts verändert.
+kopierte Verzeichnis löschen.
+
+Die Einstellungen behandelt Cinnamon selbst: Wird nur das Applet aus
+dem Panel genommen, bleiben sie erhalten; wird das Xlet vollständig
+entfernt, löscht Cinnamon auch seine Einstellungsdatei.
+
+aVincePulse legt außerdem einige Dateien unter
+`~/.local/share/avincepulse/` ab — das letzte Speedtest-Ergebnis und
+die geschriebenen Berichte. Diese bleiben in jedem Fall liegen. Wer
+nichts zurücklassen will, löscht dieses Verzeichnis; am übrigen System
+wird nichts verändert.
 
 ## Wo etwas abgelegt wird
 
@@ -170,7 +192,11 @@ dieses Verzeichnis; am übrigen System wird nichts verändert.
 |---|---|
 | `~/.config/cinnamon/spices/<uuid>/` | deine Einstellungen, je Bestandteil eine Datei |
 | `~/.local/share/avincepulse/speedtest-values` | das jüngste Speedtest-Ergebnis |
-| `~/.local/share/avincepulse/berichte/` | Hardware- und Speedtest-Berichte, bleiben erhalten |
+| `~/.local/share/avincepulse/berichte/Hardware/` | Berichte der Hardwareerkennung |
+| `~/.local/share/avincepulse/berichte/Speedtest/` | Berichte der Speedtests |
+| `~/.local/share/avincepulse/speedtest.lock` | nur während eines laufenden Speedtests |
+
+Außerhalb dieser Pfade schreibt aVincePulse nichts.
 
 Berichte werden nie selbsttätig gelöscht. aVincePulse entfernt nichts,
 was du vielleicht noch lesen willst.

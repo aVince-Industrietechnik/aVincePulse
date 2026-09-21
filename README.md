@@ -10,12 +10,12 @@ test results — as a panel applet, as a desktop desklet, or both.
 
 > **Development version.** This is `0.1.0-dev.23`. It works and is used
 > daily on the reference machine, but it has so far only been tested on
-> that one computer, and the user interface is still German only.
-> English and German translations are the next step. Not yet submitted
-> to Cinnamon Spices.
+> that one computer. The user interface is currently available in
+> German only; an English translation is the next step. Not yet
+> submitted to Cinnamon Spices.
 
-<!-- SCREENSHOT-PLATZHALTER-1: Applet mit geoeffneter Hover-Anzeige -->
-<!-- Wird vor der Veroeffentlichung durch ein Bild ersetzt:          -->
+<!-- SCREENSHOT PLACEHOLDER 1: applet with the hover display open   -->
+<!-- To be replaced with an image before release:                    -->
 <!-- ![The applet with its hover display](docs/screenshot-applet.png) -->
 
 ## Two components, each on its own
@@ -25,7 +25,7 @@ aVincePulse comes as two separate pieces that follow one principle:
 
 | | |
 |---|---|
-| **Applet** | An icon in the Cinnamon panel. Hovering over it — or a click, on a touchscreen — opens a large, readable display of all values in the middle of the screen. |
+| **Applet** | An icon in the Cinnamon panel. Hovering over it with the mouse — or tapping it on a touchscreen — opens a large, easy-to-read display of all values in the centre of the screen. |
 | **Desklet** | A permanent display on the desktop. |
 
 Install one or both. Neither needs the other to work: each reads its
@@ -33,7 +33,7 @@ own sensors and each can run the speed test. What they do share is the
 last speed test result, so a test started in one is visible in the
 other.
 
-<!-- SCREENSHOT-PLATZHALTER-2: Desklet auf dem Schreibtisch -->
+<!-- SCREENSHOT PLACEHOLDER 2: desklet on the desktop -->
 <!-- ![The desklet on the desktop](docs/screenshot-desklet.png) -->
 
 ## What it measures
@@ -91,9 +91,9 @@ Two colour sets are available — bright for dark wallpapers, muted for
 light ones — because the program cannot know what is behind its
 display.
 
-**Readable on any background.** A strong text shadow carries the
-legibility; an optional dimmed panel behind the text can be turned up
-or off entirely.
+**Designed for light and dark backgrounds.** A strong text shadow
+improves legibility, and an optional dimmed panel behind the text can
+be strengthened or turned off entirely.
 
 **Both components tick together.** The measuring interval is aligned to
 the system clock, so with the same interval set, applet and desklet
@@ -127,10 +127,11 @@ neither is installed, the speed test button simply disappears** and
 everything else keeps working — the speed test is an extra, not a
 requirement.
 
-aVincePulse takes only the four measured numbers from whichever program
-ran. The IP address, approximate coordinates and provider name that
-`speedtest-cli` reports are never stored, neither in the saved values
-nor in the lasting reports.
+aVincePulse stores only the download, upload and ping values measured
+by the program it used, plus jitter where available. It never stores
+the IP address, approximate location or provider information the
+program reports, neither in the saved values nor in the lasting
+reports.
 
 ## Installation
 
@@ -140,14 +141,24 @@ directories into place:
 ```bash
 git clone https://github.com/aVince-Industrietechnik/aVincePulse.git
 cd aVincePulse
-mkdir -p ~/.local/share/cinnamon/applets ~/.local/share/cinnamon/desklets
-cp -r 02_QUELLCODE/Applet  ~/.local/share/cinnamon/applets/avincepulse-applet@avince
-cp -r 02_QUELLCODE/Desklet ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince
+mkdir -p ~/.local/share/cinnamon/applets/avincepulse-applet@avince
+mkdir -p ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince
+rsync -a --delete 02_QUELLCODE/Applet/  ~/.local/share/cinnamon/applets/avincepulse-applet@avince/
+rsync -a --delete 02_QUELLCODE/Desklet/ ~/.local/share/cinnamon/desklets/avincepulse-desklet@avince/
 ```
+
+The same commands serve as an update: run `git pull`, then run them
+again. `rsync` replaces changed files and removes any that no longer
+exist. The trailing slashes matter — they copy the *contents* of the
+directories rather than the directories themselves. Your settings,
+reports and speed test values live elsewhere and are left untouched.
 
 Then restart Cinnamon (`Alt`+`F2`, then `r`, then Enter) and add the
 applet or the desklet the usual way, through *System Settings →
 Applets* or *Desklets*.
+
+A Wayland session cannot restart Cinnamon this way; log out and back
+in instead. aVincePulse has only been tested under X11.
 
 You only need the part you actually want — the applet directory alone
 is enough for the applet.
@@ -155,10 +166,16 @@ is enough for the applet.
 ### Removing it
 
 Remove the applet or desklet through System Settings, then delete the
-directory you copied. aVincePulse also keeps a few files under
+directory you copied.
+
+Cinnamon handles the settings itself: taking the applet off the panel
+leaves them in place, while removing the xlet altogether deletes its
+settings file as well.
+
+aVincePulse also keeps a few files under
 `~/.local/share/avincepulse/` — the last speed test result and the
-reports it wrote. Delete that directory if you want nothing left
-behind; nothing else on your system is touched.
+reports it wrote. Those always remain. Delete that directory if you
+want nothing left behind; nothing else on your system is touched.
 
 ## Where it stores things
 
@@ -166,7 +183,11 @@ behind; nothing else on your system is touched.
 |---|---|
 | `~/.config/cinnamon/spices/<uuid>/` | your settings, one file per component |
 | `~/.local/share/avincepulse/speedtest-values` | the most recent speed test result |
-| `~/.local/share/avincepulse/berichte/` | hardware and speed test reports, kept |
+| `~/.local/share/avincepulse/berichte/Hardware/` | hardware detection reports |
+| `~/.local/share/avincepulse/berichte/Speedtest/` | speed test reports |
+| `~/.local/share/avincepulse/speedtest.lock` | only while a speed test is running |
+
+aVincePulse writes nothing outside these paths.
 
 Reports are never deleted automatically. aVincePulse does not remove
 anything you might want to read.
@@ -176,7 +197,7 @@ anything you might want to read.
 Both components are configured separately, through the normal Cinnamon
 settings window, and each has a button to restore every default.
 
-<!-- SCREENSHOT-PLATZHALTER-3: Einstellungsfenster -->
+<!-- SCREENSHOT PLACEHOLDER 3: settings window -->
 <!-- ![The settings window](docs/screenshot-settings.png) -->
 
 Among the settings: update interval, display size, font size and

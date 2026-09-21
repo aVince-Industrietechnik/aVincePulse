@@ -416,46 +416,24 @@ var SpeedtestRunner = class SpeedtestRunner {
     }
 
     /*
-     * Fruehere Ablage aus der Baseline-Version.
-     * Wird einmalig uebernommen, damit ein vorhandenes Ergebnis
-     * beim Wechsel nicht verloren geht.
-     */
-    _alterPfad() {
-        return GLib.build_filenamev([
-            GLib.get_home_dir(),
-            ".config",
-            "cinnamon",
-            "spices",
-            "avince-hwmonitor@angelo",
-            "speedtest-values"
-        ]);
-    }
-
-    /*
      * Liest die gespeicherten Werte.
      *
      * Rueckgabe: Objekt mit SPEED_DOWN, SPEED_UP, PING, JITTER und
      * optional TIMESTAMP, oder null wenn noch nie gemessen wurde.
      * Unbrauchbare Einzelwerte erscheinen als "--".
      *
-     * Die fruehere Ablage wird nur uebernommen, wenn die neue Datei
-     * fehlt. Bis AP19 geschah das auch bei einer beschaedigten neuen
-     * Datei, und zwar bei jedem Takt: veraltete Werte erschienen als
-     * aktuell und ueberschrieben die neue Datei (Befund G10). Die
-     * fruehere Ablage selbst bleibt unangetastet.
+     * Bis zum 21.09.2026 wurde hier zusaetzlich eine Ablage aus der
+     * Baseline-Version uebernommen, die im Einstellungsordner eines
+     * fremden Xlets lag. Das war eine Uebergangshilfe fuer die
+     * Entwicklungsmaschine und ist entfernt worden: Auf jedem anderen
+     * Rechner gibt es dieses Verzeichnis nicht, und in den
+     * Einstellungsordner eines fremden Xlets zu greifen waere fuer
+     * eine Veroeffentlichung ueber Cinnamon Spices auch nicht
+     * angebracht. Fehlt die eigene Datei, wird schlicht noch nichts
+     * angezeigt.
      */
     leseWerte() {
-        if (GLib.file_test(this.datenPfad(), GLib.FileTest.EXISTS))
-            return this._leseDatei(this.datenPfad());
-
-        const alt = this._leseDatei(this._alterPfad());
-
-        // Einmalige Uebernahme in die neue Ablage, nur mit
-        // vollstaendigen Werten.
-        if (alt && WERTE_SCHLUESSEL.every(k => alt[k] !== "--"))
-            this._schreibeWerte(alt);
-
-        return alt;
+        return this._leseDatei(this.datenPfad());
     }
 
     _leseDatei(pfad) {
