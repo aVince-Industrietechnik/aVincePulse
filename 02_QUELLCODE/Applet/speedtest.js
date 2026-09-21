@@ -26,6 +26,94 @@
  * Diese Datei ist in Applet und Desklet identisch.
  */
 
+/*
+ * Uebersetzung (AP24).
+ *
+ * Die gettext-Domaene ist die UUID und damit in Applet und Desklet
+ * verschieden. Dieses Modul muss aber in beiden bitgenau gleich
+ * bleiben, also darf die UUID hier nicht stehen. Die Komponente
+ * uebergibt deshalb ihre Uebersetzungsfunktion - dasselbe Muster wie
+ * beim HardwareDetector seit AP08.
+ *
+ * Ohne gesetzten Uebersetzer bleibt der englische Ausgangstext
+ * stehen. Das ist der richtige Rueckfall: lieber Englisch als leer.
+ */
+var uebersetzeMit = (text) => text;
+
+function setzeUebersetzung(fn) {
+    if (typeof fn === "function")
+        uebersetzeMit = fn;
+}
+
+function _(text) {
+    return uebersetzeMit(text);
+}
+
+/*
+ * Fuellt %s in einer uebersetzten Vorlage (AP24).
+ *
+ * Meldungen werden als ganzer Satz uebersetzt, nicht in Stuecken:
+ * "automatisch - %s nicht gefunden" statt "automatisch - " + name +
+ * " nicht gefunden". Nur so kann eine andere Sprache die Wortstellung
+ * aendern. Geschrieben wird stets fuelle(_("..."), wert), damit
+ * xgettext die Vorlage findet.
+ */
+function fuelle(vorlage, ...werte) {
+    let i = 0;
+    return String(vorlage).replace(/%s/g, () => {
+        const w = werte[i++];
+        return (w === undefined || w === null) ? "" : String(w);
+    });
+}
+
+/*
+ * Tabellenhilfen fuer die Berichte (AP24).
+ *
+ * Bis zur Uebersetzung standen Trennlinien und Spaltenbreiten fest
+ * im Code - "----------------------" unter einer Ueberschrift mit
+ * 22 Zeichen, padEnd(16) fuer eine Spalte. Sobald ein Text uebersetzt
+ * wird, aendert sich seine Laenge und die Formatierung verrutscht.
+ * Beides wird deshalb aus dem Inhalt berechnet.
+ */
+function unterstreiche(text) {
+    return "-".repeat(String(text).length);
+}
+
+/*
+ * Formatiert eine Tabelle: erste Zeile Ueberschriften, danach die
+ * Daten. Jede Spalte wird so breit wie ihr laengster Eintrag.
+ * "rechts" nennt die Spaltennummern, die rechtsbuendig stehen.
+ */
+function tabelle(zeilen, rechts = []) {
+    if (!zeilen.length)
+        return [];
+
+    const spalten = zeilen[0].length;
+    const breite = [];
+
+    for (let i = 0; i < spalten; i++) {
+        breite.push(Math.max(...zeilen.map(z => String(z[i] ?? "").length)));
+    }
+
+    const formatiere = (z) => z.map((wert, i) => {
+        const t = String(wert ?? "");
+        // Die letzte Spalte nicht auffuellen, das gaebe Leerzeichen
+        // am Zeilenende.
+        if (i === spalten - 1)
+            return rechts.includes(i) ? t.padStart(breite[i]) : t;
+        return (rechts.includes(i) ? t.padStart(breite[i]) : t.padEnd(breite[i])) + "  ";
+    }).join("");
+
+    const ausgabe = [formatiere(zeilen[0])];
+    ausgabe.push(formatiere(zeilen[0].map(w => "-".repeat(String(w).length))));
+
+    for (const z of zeilen.slice(1))
+        ausgabe.push(formatiere(z));
+
+    return ausgabe;
+}
+
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const St = imports.gi.St;
@@ -91,13 +179,13 @@ const PROGRAMME = [
             const daten = Array.isArray(ausgabe) ? ausgabe[0] : ausgabe;
 
             if (!daten)
-                throw new Error("Die Messdaten sind unvollständig.");
+                throw new Error(_("The measurements are incomplete."));
 
             return {
-                SPEED_DOWN: zahlOderFehler(daten.download, "Download"),
-                SPEED_UP: zahlOderFehler(daten.upload, "Upload"),
-                PING: zahlOderFehler(daten.ping, "Ping"),
-                JITTER: zahlOderFehler(daten.jitter, "Jitter")
+                SPEED_DOWN: zahlOderFehler(daten.download, _("download")),
+                SPEED_UP: zahlOderFehler(daten.upload, _("upload")),
+                PING: zahlOderFehler(daten.ping, _("ping")),
+                JITTER: zahlOderFehler(daten.jitter, _("jitter"))
             };
         }
     },
@@ -110,9 +198,8 @@ const PROGRAMME = [
             "/usr/local/bin/speedtest-cli"
         ],
         jitter: false,
-        hinweis:
-            "speedtest-cli liefert keinen Jitter-Wert und misst bei " +
-            "schnellen Anschlüssen ungenauer.",
+        hinweis: _("speedtest-cli does not report jitter and is less " +
+                   "accurate on fast connections."),
 
         /*
          * --secure erzwingt HTTPS; ohne diese Option spricht
@@ -139,15 +226,15 @@ const PROGRAMME = [
             const daten = JSON.parse(stdout);
 
             if (!daten || Array.isArray(daten))
-                throw new Error("Die Messdaten sind unvollständig.");
+                throw new Error(_("The measurements are incomplete."));
 
             const bitProSekunde = (wert, was) =>
                 (Number(zahlOderFehler(wert, was)) / 1000000).toFixed(2);
 
             return {
-                SPEED_DOWN: bitProSekunde(daten.download, "Download"),
-                SPEED_UP: bitProSekunde(daten.upload, "Upload"),
-                PING: zahlOderFehler(daten.ping, "Ping"),
+                SPEED_DOWN: bitProSekunde(daten.download, _("download")),
+                SPEED_UP: bitProSekunde(daten.upload, _("upload")),
+                PING: zahlOderFehler(daten.ping, _("ping")),
 
                 // Kein Messwert, kein Fehler: Die Zeile bleibt
                 // sichtbar und zeigt "--" (AP22, Kriterium 5).
@@ -176,9 +263,9 @@ function zahlOderFehler(wert, bezeichnung) {
     const zahl = brauchbar ? Number(wert) : NaN;
 
     if (!Number.isFinite(zahl) || zahl < 0) {
-        throw new Error(
-            "Der Messwert " + bezeichnung + " fehlt oder ist unbrauchbar."
-        );
+        throw new Error(fuelle(
+            _("The %s value is missing or unusable."), bezeichnung
+        ));
     }
 
     return zahl.toFixed(2);
@@ -200,11 +287,10 @@ const PROGRAMM_AUTOMATISCH = "auto";
  * Die Konstante liegt hier, damit Meldung und Hinweis im
  * Einstellungsfenster in beiden Komponenten gleich lauten.
  */
-var KEIN_PROGRAMM_MELDUNG =
-    "Für den Internet-Speedtest wird eines der Programme " +
-    "librespeed-cli oder speedtest-cli benötigt. Auf diesem " +
-    "Rechner wurde keines davon gefunden.\n\n" +
-    "Alle übrigen Messwerte sind davon nicht betroffen.";
+var KEIN_PROGRAMM_MELDUNG = () => _(
+    "The internet speed test needs either librespeed-cli or " +
+    "speedtest-cli. Neither was found on this machine.\n\n" +
+    "Every other value is unaffected.");
 
 // Messwerte der Ablage; jeder muss als Zahl vorliegen.
 const WERTE_SCHLUESSEL = ["SPEED_DOWN", "SPEED_UP", "PING", "JITTER"];
@@ -365,11 +451,11 @@ var SpeedtestRunner = class SpeedtestRunner {
         const vorhanden = this.verfuegbareProgramme();
 
         if (vorhanden.length === 0) {
-            optionen["Kein Speedtest-Programm gefunden"] = PROGRAMM_AUTOMATISCH;
+            optionen[_("No speed test program found")] = PROGRAMM_AUTOMATISCH;
             return optionen;
         }
 
-        optionen["Automatisch (" + vorhanden[0].def.anzeige + ")"] =
+        optionen[fuelle(_("Automatic (%s)"), vorhanden[0].def.anzeige)] =
             PROGRAMM_AUTOMATISCH;
 
         for (const eintrag of vorhanden)
@@ -381,8 +467,8 @@ var SpeedtestRunner = class SpeedtestRunner {
             if (!da) {
                 const def = PROGRAMME.find(d => d.id === gewaehlt);
 
-                optionen["Nicht gefunden: " + (def ? def.anzeige : gewaehlt)] =
-                    gewaehlt;
+                optionen[fuelle(_("Not found: %s"),
+                                def ? def.anzeige : gewaehlt)] = gewaehlt;
             }
         }
 
@@ -511,26 +597,31 @@ var SpeedtestRunner = class SpeedtestRunner {
 
             const zeitpunkt = werte.TIMESTAMP
                 ? new Date(Number(werte.TIMESTAMP) * 1000).toLocaleString()
-                : "unbekannt";
+                : _("unknown");
 
             /*
              * Die Datei wird maschinell gelesen. Der erklaerende Kopf
              * steht deshalb in Kommentarzeilen, die beim Einlesen
              * uebersprungen werden.
              */
+            const kopf = [
+                _("aVincePulse - last internet speed test"),
+                "",
+                fuelle(_("Measured on : %s"), zeitpunkt),
+                fuelle(_("Measured by : %s"), werte.QUELLE || _("unknown")),
+                fuelle(_("Program     : %s"), werte.PROGRAMM || _("unknown")),
+                "",
+                _("SPEED_DOWN and SPEED_UP in MBit/s, PING and JITTER in ms."),
+                _("TIMESTAMP is the time of measurement in seconds since 1970."),
+                "",
+                _("This file is written by aVincePulse."),
+                _("Changes made by hand are overwritten by the next test.")
+            ];
+
             const text =
-                "# aVincePulse - Letzter Internet-Speedtest\n" +
-                "# =========================================\n" +
-                "#\n" +
-                "# Gemessen am : " + zeitpunkt + "\n" +
-                "# Gemessen von: " + (werte.QUELLE || "unbekannt") + "\n" +
-                "# Programm    : " + (werte.PROGRAMM || "unbekannt") + "\n" +
-                "#\n" +
-                "# SPEED_DOWN und SPEED_UP in MBit/s, PING und JITTER in ms.\n" +
-                "# TIMESTAMP ist der Messzeitpunkt in Sekunden seit 1970.\n" +
-                "#\n" +
-                "# Diese Datei wird von aVincePulse geschrieben.\n" +
-                "# Änderungen von Hand werden beim nächsten Test überschrieben.\n" +
+                "# " + kopf[0] + "\n" +
+                "# " + "=".repeat(kopf[0].length) + "\n" +
+                kopf.slice(1).map(z => z ? "# " + z + "\n" : "#\n").join("") +
                 "\n" +
                 "SPEED_DOWN=" + werte.SPEED_DOWN + "\n" +
                 "SPEED_UP=" + werte.SPEED_UP + "\n" +
@@ -582,7 +673,7 @@ var SpeedtestRunner = class SpeedtestRunner {
                 zwei(jetzt.getMinutes()) + "-" +
                 zwei(jetzt.getSeconds());
 
-            const quelle = this._quelle || "unbekannt";
+            const quelle = this._quelle || _("unknown");
 
             const kuerzel =
                 quelle.toLowerCase().indexOf("applet") >= 0
@@ -608,11 +699,12 @@ var SpeedtestRunner = class SpeedtestRunner {
 
             const programmZeile = def
                 ? def.anzeige + "  (" + info.pfad + ")"
-                : (this.findeProgramm() || "unbekannt");
+                : (this.findeProgramm() || _("unknown"));
 
             const herkunft = info
-                ? (info.automatisch ? "automatisch gewählt" : "manuell gewählt")
-                : "unbekannt";
+                ? (info.automatisch ? _("selected automatically")
+                                    : _("selected manually"))
+                : _("unknown");
 
             /*
              * Ein nicht gemessener Wert bekommt keine Einheit.
@@ -620,31 +712,48 @@ var SpeedtestRunner = class SpeedtestRunner {
              * (beim Funktionstest am 20.09.2026 aufgefallen).
              */
             const mitEinheit = (wert, einheit) =>
-                (wert === "--") ? "nicht gemessen" : (wert + " " + einheit);
+                (wert === "--") ? _("not measured") : (wert + " " + einheit);
+
+            const titel = _("aVincePulse - internet speed test");
+
+            const kopfZeilen = [
+                [_("Measured on"), jetzt.toLocaleString()],
+                [_("Measured by"), quelle],
+                [_("Program"), programmZeile],
+                [_("Program choice"), herkunft]
+            ];
+
+            const kb = Math.max(...kopfZeilen.map(z => z[0].length));
+
+            const ergebnisZeilen = [
+                [_("Download"), mitEinheit(werte.SPEED_DOWN, "MBit/s")],
+                [_("Upload"), mitEinheit(werte.SPEED_UP, "MBit/s")],
+                [_("Ping"), mitEinheit(werte.PING, "ms")],
+                [_("Jitter"), mitEinheit(werte.JITTER, "ms")]
+            ];
+
+            const eb = Math.max(...ergebnisZeilen.map(z => z[0].length));
+            const ueberschrift = _("Result");
 
             let text =
-                "aVincePulse - Internet-Speedtest\n" +
-                "================================\n" +
+                titel + "\n" +
+                "=".repeat(titel.length) + "\n" +
                 "\n" +
-                "Gemessen am  : " + jetzt.toLocaleString() + "\n" +
-                "Gemessen von : " + quelle + "\n" +
-                "Programm     : " + programmZeile + "\n" +
-                "Programmwahl : " + herkunft + "\n" +
+                kopfZeilen.map(z => z[0].padEnd(kb) + " : " + z[1] + "\n").join("") +
                 "\n" +
-                "Ergebnis\n" +
-                "--------\n" +
-                "Download : " + mitEinheit(werte.SPEED_DOWN, "MBit/s") + "\n" +
-                "Upload   : " + mitEinheit(werte.SPEED_UP, "MBit/s") + "\n" +
-                "Ping     : " + mitEinheit(werte.PING, "ms") + "\n" +
-                "Jitter   : " + mitEinheit(werte.JITTER, "ms") + "\n";
+                ueberschrift + "\n" +
+                "-".repeat(ueberschrift.length) + "\n" +
+                ergebnisZeilen.map(z => z[0].padEnd(eb) + " : " + z[1] + "\n").join("");
 
             // Einschraenkungen des Programms, etwa der fehlende
             // Jitter-Wert von speedtest-cli.
             if (def && def.hinweis) {
+                const hu = _("Note on the program");
+
                 text +=
                     "\n" +
-                    "Hinweis zum Programm\n" +
-                    "--------------------\n" +
+                    hu + "\n" +
+                    "-".repeat(hu.length) + "\n" +
                     def.hinweis + "\n";
             }
 
@@ -723,7 +832,7 @@ var SpeedtestRunner = class SpeedtestRunner {
         if (this._laeuft) {
             rueckmeldung({
                 erfolg: false,
-                meldung: "Es läuft bereits ein Speedtest."
+                meldung: _("A speed test is already running.")
             });
             return;
         }
@@ -744,7 +853,7 @@ var SpeedtestRunner = class SpeedtestRunner {
         if (!info) {
             rueckmeldung({
                 erfolg: false,
-                meldung: KEIN_PROGRAMM_MELDUNG
+                meldung: KEIN_PROGRAMM_MELDUNG()
             });
             return;
         }
@@ -756,10 +865,11 @@ var SpeedtestRunner = class SpeedtestRunner {
         if (fremd) {
             rueckmeldung({
                 erfolg: false,
-                meldung:
-                    "Es läuft bereits ein Internet-Speedtest " +
-                    "(gestartet vom " + fremd + ").\n\n" +
-                    "Das Ergebnis erscheint in beiden Komponenten."
+                meldung: fuelle(
+                    _("An internet speed test is already running, " +
+                      "started by the %s.\n\n" +
+                      "The result appears in both components."),
+                    fremd)
             });
             return;
         }
@@ -814,15 +924,15 @@ var SpeedtestRunner = class SpeedtestRunner {
                         p.communicate_utf8_finish(ergebnis);
 
                     if (this._zeitUeberschritten) {
-                        throw new Error(
-                            "Speedtest nach " + ZEITGRENZE_SEKUNDEN +
-                            " s abgebrochen"
-                        );
+                        throw new Error(fuelle(
+                            _("speed test cancelled after %s s"),
+                            ZEITGRENZE_SEKUNDEN
+                        ));
                     }
 
                     if (!p.get_successful()) {
                         throw new Error(
-                            stderr || "Der Speedtest wurde nicht erfolgreich beendet."
+                            stderr || _("The speed test did not finish successfully.")
                         );
                     }
 
@@ -847,12 +957,12 @@ var SpeedtestRunner = class SpeedtestRunner {
                         PING: gemessen.PING,
                         JITTER: gemessen.JITTER,
                         TIMESTAMP: String(Math.floor(Date.now() / 1000)),
-                        QUELLE: this._quelle || "unbekannt",
+                        QUELLE: this._quelle || _("unknown"),
                         PROGRAMM: info.def.id
                     };
 
                     if (!this._schreibeWerte(werte))
-                        throw new Error("Das Ergebnis konnte nicht gespeichert werden.");
+                        throw new Error(_("The result could not be saved."));
 
                     // Zusaetzlich zur Wertedatei, die stets den
                     // aktuellen Stand enthaelt, einen bleibenden
@@ -871,10 +981,12 @@ var SpeedtestRunner = class SpeedtestRunner {
                     antwort = {
                         erfolg: false,
                         meldung: this._zeitUeberschritten
-                            ? "Der Internet-Speedtest wurde nach " +
-                              ZEITGRENZE_SEKUNDEN + " Sekunden abgebrochen, " +
-                              "da er nicht beendet wurde."
-                            : "Der Speedtest ist fehlgeschlagen."
+                            ? fuelle(
+                                _("The internet speed test was cancelled " +
+                                  "after %s seconds because it did not " +
+                                  "finish."),
+                                ZEITGRENZE_SEKUNDEN)
+                            : _("The speed test failed.")
                     };
                 }
 
@@ -899,7 +1011,7 @@ var SpeedtestRunner = class SpeedtestRunner {
 
             rueckmeldung({
                 erfolg: false,
-                meldung: "Der Speedtest konnte nicht gestartet werden."
+                meldung: _("The speed test could not be started.")
             });
         }
     }
@@ -984,7 +1096,7 @@ var SpeedtestRunner = class SpeedtestRunner {
         if (!Number.isFinite(alter) || alter < 0 || alter > SPERRE_VERFALL_SEKUNDEN)
             return null;
 
-        return quelle || "unbekannt";
+        return quelle || _("unknown");
     }
 };
 

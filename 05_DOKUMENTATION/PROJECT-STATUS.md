@@ -1,12 +1,12 @@
 # aVincePulse – Projektstatus und Übergabedokument
 
-Stand: 21.09.2026 (AP23 abgeschlossen)  
+Stand: 21.09.2026 (AP24 abgeschlossen)  
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP23-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP22-END`  
-Versionsnummer in `metadata.json`: `0.1.0-dev.23` (Regel aus Abschnitt 9, Schritt 0)  
+Aktueller Referenzstand: `0.1.0-dev_AP24-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP23-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.24` (Regel aus Abschnitt 9, Schritt 0)  
 Lizenz: GPL-3.0 (seit AP23, Datei `LICENSE` im Wurzelverzeichnis)
 
 ## 1. Zweck dieses Dokuments
@@ -98,6 +98,7 @@ Tags:
 - `0.1.0-dev_AP21-END` – Entwicklungsstand nach Abschluss von AP21
 - `0.1.0-dev_AP22-END` – Entwicklungsstand nach Abschluss von AP22
 - `0.1.0-dev_AP23-END` – Entwicklungsstand nach Abschluss von AP23
+- `0.1.0-dev_AP24-END` – Entwicklungsstand nach Abschluss von AP24
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1382,6 +1383,79 @@ Arbeitspaket (Vorgehen wie beim Nachtrag zu AP20).
 - **Changelog** bewusst nicht angelegt; die GitHub-Releases erfüllen den Zweck vorläufig.
 - **`Entwicklungsstand: 0.1.0-dev`** steht unverändert im Kopf aller zehn Quelldateien und ist seit AP01 nicht mitgezogen worden. Die richtige Version steht in `metadata.json`. Vorschlag für ein späteres Paket: die Zeile ersatzlos streichen, statt sie bei jedem Arbeitspaket an zehn Stellen nachzuziehen.
 
+### AP24 – Übersetzung Deutsch/Englisch
+
+Abgeschlossen.
+
+Dateien: beide `settings-schema.json`, beide `metadata.json`, `applet.js`, `desklet.js`, alle vier gemeinsamen Module; neu `02_QUELLCODE/Applet/po/` und `02_QUELLCODE/Desklet/po/` mit je `<uuid>.pot` und `de.po`.
+
+Ziel und Akzeptanzkriterien stehen in Abschnitt 14.
+
+#### Umfang
+
+**442 Textstellen** wurden auf Englisch umgestellt: 191 in Schemata und Metadaten, 251 im Quellcode. Die Schätzung vorab lag bei 310 und war zu niedrig – das erste Suchmuster hatte nur Zeichenketten mit deutschen Merkmalen erfasst und einzelne Wörter wie „verbunden", „getrennt" oder „automatisch" übersehen.
+
+#### Gerüst
+
+Applet und Desklet binden gettext mit der UUID als Domäne. Die vier gemeinsamen Module kennen die UUID nicht und dürfen sie nicht kennen, da sie bitgenau identisch bleiben müssen; sie bekommen die Übersetzungsfunktion deshalb übergeben – dasselbe Muster wie beim HardwareDetector seit AP08. Ohne gesetzten Übersetzer bleibt der englische Ausgangstext stehen.
+
+`fuelle(_("… %s …"), wert)` ersetzt die früheren Verkettungen. Meldungen werden als ganzer Satz übersetzt, nicht in Stücken – nur so kann eine andere Sprache die Wortstellung ändern. Geschrieben wird stets `_()` direkt, damit xgettext die Vorlage findet.
+
+#### Berichte
+
+Trennlinien und Spaltenbreiten standen fest im Code – 22 Striche unter einer Überschrift mit 22 Zeichen, `padEnd(16)` für eine Spalte. Sobald ein Text übersetzt wird, ändert sich seine Länge und die Formatierung verrutscht. Beides wird jetzt aus dem Inhalt berechnet (`unterstreiche()` und `tabelle()` in den drei Berichtsmodulen). Entscheidung des Nutzers vom 21.09.2026: Berichte werden mitübersetzt, mit sauberer Formatierung.
+
+#### Nicht übersetzbar: die Listenspalten
+
+**Cinnamon kann die Beschriftungen in den Spalten einer Liste nicht übersetzen.** Betroffen sind 21 Texte je Komponente: die 15 Messwertnamen der Messwertliste („CPU temperature (default: CPU)") und die 6 Namen der Warnschwellenliste.
+
+Beide denkbaren Wege wurden geprüft und scheitern:
+
+- **`setOptions()`** setzt `settingsData[key].options`, also die Optionen des Schlüssels selbst. Eine Liste hat dort keine, nur in ihren Spalten; der Aufruf liefe in `options_not_supported_error`.
+- **Über die `.pot`** geht es nicht, weil `xlet-settings.py` bei Spalten ausschließlich `column["title"]` durch `translate()` schickt. In `TreeListWidgets.py`, das die Listen zeichnet, kommt `translate` kein einziges Mal vor. `cinnamon-xlet-makepot` erfasst die Texte folgerichtig gar nicht erst: Die Rekursion in die Spalten scheitert an einem `AttributeError`, weil Spalten eine Liste und kein Objekt sind, und wird stillschweigend abgefangen.
+
+Praktisch belegt: `dgettext("Drive temperature  (default: SSD)")` kommt unübersetzt zurück, weil der Text nicht in der `.mo` steht.
+
+Die Namen bleiben deshalb englisch. Das betrifft jedes Spice mit Listen, nicht nur aVincePulse. Vom Nutzer am 21.09.2026 geprüft und als hinnehmbar bezeichnet.
+
+#### Cinnamon übersetzt bekannte Begriffe selbst
+
+Findet `translate()` im Katalog des Xlets nichts, greift es am Ende auf Cinnamons eigenen Katalog zurück (`return _(string)`). Begriffe, die Cinnamon selbst kennt – *Appearance*, *Panel*, *Hardware*, *Font size*, *seconds* – erscheinen dadurch in der Systemsprache, auch ohne eigene Übersetzung. Das ist derselbe Effekt wie der Nebenbefund aus AP12, wo aus `Hardware` von allein `Geräte` wurde.
+
+Im Betrieb ist das erwünscht: Diese Begriffe lauten dann wie überall sonst in Cinnamon. Es bedeutet aber, dass ein Test über `cinnamon-xlet-makepot -r` kein reines Englisch zeigt, solange die Systemsprache Deutsch ist.
+
+#### Zwei Fehler, die die Übersetzung erzeugt hätte
+
+- **Ein Filter hing am deutschen Wortlaut.** `_auswahlKennzeichen()` filterte mit `text.startsWith("Nicht ")`. Nach der Übersetzung hätte das nicht mehr gegriffen, und ein „Not found"-Eintrag wäre ins Änderungskennzeichen eingegangen – mit der Folge grundloser Rückfragen „Fenster neu öffnen?". Erkannt wird er jetzt daran, dass die Beschriftung genau der übersetzten Vorlage mit diesem Wert entspricht. Das funktioniert auch in Sprachen, die den Platzhalter voranstellen.
+- **„Speicher-Temperatur" war im Schema stehen geblieben.** Der Nachtrag zu AP23 hatte den Begriff nur in den READMEs zu „Datenträgertemperatur" geändert. Beim Erzeugen der `de.po` fiel auf, dass die Rückübersetzung wieder den alten Begriff ergab; jetzt einheitlich.
+
+#### Vom Funktionstest des Nutzers gefunden
+
+Der Menüeintrag „Internet-Speedtest starten" stand ohne `_()` im Code – in beiden Komponenten. Das erste Suchmuster hatte ihn übersehen, weil der Text keinen Umlaut enthält. Beim gründlichen Nachsuchen kamen vier weitere Stellen zutage: die Meldung „Die Hardwareerkennung ist fehlgeschlagen.", `NOT FOUND`, `NOT FOUND (system without battery)` und `unlabeled` im Hardwarebericht.
+
+**Lehre:** Nach einer Umstellung nicht nach deutschen Merkmalen suchen, sondern nach allen Zeichenketten, die **außerhalb** eines `_()`-Aufrufs stehen. Protokollzeilen (`global.log`) sind dabei auszunehmen, sie bleiben unübersetzt.
+
+#### Prüfung
+
+Syntax mit `cjs`, Namensprüfung, Prüfsummen der vier gemeinsamen Module, Schemata und Metadaten als JSON, beide `de.po` mit `msgfmt -c`.
+
+| Prüfung | Applet | Desklet |
+|---|---|---|
+| Einträge in der `.pot` | 179 | 170 |
+| davon übersetzt | 100 % | 100 % |
+| leere oder `fuzzy` Einträge | 0 | 0 |
+| Platzhalter `%s` stimmen überein | ja | ja |
+| `_()`-Aufrufe im Code, alle in der `.pot` | 109 | 107 |
+| Schema-Texte, alle in der `.pot` | 69 | 62 |
+
+Die gespeicherten Einstellungen haben die Umstellung unverändert überstanden: In den Listen stehen Messwert-IDs, keine Beschriftungen. Alle 16 bzw. 15 Werte waren nach dem Neustart identisch mit der Sicherung.
+
+Funktionstest durch den Nutzer am 21.09.2026 in beiden Komponenten, umgeschaltet über `cinnamon-xlet-makepot -i` und `-r` ohne Eingriff in die Systemsprache.
+
+#### Nicht enthalten
+
+Weitere Sprachen außer Deutsch und Englisch (Entscheidung des Nutzers vom 21.09.2026). Die `.pot` ist die Einladung an Muttersprachler; Cinnamon Spices hat dafür ein eigenes Verfahren.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1463,6 +1537,42 @@ Speedtest-Auswertung.
 ### Fenster
 
 Festgelegt vom Nutzer am 18.09.2026: aVincePulse öffnet oder schließt Fenster nur nach einer Benutzeraktion und nur mit vorherigem Hinweis bzw. Rückfrage. Meldungen in der Bildschirmmitte (`StatusAnzeige`) sind davon ausgenommen. Die Regel gilt auch für künftige Funktionen, etwa den zeitgesteuerten Speedtest oder Benachrichtigungen.
+
+### Übersetzung: worauf zu achten ist
+
+Aus AP24, verbindlich für jeden neuen sichtbaren Text:
+
+- **Jeder sichtbare Text läuft über `_()`.** Protokollzeilen (`global.log`)
+  und Code-Kommentare bleiben unübersetzt.
+- **Ganze Sätze übersetzen, keine Fragmente.** `fuelle(_("… %s …"), wert)`
+  statt Verkettung mit `+`. Eine andere Sprache muss die Wortstellung
+  ändern können.
+- **Kein Vergleich auf sichtbaren Text.** Ein `startsWith("Nicht ")`
+  bricht, sobald übersetzt wird. Wo eine Beschriftung wiedererkannt
+  werden muss, gegen die gefüllte Vorlage vergleichen.
+- **Keine festen Trennlinien und Spaltenbreiten** in Berichten. Beides
+  aus dem Inhalt berechnen, sonst verrutscht die Formatierung mit
+  jeder Sprache.
+- **Nach einer Umstellung nach Zeichenketten außerhalb von `_()`
+  suchen**, nicht nach deutschen Merkmalen. Ein Text ohne Umlaut wird
+  sonst übersehen – so geschehen mit dem Menüeintrag.
+- **Cinnamon kann Beschriftungen in Listenspalten nicht übersetzen**
+  (`options` innerhalb von `columns`). Weder `setOptions()` noch die
+  `.pot` helfen. Neue Listen dieser Art sollten das berücksichtigen.
+- **Cinnamon übersetzt bekannte Begriffe selbst**, wenn das Xlet keine
+  eigene Übersetzung dafür hat (`translate()` fällt auf `_(string)`
+  zurück). *Appearance*, *Panel*, *Hardware* und Ähnliches erscheinen
+  deshalb auch ohne eigenen Eintrag in der Systemsprache.
+
+Die Übersetzung erproben, ohne die Systemsprache umzustellen:
+
+```bash
+cinnamon-xlet-makepot -i <uuid>/     # Übersetzung installieren
+cinnamon-xlet-makepot -r <uuid>/     # wieder entfernen
+```
+
+Danach jeweils Cinnamon neu starten. Werkzeug: `cinnamon-xlet-makepot`
+braucht das Paket `python3-polib`.
 
 ### Verzeichnisse kopieren: `cp -r` ist nicht wiederholbar
 
@@ -1759,24 +1869,62 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP23 sind abgeschlossen.
+AP01 bis AP24 sind abgeschlossen. **Alle Arbeitspakete vor der Veröffentlichung sind damit erledigt.**
 
-**Als Nächstes** steht laut `ROADMAP_V2.md`, Abschnitt 24, noch ein Paket vor der Veröffentlichung an:
+**Als Nächstes** steht die **Abschlussprüfung vor der Einreichung** bei Cinnamon Spices an (`ROADMAP_V2.md`, Abschnitt 24). Umfang wie AP19, zusätzlich Installation und Deinstallation, Prüfung gegen die dann gültigen Spices-Vorgaben sowie Tests des Nutzers auf weiteren Geräten.
 
-- **Übersetzung Deutsch/Englisch** über gettext (`cinnamon-xlet-makepot`), mit englischen Ausgangstexten und einem `po/`-Verzeichnis je Bestandteil. Betroffen sind alle sichtbaren Texte in Applet, Desklet, beiden Schemata und den Meldungen – derzeit durchgängig Deutsch.
-
-Danach folgt die Abschlussprüfung vor der Einreichung bei Cinnamon Spices, einschließlich der komponentenweisen `info.json`, `README.md` und `screenshot.png` im Einreichungspaket.
+Danach folgt das **Einreichungspaket**: zwei Pull Requests auf `cinnamon-spices-applets` und `cinnamon-spices-desklets`, je Komponente mit `info.json`, `screenshot.png`, `README.md` und der Struktur `UUID/files/UUID/…`.
 
 Offene Punkte aus den letzten Paketen:
 
-- **Aus AP22:** Der Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` war am 20.09.2026 nicht abrufbar; `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt. Beides vor der Einreichung erneut bewerten.
-- **Erledigt am 21.09.2026:** Der Zugriff auf den Einstellungsordner des Altstands (`avince-hwmonitor@angelo`) ist aus `speedtest.js` entfernt; beide READMEs wurden gegen den Code geprüft und abgeglichen.
-- **Aus AP23:** Screenshots für beide READMEs fehlen noch; bei Ko-fi ist noch keine Zahlungsmethode verbunden; ein Changelog wurde bewusst nicht angelegt; die Zeile `Entwicklungsstand: 0.1.0-dev` im Kopf aller zehn Quelldateien ist veraltet und sollte gestrichen werden.
-- **Aus AP23, für die Abschlussprüfung:** Das Mausrad verstellt im Einstellungsfenster Auswahlfelder und Regler (Abschnitt 8). In aVincePulse nicht behebbar, da das Fenster Cinnamon gehört. Zu bewerten ist, ob sich die Zahl der Auswahlfelder verringern lässt oder ob ein Hinweis im README angebracht ist.
+- **Aus AP22:** Der Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` war am 20.09.2026 nicht abrufbar; `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt.
+- **Aus AP23:** Screenshots für beide READMEs fehlen; bei Ko-fi ist noch keine Zahlungsmethode verbunden; kein Changelog; die Zeile `Entwicklungsstand: 0.1.0-dev` in allen zehn Dateiköpfen ist veraltet.
+- **Aus AP23/AP24:** Das Mausrad verstellt im Einstellungsfenster Auswahlfelder (Abschnitt 8). Zu bewerten, ob sich die Zahl der Auswahlfelder verringern lässt.
+- **Aus AP24:** Die 21 Beschriftungen je Komponente in den Listenspalten bleiben englisch – von Cinnamon nicht übersetzbar.
 
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
 
-**AP23 – Unterstützen-Hinweis, README und Lizenz: abgeschlossen am 21.09.2026.** Ergebnis in Abschnitt 6 unter „AP23". Die folgenden Absätze halten Ziel, Akzeptanzkriterien und Verlauf fest.
+**AP24 – Übersetzung: abgeschlossen am 21.09.2026.** Ergebnis in Abschnitt 6 unter „AP24".
+
+### AP24 – Übersetzung Deutsch/Englisch: Ziel und Akzeptanzkriterien (freigegeben und abgeschlossen am 21.09.2026)
+
+Grundlage: `ROADMAP_V2.md`, Abschnitte 5 und 24. Ausgangstexte in Englisch, Übersetzung über gettext, `po/` je Komponente, angezeigte Sprache folgt der Systemsprache.
+
+#### Ziel
+
+aVincePulse spricht die Sprache des Systems. Die Ausgangstexte im Quellcode werden auf Englisch umgestellt, die deutsche Fassung kommt als Übersetzung über gettext hinzu. Damit ist die letzte Voraussetzung für die Einreichung bei Cinnamon Spices erfüllt, und weitere Sprachen lassen sich später ohne Codeänderung ergänzen.
+
+#### Entscheidungen des Nutzers vom 21.09.2026
+
+- Berichte werden **mitübersetzt**, mit sauber berechneter Formatierung.
+- **Keine weiteren Sprachen** in AP24; die `.pot` genügt als Einladung.
+- Ausgangstexte in Englisch, auch wenn die Oberfläche dadurch zwischenzeitlich englisch ist.
+- Die englischen Beschriftungen in den Listenspalten sind hinnehmbar.
+
+#### Akzeptanzkriterien
+
+1. `po/`-Verzeichnis je Komponente mit `<uuid>.pot` und `de.po`, erzeugt mit `cinnamon-xlet-makepot`.
+2. Gettext im Code eingebunden, Domäne gleich der UUID.
+3. Jeder sichtbare Text läuft über `_()`; Kommentare und Protokollzeilen bleiben unverändert.
+4. Alle sichtbaren Texte auf Englisch; die gemeinsamen Module danach bitgenau identisch.
+5. Verkettete Meldungen werden zu ganzen Sätzen mit Platzhaltern.
+6. Die 21 Texte je Komponente aus den Listenspalten werden übersetzbar gemacht – **nicht erfüllbar**, siehe Abschnitt 6.
+7. `metadata.json`: `name` und `description` auf Englisch.
+8. `de.po` vollständig, keine leeren und keine `fuzzy` Einträge.
+9. Die deutschen Texte entsprechen den heutigen.
+10. Umlaute und ß bleiben erhalten.
+11. `de.po` mit `msgfmt` geprüft.
+12. Die angezeigte Sprache folgt der Systemsprache.
+13. Gespeicherte Einstellungen überleben einen Sprachwechsel.
+14. Fehlt eine Übersetzung, erscheint der englische Ausgangstext.
+15. Prüfung einschließlich Abgleich, dass jeder sichtbare Text in der `.pot` steht.
+16. Funktionstest in beiden Sprachen, umgeschaltet über `--install` und `--remove`.
+17. Abschluss: Version `0.1.0-dev.24`, Snapshot, Dokumentation, Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
+18. Die Berichte werden mitübersetzt.
+
+#### Abweichung
+
+**Kriterium 6 ist nicht erfüllbar.** Cinnamon übersetzt Beschriftungen in Listenspalten nicht; beide denkbaren Wege wurden geprüft und scheitern. Einzelheiten in Abschnitt 6. Vom Nutzer am 21.09.2026 zur Kenntnis genommen.
 
 ### AP23 – Unterstützen-Hinweis, README und Lizenz: Ziel und Akzeptanzkriterien (freigegeben und abgeschlossen am 21.09.2026)
 
@@ -2125,12 +2273,13 @@ git log -3 --oneline
 git tag --list
 ```
 
-Erwarteter Ausgangspunkt nach AP23:
+Erwarteter Ausgangspunkt nach AP24:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP23-END`, Versionsnummer `0.1.0-dev.23`
-- AP01 bis AP23 abgeschlossen; Prüfbericht `PRUEFBERICHT_AP19.md`, Lizenzprüfung `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE` und beide READMEs vorhanden
-- Nächstes Arbeitspaket: Übersetzung Deutsch/Englisch über gettext; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
+- Referenz-Tag: `0.1.0-dev_AP24-END`, Versionsnummer `0.1.0-dev.24`
+- AP01 bis AP24 abgeschlossen; alle Arbeitspakete vor der Veröffentlichung sind erledigt
+- Vorhanden: `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
+- Nächstes Arbeitspaket: Abschlussprüfung vor der Einreichung bei Cinnamon Spices; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
 ---
 

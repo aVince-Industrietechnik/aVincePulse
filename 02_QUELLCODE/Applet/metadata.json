@@ -1,7 +1,7 @@
 {
     "uuid": "avincepulse-applet@avince",
     "name": "aVincePulse Applet",
-    "description": "Hardware- und Netzwerkmonitor für das Cinnamon-Panel mit zentraler Hover-Anzeige.",
-    "version": "0.1.0-dev.23",
+    "description": "Hardware and network monitor for the Cinnamon panel, with a large hover display.",
+    "version": "0.1.0-dev.24",
     "max-instances": 1
 }

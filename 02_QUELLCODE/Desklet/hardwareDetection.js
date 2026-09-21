@@ -42,6 +42,94 @@
  * "nvme / Composite".
  */
 
+/*
+ * Uebersetzung (AP24).
+ *
+ * Die gettext-Domaene ist die UUID und damit in Applet und Desklet
+ * verschieden. Dieses Modul muss aber in beiden bitgenau gleich
+ * bleiben, also darf die UUID hier nicht stehen. Die Komponente
+ * uebergibt deshalb ihre Uebersetzungsfunktion - dasselbe Muster wie
+ * beim HardwareDetector seit AP08.
+ *
+ * Ohne gesetzten Uebersetzer bleibt der englische Ausgangstext
+ * stehen. Das ist der richtige Rueckfall: lieber Englisch als leer.
+ */
+var uebersetzeMit = (text) => text;
+
+function setzeUebersetzung(fn) {
+    if (typeof fn === "function")
+        uebersetzeMit = fn;
+}
+
+function _(text) {
+    return uebersetzeMit(text);
+}
+
+/*
+ * Fuellt %s in einer uebersetzten Vorlage (AP24).
+ *
+ * Meldungen werden als ganzer Satz uebersetzt, nicht in Stuecken:
+ * "automatisch - %s nicht gefunden" statt "automatisch - " + name +
+ * " nicht gefunden". Nur so kann eine andere Sprache die Wortstellung
+ * aendern. Geschrieben wird stets fuelle(_("..."), wert), damit
+ * xgettext die Vorlage findet.
+ */
+function fuelle(vorlage, ...werte) {
+    let i = 0;
+    return String(vorlage).replace(/%s/g, () => {
+        const w = werte[i++];
+        return (w === undefined || w === null) ? "" : String(w);
+    });
+}
+
+/*
+ * Tabellenhilfen fuer die Berichte (AP24).
+ *
+ * Bis zur Uebersetzung standen Trennlinien und Spaltenbreiten fest
+ * im Code - "----------------------" unter einer Ueberschrift mit
+ * 22 Zeichen, padEnd(16) fuer eine Spalte. Sobald ein Text uebersetzt
+ * wird, aendert sich seine Laenge und die Formatierung verrutscht.
+ * Beides wird deshalb aus dem Inhalt berechnet.
+ */
+function unterstreiche(text) {
+    return "-".repeat(String(text).length);
+}
+
+/*
+ * Formatiert eine Tabelle: erste Zeile Ueberschriften, danach die
+ * Daten. Jede Spalte wird so breit wie ihr laengster Eintrag.
+ * "rechts" nennt die Spaltennummern, die rechtsbuendig stehen.
+ */
+function tabelle(zeilen, rechts = []) {
+    if (!zeilen.length)
+        return [];
+
+    const spalten = zeilen[0].length;
+    const breite = [];
+
+    for (let i = 0; i < spalten; i++) {
+        breite.push(Math.max(...zeilen.map(z => String(z[i] ?? "").length)));
+    }
+
+    const formatiere = (z) => z.map((wert, i) => {
+        const t = String(wert ?? "");
+        // Die letzte Spalte nicht auffuellen, das gaebe Leerzeichen
+        // am Zeilenende.
+        if (i === spalten - 1)
+            return rechts.includes(i) ? t.padStart(breite[i]) : t;
+        return (rechts.includes(i) ? t.padStart(breite[i]) : t.padEnd(breite[i])) + "  ";
+    }).join("");
+
+    const ausgabe = [formatiere(zeilen[0])];
+    ausgabe.push(formatiere(zeilen[0].map(w => "-".repeat(String(w).length))));
+
+    for (const z of zeilen.slice(1))
+        ausgabe.push(formatiere(z));
+
+    return ausgabe;
+}
+
+
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const ByteArray = imports.byteArray;
@@ -151,9 +239,10 @@ var HardwareDetector = class HardwareDetector {
         const auto = this._automatisch[art];
 
         optionen[
-            "Automatisch (" +
-            (auto ? this._anzeigeName(auto, art) : "kein Sensor gefunden") +
-            ")"
+            fuelle(
+                _("Automatic (%s)"),
+                auto ? this._anzeigeName(auto, art) : _("no sensor found")
+            )
         ] = "auto";
 
         const kandidaten = this._kandidaten(art).slice().sort(
@@ -183,7 +272,7 @@ var HardwareDetector = class HardwareDetector {
             aktuelleWahl !== "auto" &&
             !kandidaten.some(sensor => sensor.key === aktuelleWahl)
         )
-            optionen["Nicht gefunden: " + aktuelleWahl] = aktuelleWahl;
+            optionen[fuelle(_("Not found: %s"), aktuelleWahl)] = aktuelleWahl;
 
         return optionen;
     }
@@ -222,7 +311,7 @@ var HardwareDetector = class HardwareDetector {
         const auto = this._automatisch[art];
 
         if (gewuenscht === "auto") {
-            this._quelle[art] = "automatisch";
+            this._quelle[art] = _("automatic");
             return auto;
         }
 
@@ -230,12 +319,12 @@ var HardwareDetector = class HardwareDetector {
             .find(kandidat => kandidat.key === gewuenscht);
 
         if (sensor) {
-            this._quelle[art] = "manuell gewählt";
+            this._quelle[art] = _("selected manually");
             return sensor;
         }
 
-        this._quelle[art] =
-            "automatisch – gewählter Sensor " + gewuenscht + " nicht gefunden";
+        this._quelle[art] = fuelle(
+            _("automatic – selected sensor %s was not found"), gewuenscht);
         return auto;
     }
 
@@ -246,8 +335,8 @@ var HardwareDetector = class HardwareDetector {
      * angehaengt.
      */
     _anzeigeName(sensor, art) {
-        const bezeichnung = sensor.label ||
-            (art === "fan" ? "L\u00fcfter " : "Temperatur ") + sensor.index;
+        const bezeichnung = sensor.label || fuelle(
+            art === "fan" ? _("Fan %s") : _("Temperature %s"), sensor.index);
 
         const geraete = new Set(
             this._kandidaten(art)
@@ -817,57 +906,80 @@ var HardwareDetector = class HardwareDetector {
      */
     berichtText(komponente) {
         const zeilen = [];
+        const titel = _("aVincePulse - detected hardware");
 
-        zeilen.push("aVincePulse - Erkannte Hardware");
-        zeilen.push("================================");
+        zeilen.push(titel);
+        zeilen.push("=".repeat(titel.length));
         zeilen.push("");
-        zeilen.push("Erstellt am  : " + new Date().toLocaleString());
-        zeilen.push("Erstellt von : " + (komponente || "unbekannt"));
+        zeilen.push(fuelle(_("Created on   : %s"), new Date().toLocaleString()));
+        zeilen.push(fuelle(_("Created by   : %s"), komponente || _("unknown")));
         zeilen.push("");
 
-        zeilen.push("Sensoren");
-        zeilen.push("--------");
-        zeilen.push("CPU-Temperatur     : " + this._describe(this._mapping.cpu));
-        zeilen.push("                     (" + this._quelle.cpu + ")");
-        zeilen.push("Storage-Temperatur : " + this._describe(this._mapping.storage));
-        zeilen.push("                     (" + this._quelle.storage + ")");
-        zeilen.push("Lüfter             : " + this._describe(this._mapping.fan));
-        zeilen.push("                     (" + this._quelle.fan + ")");
-        zeilen.push("Akku / Netzteil    : " + this._describeBattery(this._mapping.battery));
+        const u1 = _("Sensors");
+        zeilen.push(u1);
+        zeilen.push(unterstreiche(u1));
+
+        // Die drei Sensorzeilen als Tabelle, damit der Doppelpunkt
+        // in jeder Sprache untereinander steht.
+        const sensorZeilen = [
+            [_("CPU temperature"), this._describe(this._mapping.cpu), this._quelle.cpu],
+            [_("Drive temperature"), this._describe(this._mapping.storage), this._quelle.storage],
+            [_("Fan"), this._describe(this._mapping.fan), this._quelle.fan]
+        ];
+
+        const breite = Math.max(...sensorZeilen.map(z => z[0].length),
+                                _("Battery / power supply").length);
+
+        for (const [name, wert, quelle] of sensorZeilen) {
+            zeilen.push(name.padEnd(breite) + " : " + wert);
+            zeilen.push(" ".repeat(breite) + "   (" + quelle + ")");
+        }
+
+        zeilen.push(_("Battery / power supply").padEnd(breite) + " : " +
+                    this._describeBattery(this._mapping.battery));
         zeilen.push("");
 
         const verfuegbar = this.getAvailability();
+        const u2 = _("Available values");
 
-        zeilen.push("Verfügbare Messwerte");
-        zeilen.push("--------------------");
+        zeilen.push(u2);
+        zeilen.push(unterstreiche(u2));
+
+        const vZeilen = [[_("Value"), _("State")]];
 
         for (const id of Object.keys(verfuegbar)) {
-            zeilen.push(
-                id.padEnd(20) +
-                (verfuegbar[id] ? "vorhanden" : "nicht vorhanden")
-            );
+            vZeilen.push([
+                id,
+                verfuegbar[id] ? _("present") : _("not present")
+            ]);
         }
 
+        for (const z of tabelle(vZeilen))
+            zeilen.push(z);
+
         zeilen.push("");
-        zeilen.push("Alle übrigen Messwerte hängen nicht von einem");
-        zeilen.push("Sensor ab und sind immer verfügbar.");
+        zeilen.push(_("Every other value does not depend on a sensor and " +
+                      "is always available."));
         zeilen.push("");
-        zeilen.push("Vollständige Sensorliste des Systems");
-        zeilen.push("------------------------------------");
+
+        const u3 = _("Every sensor on this system");
+        zeilen.push(u3);
+        zeilen.push(unterstreiche(u3));
 
         /*
-         * Eine Zeile je Sensor mit festen Spalten, damit sich die
-         * Liste ohne seitliches Scrollen lesen laesst. Der hwmon-Pfad
-         * steht bewusst nicht darin: Er ist lang und aendert sich nach
-         * einem Neustart. Fuer die verwendeten Sensoren steht er oben.
+         * Eine Zeile je Sensor mit berechneten Spaltenbreiten, damit
+         * sich die Liste ohne seitliches Scrollen lesen laesst. Der
+         * hwmon-Pfad steht bewusst nicht darin: Er ist lang und
+         * aendert sich nach einem Neustart. Fuer die verwendeten
+         * Sensoren steht er oben.
          */
         const alle = this._scanHwmon();
 
         const verwendung = {};
         const zuordnung = [
             ["cpu", "CPU"],
-            ["storage", "Speicher"],
-            ["fan", "Lüfter"]
+            ["storage", _("Drive")],
+            ["fan", _("Fan")]
         ];
 
         for (const [art, name] of zuordnung) {
@@ -886,62 +998,64 @@ var HardwareDetector = class HardwareDetector {
                 a.index - b.index
         );
 
-        const zeile = (art, chip, bezeichnung, wert, genutzt, kennung) =>
-            art.padEnd(12) + chip.padEnd(14) + bezeichnung.padEnd(18) +
-            wert.padStart(9) + "   " + genutzt.padEnd(14) + kennung;
-
-        zeilen.push(zeile("Art", "Chip", "Bezeichnung", "Wert", "Verwendet", "Kennung"));
-        zeilen.push(zeile("---", "----", "-----------", "----", "---------", "-------"));
+        const sZeilen = [
+            [_("Kind"), _("Chip"), _("Label"), _("Reading"),
+             _("Used for"), _("Identifier")]
+        ];
 
         for (const s of sortiert(alle.temperatures)) {
-            zeilen.push(zeile(
-                "Temperatur",
+            sZeilen.push([
+                _("Temperature"),
                 s.chip,
-                s.label || "Temperatur " + s.index,
+                s.label || fuelle(_("Temperature %s"), s.index),
                 this._readTemperature(s) + " °C",
                 verwendung[s.key] || "-",
                 s.key
-            ));
+            ]);
         }
 
         for (const s of sortiert(alle.fans)) {
-            zeilen.push(zeile(
-                "Lüfter",
+            sZeilen.push([
+                _("Fan"),
                 s.chip,
-                s.label || "Lüfter " + s.index,
+                s.label || fuelle(_("Fan %s"), s.index),
                 this._readFan(s) + " rpm",
                 verwendung[s.key] || "-",
                 s.key
-            ));
+            ]);
         }
 
+        // Spalte 3 ist der Messwert und steht rechtsbuendig.
+        for (const z of tabelle(sZeilen, [3]))
+            zeilen.push(z);
+
         zeilen.push("");
-        zeilen.push("Wert: gemessen bei Erstellung dieses Berichts.");
-        zeilen.push("Kennung: bleibt nach einem Neustart gleich und wird für");
-        zeilen.push("die Sensorauswahl in den Einstellungen gespeichert.");
+        zeilen.push(_("Reading: measured while this report was written."));
+        zeilen.push(_("Identifier: stays the same after a restart and is " +
+                      "what the sensor choice in the settings stores."));
 
         return zeilen.join("\n") + "\n";
     }
 
     _describeBattery(battery) {
         if (!battery || !battery.path)
-            return "NOT FOUND (system without battery)";
+            return _("not found (system without battery)");
 
         return (
             battery.path +
             " / AC: " +
-            (battery.acPath || "none")
+            (battery.acPath || _("none"))
         );
     }
 
     _describe(sensor) {
         if (!sensor)
-            return "NOT FOUND";
+            return _("not found");
 
         return (
             sensor.chip +
             " / " +
-            (sensor.label || "unlabeled") +
+            (sensor.label || _("unlabeled")) +
             " / " +
             sensor.path
         );

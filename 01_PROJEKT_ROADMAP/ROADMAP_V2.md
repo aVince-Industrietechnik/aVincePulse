@@ -1700,7 +1700,7 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 8. AP21 – Aktion bei Linksklick auf das Applet (aufgenommen am 19.09.2026; abgeschlossen am 20.09.2026)
 9. AP22 – Speedtest-Programm vor der Veröffentlichung (abgeschlossen am 20.09.2026)
 10. AP23 – Unterstützen-Hinweis, README und Lizenz (abgeschlossen am 21.09.2026)
-11. Übersetzung Deutsch/Englisch
+11. AP24 – Übersetzung Deutsch/Englisch (abgeschlossen am 21.09.2026)
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1825,6 +1825,14 @@ Aufgenommen am 19.09.2026, Grundlage ist die oben genannte README.
 - Weitere Regeln: keine vorkompilierten Programme außer Bildern, kein Nachladen fremden Codes zur Laufzeit, Einstellungen nur über die Cinnamon-Einstellungsoberfläche, keine GSettings-Schemas.
 - Updates laufen später als weitere Pull Requests; Übersetzungen und Fehlerkorrekturen anderer werden auch ohne Zustimmung des Autors aufgenommen.
 - Vor der Einreichung sind die dann gültigen Regeln erneut zu prüfen.
+
+**Umgesetzt als AP24, abgeschlossen am 21.09.2026.** 442 Textstellen auf
+Englisch umgestellt, `po/` je Komponente mit `.pot` und vollständiger
+`de.po`. Entscheidungen des Nutzers: Berichte mitübersetzt, keine
+weiteren Sprachen in diesem Paket. **Einschränkung:** Cinnamon kann
+die Beschriftungen in Listenspalten nicht übersetzen; 21 Texte je
+Komponente bleiben deshalb englisch. Einzelheiten in
+`05_DOKUMENTATION/PROJECT-STATUS.md`, Abschnitte 6 und 8.
 
 **Sprachen:** Ausgangstexte in Englisch, Übersetzung über gettext (`cinnamon-xlet-makepot`, auf dem Referenzgerät vorhanden), `po/`-Verzeichnis je Komponente. Die angezeigte Sprache folgt der **Systemsprache**; ein eigener Sprachumschalter ist bei Cinnamon nicht vorgesehen. Geplant: Englisch und Deutsch geprüft, dazu eine erste Auswahl weiterer Sprachen (Spanisch, Französisch, Portugiesisch (BR), Italienisch, Niederländisch, Polnisch, Russisch, Ukrainisch, Türkisch, Chinesisch (vereinfacht), Japanisch) mit dem Hinweis im README, dass Korrekturen willkommen sind.
 

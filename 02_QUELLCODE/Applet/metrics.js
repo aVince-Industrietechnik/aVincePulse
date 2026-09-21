@@ -39,6 +39,47 @@
  * gleich. Fehlt er, wird ein mittlerer Vorgabewert verwendet.
  */
 
+/*
+ * Uebersetzung (AP24).
+ *
+ * Die gettext-Domaene ist die UUID und damit in Applet und Desklet
+ * verschieden. Dieses Modul muss aber in beiden bitgenau gleich
+ * bleiben, also darf die UUID hier nicht stehen. Die Komponente
+ * uebergibt deshalb ihre Uebersetzungsfunktion - dasselbe Muster wie
+ * beim HardwareDetector seit AP08.
+ *
+ * Ohne gesetzten Uebersetzer bleibt der englische Ausgangstext
+ * stehen. Das ist der richtige Rueckfall: lieber Englisch als leer.
+ */
+var uebersetzeMit = (text) => text;
+
+function setzeUebersetzung(fn) {
+    if (typeof fn === "function")
+        uebersetzeMit = fn;
+}
+
+function _(text) {
+    return uebersetzeMit(text);
+}
+
+/*
+ * Fuellt %s in einer uebersetzten Vorlage (AP24).
+ *
+ * Meldungen werden als ganzer Satz uebersetzt, nicht in Stuecken:
+ * "automatisch - %s nicht gefunden" statt "automatisch - " + name +
+ * " nicht gefunden". Nur so kann eine andere Sprache die Wortstellung
+ * aendern. Geschrieben wird stets fuelle(_("..."), wert), damit
+ * xgettext die Vorlage findet.
+ */
+function fuelle(vorlage, ...werte) {
+    let i = 0;
+    return String(vorlage).replace(/%s/g, () => {
+        const w = werte[i++];
+        return (w === undefined || w === null) ? "" : String(w);
+    });
+}
+
+
 var METRICS = {
     cpu_temp: {
         id: "cpu_temp",

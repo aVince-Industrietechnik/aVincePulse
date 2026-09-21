@@ -43,10 +43,55 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const PopupMenu = imports.ui.popupMenu;
 
+const Gettext = imports.gettext;
+
+/*
+ * Uebersetzung (AP24).
+ *
+ * Die Domaene ist die UUID. Cinnamon legt die uebersetzten Dateien
+ * beim Installieren eines Spice dorthin; zum Erproben tut das
+ * "cinnamon-xlet-makepot -i". Fehlt eine Uebersetzung, liefert
+ * dgettext den englischen Ausgangstext zurueck.
+ */
+const UUID = "avincepulse-applet@avince";
+
+Gettext.bindtextdomain(UUID, GLib.get_user_data_dir() + "/locale");
+
+function _(text) {
+    return Gettext.dgettext(UUID, text);
+}
+
+/*
+ * Fuellt %s in einer uebersetzten Vorlage (AP24).
+ *
+ * Meldungen werden als ganzer Satz uebersetzt, nicht in Stuecken:
+ * "automatisch - %s nicht gefunden" statt "automatisch - " + name +
+ * " nicht gefunden". Nur so kann eine andere Sprache die Wortstellung
+ * aendern. Geschrieben wird stets fuelle(_("..."), wert), damit
+ * xgettext die Vorlage findet.
+ */
+function fuelle(vorlage, ...werte) {
+    let i = 0;
+    return String(vorlage).replace(/%s/g, () => {
+        const w = werte[i++];
+        return (w === undefined || w === null) ? "" : String(w);
+    });
+}
+
 const Metrics = imports.applets['avincepulse-applet@avince'].metrics;
 const Measurement = imports.applets['avincepulse-applet@avince'].measurement;
 const HardwareDetection = imports.applets['avincepulse-applet@avince'].hardwareDetection;
 const Speedtest = imports.applets['avincepulse-applet@avince'].speedtest;
+
+/*
+ * Die vier gemeinsamen Module kennen die UUID nicht und bekommen
+ * die Uebersetzung deshalb uebergeben (AP24). Das geschieht hier,
+ * unmittelbar nach dem Import und damit vor jeder Verwendung.
+ */
+Metrics.setzeUebersetzung(_);
+Measurement.setzeUebersetzung(_);
+HardwareDetection.setzeUebersetzung(_);
+Speedtest.setzeUebersetzung(_);
 
 const MeasurementProvider = Measurement.MeasurementProvider;
 const HardwareDetector = HardwareDetection.HardwareDetector;
@@ -348,7 +393,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         // (Befund H14). Eintraege, die vor dem Abschluss des Menues
         // hinzukommen, stellt Cinnamon oberhalb seiner eigenen an.
         this._menuEintragSpeedtest =
-            new PopupMenu.PopupMenuItem("Internet-Speedtest starten");
+            new PopupMenu.PopupMenuItem(_("Run a speed test now"));
 
         this._menuEintragSpeedtest.connect("activate", () => {
             this.starteSpeedtest();
@@ -784,13 +829,26 @@ class AVincePulseApplet extends Applet.TextIconApplet {
      *
      * Eintraege "Nicht gefunden" zaehlen nicht mit; kehrt ein
      * gewaehlter Sensor zurueck, aendert sich dadurch das Kennzeichen.
+     *
+     * Erkannt werden sie nicht mehr am Wortanfang, sondern daran, dass
+     * die Beschriftung genau der uebersetzten Vorlage mit diesem Wert
+     * entspricht (AP24). Ein Vergleich auf "Nicht " haette nach der
+     * Uebersetzung nicht mehr gegriffen, und in einer Sprache, die den
+     * Platzhalter voranstellt, wuerde auch ein Praefixvergleich
+     * scheitern.
      */
     _auswahlKennzeichen(geschrieben) {
+        const fehlendeVorlagen = [
+            _("Not found: %s"),
+            _("Not mounted: %s")
+        ];
+
         return Object.keys(geschrieben).sort().map(schluessel => {
             const optionen = geschrieben[schluessel];
 
             const werte = Object.keys(optionen)
-                .filter(text => !text.startsWith("Nicht "))
+                .filter(text => !fehlendeVorlagen.some(
+                    vorlage => text === fuelle(vorlage, optionen[text])))
                 .map(text => optionen[text])
                 .sort();
 
@@ -814,13 +872,14 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         const dialog = new ModalDialog.ModalDialog();
 
         dialog.contentLayout.add_child(new Dialog.MessageDialogContent({
-            title: this._einstellungsTitel + " \u2013 Hardware neu erkannt",
+            title: this._einstellungsTitel + " \u2013 " +
+                   _("hardware detected again"),
             description:
-                "Es wurden neue oder entfernte Sensoren, Schnittstellen " +
-                "oder Laufwerke gefunden. Die Anzeige ist bereits aktuell.\n\n" +
-                "Damit auch die Auswahlfelder im Einstellungsfenster sie " +
-                "zeigen, muss das Fenster kurz geschlossen und an derselben " +
-                "Stelle neu geöffnet werden."
+                _("Sensors, interfaces or drives have appeared or gone. " +
+                  "The display is already up to date.\n\n" +
+                  "For the selection lists in the settings window to show " +
+                  "them as well, the window has to close briefly and " +
+                  "reopen in the same place.")
         }));
 
         let beantwortet = false;
@@ -841,12 +900,12 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         dialog.setButtons([
             {
-                label: "Nicht jetzt",
+                label: _("Not now"),
                 key: Clutter.KEY_Escape,
                 action: () => antworte(false)
             },
             {
-                label: "Jetzt neu öffnen",
+                label: _("Reopen now"),
                 action: () => antworte(true)
             }
         ]);
@@ -870,10 +929,10 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._statusAnzeige.zeige(
                 meldung +
                 (geoeffnet
-                    ? "\n\nDas Einstellungsfenster wurde dafür neu geöffnet."
-                    : "\n\nDie neuen Einträge erscheinen in der Auswahl, " +
-                      "sobald du das Einstellungsfenster schließt und " +
-                      "wieder öffnest.")
+                    ? "\n\n" + _("The settings window was reopened for this.")
+                    : "\n\n" + _("The new entries appear in the lists as " +
+                                 "soon as you close the settings window " +
+                                 "and open it again."))
             );
             this._statusAnzeige.verbergeNachLesezeit();
         };
@@ -1075,23 +1134,25 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             this._baueZeilenNeu();
 
             const meldung =
-                "Hardware neu erkannt\n\n" +
-                gefunden.length + " von " +
-                Object.keys(verfuegbar).length +
-                " sensorabhängigen Messwerten verfügbar" +
+                _("Hardware detected again") + "\n\n" +
+                fuelle(
+                    _("%s of %s sensor-based values available"),
+                    gefunden.length,
+                    Object.keys(verfuegbar).length
+                ) +
                 (fehlend.length
-                    ? "\nNicht gefunden: " + fehlend.join(", ")
+                    ? "\n" + fuelle(_("Not found: %s"), fehlend.join(", "))
                     : "") +
                 (pfad
-                    ? "\n\nBericht abgelegt \u2013 zu finden über die " +
-                      "Einstellungen unter „Hardware-Berichte öffnen“"
+                    ? "\n\n" + _("Report saved \u2013 reachable from the " +
+                                 "settings under “Open the hardware reports”")
                     : "") +
                 (auswahlNeu
-                    ? "\n\nNeue oder entfernte Sensoren, Schnittstellen " +
-                      "oder Laufwerke gefunden \u2013 die Anzeige ist " +
-                      "aktualisiert."
-                    : "\n\nDie Auswahl an Sensoren, Schnittstellen und " +
-                      "Laufwerken ist unverändert.");
+                    ? "\n\n" + _("Sensors, interfaces or drives have " +
+                                 "appeared or gone \u2013 the lists are up " +
+                                 "to date.")
+                    : "\n\n" + _("The sensors, interfaces and drives on " +
+                                 "offer are unchanged."));
 
             if (fensterOffen) {
                 // Erst fragen, dann melden: Meldung und Rueckfrage
@@ -1106,7 +1167,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         } catch (e) {
             global.logError(e);
-            this._statusAnzeige.zeige("Die Hardwareerkennung ist fehlgeschlagen.");
+            this._statusAnzeige.zeige(_("The hardware detection failed."));
             this._statusAnzeige.verbergeNach(8);
         }
     }
@@ -1199,7 +1260,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             global.logError(e);
 
             this._statusAnzeige.zeige(
-                "Der Berichtsordner konnte nicht geöffnet werden."
+                _("The report folder could not be opened.")
             );
             this._statusAnzeige.verbergeNach(8);
         }
@@ -1230,8 +1291,8 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         // geschickt worden.
         if (unterstuetzenUrlFehlt()) {
             this._statusAnzeige.zeige(
-                "Die Unterstützerseite ist noch nicht eingerichtet.\n\n" +
-                "Diese Entwicklungsfassung enthält noch keine Adresse."
+                _("The support page is not set up yet.\n\n" +
+                  "This development version does not carry an address.")
             );
             this._statusAnzeige.verbergeNachLesezeit();
             return;
@@ -1244,7 +1305,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             global.logError(e);
 
             this._statusAnzeige.zeige(
-                "Die Unterstützerseite konnte nicht geöffnet werden."
+                _("The support page could not be opened.")
             );
             this._statusAnzeige.verbergeNach(8);
         }
@@ -1324,7 +1385,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
         this._baueZeilenNeu();
 
         this._statusAnzeige.zeige(
-            "Einstellungen auf Standardwerte zurückgesetzt");
+            _("Settings restored to their defaults"));
         this._statusAnzeige.verbergeNachLesezeit();
 
         global.log("aVincePulse AP12: settings reset to defaults");
@@ -1982,8 +2043,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             }
 
             this._statusAnzeige.zeige(
-                "Auf diesem System wurde keine Systemüberwachung " +
-                "gefunden."
+                _("No system monitor was found on this machine.")
             );
 
             this._statusAnzeige.verbergeNach(8);
@@ -1992,7 +2052,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             global.logError(e);
 
             this._statusAnzeige.zeige(
-                "Die Systemüberwachung konnte nicht geöffnet werden."
+                _("The system monitor could not be opened.")
             );
 
             this._statusAnzeige.verbergeNach(8);
@@ -2071,7 +2131,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
         // Die Meldung verwendet eine feste Deckkraft, siehe
         // StatusAnzeige.zeige() (Befund G3 aus AP19).
-        this._statusAnzeige.zeige("Internet-Speedtest läuft …");
+        this._statusAnzeige.zeige(_("Internet speed test running …"));
 
         this._speedtest.starte(ergebnis => {
             // Nach dem Entfernen keine Meldung mehr (Befund M2).
@@ -2080,12 +2140,16 @@ class AVincePulseApplet extends Applet.TextIconApplet {
 
             if (ergebnis.erfolg) {
                 this._statusAnzeige.zeige(
-                    "Speedtest abgeschlossen\n\n" +
-                    "Download " + ergebnis.werte.SPEED_DOWN + " MBit/s, " +
-                    "Upload " + ergebnis.werte.SPEED_UP + " MBit/s" +
+                    _("Speed test finished") + "\n\n" +
+                    fuelle(
+                        _("Download %s MBit/s, upload %s MBit/s"),
+                        ergebnis.werte.SPEED_DOWN,
+                        ergebnis.werte.SPEED_UP
+                    ) +
                     (ergebnis.bericht
-                        ? "\n\nBericht abgelegt \u2013 zu finden über die " +
-                          "Einstellungen unter „Speedtest-Berichte öffnen“"
+                        ? "\n\n" + _("Report saved \u2013 reachable from " +
+                                     "the settings under “Open the speed " +
+                                     "test reports”")
                         : "")
                 );
                 this._statusAnzeige.verbergeNachLesezeit();

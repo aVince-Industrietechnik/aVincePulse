@@ -36,6 +36,94 @@
  * Standardverbindung bzw. die Systempartition "/".
  */
 
+/*
+ * Uebersetzung (AP24).
+ *
+ * Die gettext-Domaene ist die UUID und damit in Applet und Desklet
+ * verschieden. Dieses Modul muss aber in beiden bitgenau gleich
+ * bleiben, also darf die UUID hier nicht stehen. Die Komponente
+ * uebergibt deshalb ihre Uebersetzungsfunktion - dasselbe Muster wie
+ * beim HardwareDetector seit AP08.
+ *
+ * Ohne gesetzten Uebersetzer bleibt der englische Ausgangstext
+ * stehen. Das ist der richtige Rueckfall: lieber Englisch als leer.
+ */
+var uebersetzeMit = (text) => text;
+
+function setzeUebersetzung(fn) {
+    if (typeof fn === "function")
+        uebersetzeMit = fn;
+}
+
+function _(text) {
+    return uebersetzeMit(text);
+}
+
+/*
+ * Fuellt %s in einer uebersetzten Vorlage (AP24).
+ *
+ * Meldungen werden als ganzer Satz uebersetzt, nicht in Stuecken:
+ * "automatisch - %s nicht gefunden" statt "automatisch - " + name +
+ * " nicht gefunden". Nur so kann eine andere Sprache die Wortstellung
+ * aendern. Geschrieben wird stets fuelle(_("..."), wert), damit
+ * xgettext die Vorlage findet.
+ */
+function fuelle(vorlage, ...werte) {
+    let i = 0;
+    return String(vorlage).replace(/%s/g, () => {
+        const w = werte[i++];
+        return (w === undefined || w === null) ? "" : String(w);
+    });
+}
+
+/*
+ * Tabellenhilfen fuer die Berichte (AP24).
+ *
+ * Bis zur Uebersetzung standen Trennlinien und Spaltenbreiten fest
+ * im Code - "----------------------" unter einer Ueberschrift mit
+ * 22 Zeichen, padEnd(16) fuer eine Spalte. Sobald ein Text uebersetzt
+ * wird, aendert sich seine Laenge und die Formatierung verrutscht.
+ * Beides wird deshalb aus dem Inhalt berechnet.
+ */
+function unterstreiche(text) {
+    return "-".repeat(String(text).length);
+}
+
+/*
+ * Formatiert eine Tabelle: erste Zeile Ueberschriften, danach die
+ * Daten. Jede Spalte wird so breit wie ihr laengster Eintrag.
+ * "rechts" nennt die Spaltennummern, die rechtsbuendig stehen.
+ */
+function tabelle(zeilen, rechts = []) {
+    if (!zeilen.length)
+        return [];
+
+    const spalten = zeilen[0].length;
+    const breite = [];
+
+    for (let i = 0; i < spalten; i++) {
+        breite.push(Math.max(...zeilen.map(z => String(z[i] ?? "").length)));
+    }
+
+    const formatiere = (z) => z.map((wert, i) => {
+        const t = String(wert ?? "");
+        // Die letzte Spalte nicht auffuellen, das gaebe Leerzeichen
+        // am Zeilenende.
+        if (i === spalten - 1)
+            return rechts.includes(i) ? t.padStart(breite[i]) : t;
+        return (rechts.includes(i) ? t.padStart(breite[i]) : t.padEnd(breite[i])) + "  ";
+    }).join("");
+
+    const ausgabe = [formatiere(zeilen[0])];
+    ausgabe.push(formatiere(zeilen[0].map(w => "-".repeat(String(w).length))));
+
+    for (const z of zeilen.slice(1))
+        ausgabe.push(formatiere(z));
+
+    return ausgabe;
+}
+
+
 // Dateisystemtypen, die trotz eines Geraets unter /dev kein
 // sinnvolles Laufwerk fuer den freien Speicherplatz sind.
 const KEIN_LAUFWERK_TYPEN = ["squashfs"];
@@ -587,14 +675,15 @@ var MeasurementProvider = class MeasurementProvider {
         const std = liste.find(s => s.name === standard);
 
         optionen[
-            "Automatisch (" +
-            (std ? beschreibe(std) : "derzeit keine Verbindung") +
-            ")"
+            fuelle(
+                _("Automatic (%s)"),
+                std ? beschreibe(std) : _("no connection at the moment")
+            )
         ] = "auto";
 
         for (const s of liste) {
             let text = beschreibe(s) + "  ·  " +
-                (s.verbunden ? "verbunden" : "getrennt");
+                (s.verbunden ? _("connected") : _("disconnected"));
 
             while (text in optionen)
                 text += " ";
@@ -607,7 +696,7 @@ var MeasurementProvider = class MeasurementProvider {
             aktuelleWahl !== "auto" &&
             !liste.some(s => s.name === aktuelleWahl)
         )
-            optionen["Nicht gefunden: " + aktuelleWahl] = aktuelleWahl;
+            optionen[fuelle(_("Not found: %s"), aktuelleWahl)] = aktuelleWahl;
 
         return optionen;
     }
@@ -695,10 +784,12 @@ var MeasurementProvider = class MeasurementProvider {
         const system = liste.find(l => l.pfad === "/");
 
         optionen[
-            "Automatisch (" +
-            (system ? "/ – " + system.geraet + ", " +
-                this._platzText("/") : "/") +
-            ")"
+            fuelle(
+                _("Automatic (%s)"),
+                system
+                    ? "/ – " + system.geraet + ", " + this._platzText("/")
+                    : "/"
+            )
         ] = "auto";
 
         for (const l of liste) {
@@ -715,7 +806,7 @@ var MeasurementProvider = class MeasurementProvider {
             aktuelleWahl !== "auto" &&
             !liste.some(l => l.kennung === aktuelleWahl)
         )
-            optionen["Nicht eingehängt: " + aktuelleWahl] = aktuelleWahl;
+            optionen[fuelle(_("Not mounted: %s"), aktuelleWahl)] = aktuelleWahl;
 
         return optionen;
     }
@@ -723,7 +814,7 @@ var MeasurementProvider = class MeasurementProvider {
     _platzText(pfad) {
         const groesse = this.formatSize(this._freierPlatz(pfad));
 
-        return groesse.value.replace(".", ",") + " " + groesse.unit + " frei";
+        return fuelle(_("%s %s free"), groesse.value, groesse.unit);
     }
 
     // Kernelname eines Geraets, etwa "dm-0" fuer /dev/mapper/...
@@ -787,71 +878,83 @@ var MeasurementProvider = class MeasurementProvider {
     berichtText() {
         const zeilen = [];
         const aktiv = this._aktiveSchnittstelle();
+
         const herkunft = (auswahl, gefunden) =>
             auswahl === "auto"
-                ? "automatisch"
+                ? _("automatic")
                 : gefunden
-                    ? "manuell gewählt"
-                    : "automatisch – gewählt war " + auswahl + ", nicht vorhanden";
+                    ? _("selected manually")
+                    : fuelle(_("automatic – %s was selected but is absent"),
+                             auswahl);
+
+        const ueberschrift = _("Network interfaces");
 
         zeilen.push("");
-        zeilen.push("Netzwerkschnittstellen");
-        zeilen.push("----------------------");
-        zeilen.push(
-            "Gemessen: " + (aktiv || "keine") + "  (" +
-            herkunft(this._netzAuswahl, aktiv === this._netzAuswahl) + ")"
-        );
+        zeilen.push(ueberschrift);
+        zeilen.push(unterstreiche(ueberschrift));
+        zeilen.push(fuelle(
+            _("Measured: %s  (%s)"),
+            aktiv || _("none"),
+            herkunft(this._netzAuswahl, aktiv === this._netzAuswahl)
+        ));
         zeilen.push("");
 
-        const netz = (name, art, zustand, genutzt) =>
-            name.padEnd(16) + art.padEnd(12) + zustand.padEnd(12) + genutzt;
-
-        zeilen.push(netz("Name", "Art", "Zustand", "Verwendet"));
-        zeilen.push(netz("----", "---", "-------", "---------"));
+        const netzZeilen = [
+            [_("Name"), _("Type"), _("State"), _("Used for")]
+        ];
 
         for (const s of this._schnittstellen()) {
-            zeilen.push(netz(
+            netzZeilen.push([
                 s.name,
                 s.art,
-                s.verbunden ? "verbunden" : "getrennt",
+                s.verbunden ? _("connected") : _("disconnected"),
                 s.name === aktiv ? "DOWN/UP" : "-"
-            ));
+            ]);
         }
 
+        for (const z of tabelle(netzZeilen))
+            zeilen.push(z);
+
         const laufwerk = this._laufwerk();
+        const ueberschrift2 = _("Drives (mounted locally)");
 
         zeilen.push("");
-        zeilen.push("Laufwerke (lokal eingehängt)");
-        zeilen.push("----------------------------");
-        zeilen.push(
-            "Gemessen: " + laufwerk.pfad + "  (" +
-            herkunft(this._laufwerkAuswahl, laufwerk.kennung === this._laufwerkAuswahl) +
-            ")"
-        );
+        zeilen.push(ueberschrift2);
+        zeilen.push(unterstreiche(ueberschrift2));
+        zeilen.push(fuelle(
+            _("Measured: %s  (%s)"),
+            laufwerk.pfad,
+            herkunft(this._laufwerkAuswahl,
+                     laufwerk.kennung === this._laufwerkAuswahl)
+        ));
         zeilen.push("");
 
-        const lw = (pfad, geraet, typ, frei, genutzt, kennung) =>
-            pfad.padEnd(20) + geraet.padEnd(14) + typ.padEnd(8) +
-            frei.padStart(14) + "   " + genutzt.padEnd(11) + kennung;
-
-        zeilen.push(lw("Einhängeort", "Gerät", "Typ", "Frei", "Verwendet", "Kennung"));
-        zeilen.push(lw("-----------", "-----", "---", "----", "---------", "-------"));
+        const lwZeilen = [
+            [_("Mount point"), _("Device"), _("Type"), _("Free"),
+             _("Used for"), _("Identifier")]
+        ];
 
         for (const l of this._laufwerke()) {
-            zeilen.push(lw(
+            const platz = this.formatSize(this._freierPlatz(l.pfad));
+
+            lwZeilen.push([
                 l.pfad,
                 l.geraet,
                 l.typ,
-                this._platzText(l.pfad).replace(" frei", ""),
+                platz.value + " " + platz.unit,
                 l.pfad === laufwerk.pfad ? "FREE" : "-",
                 l.kennung
-            ));
+            ]);
         }
 
+        // Spalte 3 ist die Groessenangabe und steht rechtsbuendig.
+        for (const z of tabelle(lwZeilen, [3]))
+            zeilen.push(z);
+
         zeilen.push("");
-        zeilen.push("Netzlaufwerke werden bewusst nicht angeboten: Die Abfrage");
-        zeilen.push("läuft bei jedem Takt, ein nicht erreichbares Netzlaufwerk");
-        zeilen.push("könnte die Oberfläche blockieren.");
+        zeilen.push(_("Network shares are deliberately not offered: the " +
+                      "query runs on every tick, and a share that cannot " +
+                      "be reached could block the interface."));
 
         return zeilen.join("\n") + "\n";
     }
