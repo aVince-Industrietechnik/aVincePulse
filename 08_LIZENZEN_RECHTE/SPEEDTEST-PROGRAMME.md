@@ -122,6 +122,65 @@ nichts. Eine abschließende Prüfung des Wortlauts steht aus und
 sollte vor der Einreichung bei Cinnamon Spices nachgeholt werden,
 wenn die Seiten erreichbar sind.
 
+#### Nachgeholt am 21.09.2026 (AP25)
+
+`speedtest.net/about/terms` war an diesem Tag erreichbar (HTTP 200) und
+wurde abgerufen; `ookla.com/terms-of-use` antwortet mit 404, die
+Bedingungen liegen also allein unter der erstgenannten Adresse. Die
+Seite trägt den Hinweis „The Ookla Terms of Use have been updated."
+
+**Gezielt gesucht, nicht gefunden:** Die Bedingungen enthalten **keine
+Klausel zu inoffiziellen oder fremden Befehlszeilenclients**. Die
+Zeichenkette „unofficial" kommt nicht vor; ebenso wenig eine Regelung
+zu Clients, die die Messserver nutzen, ohne von Ookla zu stammen.
+
+**Die einschlägige Klausel** ist die allgemeine Nutzungsbeschränkung.
+Sie untersagt, „except as expressly permitted", unter anderem:
+
+- den Inhalt („Content, code or Material") zu verändern, zu
+  vervielfältigen, zu verbreiten oder in anderer Weise zu verwerten;
+- mit „any robot, spider, site search and/or retrieval application, or
+  other device" Teile der Dienste zu durchsuchen, abzugreifen oder zu
+  indizieren;
+- Inhalte der Dienste für den Aufbau oder die Auswertung von
+  Datensätzen zu verwenden oder „in connection with the development or
+  operation of any software program", einschließlich des Trainings von
+  KI-Modellen.
+
+Daneben: „You may download, copy and make any personal, non-commercial
+use of the Content."
+
+**Einordnung für aVincePulse.** Keine Rechtsberatung, sondern eine
+Zusammenstellung der Tatsachen:
+
+1. Die Bedingungen richten sich an den **Nutzer der Dienste**.
+   aVincePulse baut selbst keine Verbindung zu Ookla auf; es startet
+   ein Programm, das der Nutzer aus den Quellen seiner Distribution
+   installiert hat. Die Beziehung besteht zwischen dem Nutzer und
+   Ookla.
+2. Die zitierten Verbote zielen erkennbar auf **Scraping, Data Mining
+   und KI-Training**, nicht auf das Durchführen einer Messung. Die
+   Aufzählung „text, code, image, audio, video, or other content"
+   beschreibt urheberrechtlich geschützte Inhalte der Website, nicht
+   die Zahlenwerte einer Geschwindigkeitsmessung.
+3. Eine **Grauzone bleibt**. „Retrieval application" ist weit
+   formuliert, und `speedtest-cli` nutzt die Messserver als
+   inoffizieller Client. Ookla könnte diese Nutzung technisch
+   unterbinden. Das wäre ein **Betriebsrisiko** – das Programm hörte
+   auf zu arbeiten –, kein Rechtsrisiko für aVincePulse.
+4. Für diesen Fall ist seit AP22 vorgesorgt: `librespeed-cli` hat
+   Vorrang, und fällt jedes Programm aus, verschwinden Schaltfläche
+   und Menüeintrag, während die übrigen Messwerte weiterlaufen.
+
+**Empfehlung:** In beiden READMEs einen Satz ergänzen, dass
+`speedtest-cli` die Server von Speedtest.net als inoffizieller Client
+nutzt und dafür die Nutzungsbedingungen von Ookla gelten. Der Nutzer
+wählt das Programm bewusst; er soll wissen, worauf er sich einlässt.
+Bisher nennt das README nur Genauigkeit und fehlenden Jitter.
+
+**Damit ist dieser Punkt geschlossen.** Abgerufener Wortlaut gesichert
+unter `06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/`.
+
 ### 3.2 Offener Punkt: Das Projekt wird nicht mehr gepflegt
 
 Das Repository `sivel/speedtest-cli` wurde **am 30.04.2026 vom

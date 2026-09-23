@@ -1871,7 +1871,7 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 AP01 bis AP24 sind abgeschlossen. **Alle Arbeitspakete vor der Veröffentlichung sind damit erledigt.**
 
-**Als Nächstes** steht die **Abschlussprüfung vor der Einreichung** bei Cinnamon Spices an (`ROADMAP_V2.md`, Abschnitt 24). Umfang wie AP19, zusätzlich Installation und Deinstallation, Prüfung gegen die dann gültigen Spices-Vorgaben sowie Tests des Nutzers auf weiteren Geräten.
+**In Arbeit** ist seit dem 21.09.2026 **AP25 – Abschlussprüfung vor der Einreichung** bei Cinnamon Spices (`ROADMAP_V2.md`, Abschnitt 24). Umfang wie AP19, zusätzlich Installation und Deinstallation, Prüfung gegen die heute gültigen Spices-Vorgaben sowie Tests des Nutzers auf weiteren Geräten. Ziel und Akzeptanzkriterien stehen unten.
 
 Danach folgt das **Einreichungspaket**: zwei Pull Requests auf `cinnamon-spices-applets` und `cinnamon-spices-desklets`, je Komponente mit `info.json`, `screenshot.png`, `README.md` und der Struktur `UUID/files/UUID/…`.
 
@@ -1881,8 +1881,227 @@ Offene Punkte aus den letzten Paketen:
 - **Aus AP23:** Screenshots für beide READMEs fehlen; bei Ko-fi ist noch keine Zahlungsmethode verbunden; kein Changelog; die Zeile `Entwicklungsstand: 0.1.0-dev` in allen zehn Dateiköpfen ist veraltet.
 - **Aus AP23/AP24:** Das Mausrad verstellt im Einstellungsfenster Auswahlfelder (Abschnitt 8). Zu bewerten, ob sich die Zahl der Auswahlfelder verringern lässt.
 - **Aus AP24:** Die 21 Beschriftungen je Komponente in den Listenspalten bleiben englisch – von Cinnamon nicht übersetzbar.
+- **Aus der Roadmap, bis zum 21.09.2026 hier nicht geführt:** Die Rechte an den Grafiken sowie die Marken- und Namensfrage sind laut `ROADMAP_V2.md`, Abschnitt 9, ausdrücklich noch offen. Ebenso verlangt Abschnitt 15 vor der Veröffentlichung ein eigenständiges Vektorlogo (SVG), geprüft bei 16, 20, 24, 32 und 64 Pixel; im Repository liegt keines. Beides ist in AP25 aufgenommen (Kriterien 11, 12 und 20).
 
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
+
+**AP25 – Abschlussprüfung vor der Einreichung: in Arbeit seit dem 21.09.2026.**
+
+### AP25 – Zwischenstand vom 22.09.2026, Abend
+
+Dieser Abschnitt ist der Einstiegspunkt für die Fortsetzung, auch mit
+einem anderen Assistenten. Alle Nachweise liegen in
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/`; der Gesprächsverlauf
+wird nicht gebraucht.
+
+#### Phase 1 abgeschlossen
+
+Alle zehn Prüfblöcke durch. **35 Befunde, keiner kritisch.**
+
+| Stufe | Zahl |
+|---|---|
+| kritisch | **0** |
+| mittel | 10 |
+| gering | 14 |
+| Hinweis / zur Kenntnis | 10 |
+| Verbesserungsvorschlag | 1 |
+
+Vollständige Liste mit Nachweis je Befund:
+`PRUEFDATEN/codedurchsicht/BEFUNDE.md`.
+
+Wesentliche Nachweise:
+
+- **Langzeittest** 21.09. 21:48 bis 22.09. 08:00, 613 Minuten: 39,99
+  Lesezugriffe je Minute im Mittel, **nie mehr als zwei je Taktmarke**
+  (Befund K1 aus AP19 damit über zehn Stunden als behoben belegt),
+  Speicherzuwachs +2,3 MB, keine Protokollzeile. Das CPU-Plateau aus
+  AP19 trat **nicht** wieder auf: ab 23 Uhr neun Stunden lang zwischen
+  2,82 und 2,89 Prozent. `PRUEFDATEN/langzeit/ERGEBNIS.md`
+- **Funktionstest** 75 Prüfpunkte in vier Etappen, beide Komponenten,
+  beide Sprachen, **kein Punkt abweichend**; nach jeder Etappe alle
+  Werte gegen die Schema-Vorgaben verglichen, jedes Mal null
+  Abweichungen. `PRUEFDATEN/funktionstest/`
+- **Robustheit** R1–R5 bestanden; R1 und R2 haben die Befunde P16 und
+  P18 im Betrieb bewiesen. `PRUEFDATEN/robustheit/ERGEBNIS.md`
+- **Einreichungspakete** für beide Komponenten aufgebaut und mit dem
+  **offiziellen** `validate-spice` aus dem Spices-Repository geprüft:
+  „No errors found." `PRUEFDATEN/einreichung/`
+- **Rechtefragen** geschlossen: `08_LIZENZEN_RECHTE/GRAFIKEN.md`,
+  `NAME-UND-MARKE.md`, Ookla-Nachtrag in `SPEEDTEST-PROGRAMME.md`.
+
+#### Phase 2, Gruppe A abgeschlossen (22.09.2026)
+
+Elf Befunde behoben, alle klein und ohne Entscheidungsbedarf:
+
+| Befund | Änderung |
+|---|---|
+| P1, P6, P7 | neue Hilfsfunktion `_zahlOderNull()` in `measurement.js` und `hardwareDetection.js`, an acht Stellen angewandt |
+| P8 | `zahlOderNull()` in `metrics.js` für die Warnschwellen |
+| P2 | `has_attribute("filesystem::free")` vor der Auswertung |
+| P9 | `!(totalDelta > 0)` statt `totalDelta <= 0` |
+| P3 | `hinweis` ist eine Pfeilfunktion, Aufrufstelle angepasst |
+| P4 | alle fünf Schnittstellenarten über `_()`, `.pot` und `de.po` ergänzt |
+| P5 | `_("unknown")` statt `"unbekannt"` |
+| P19 | `Gio.File.new_for_path(…).get_uri()` |
+| P20 | fester Pfad `~/.local/share/locale` wie in Cinnamon |
+| P23 | Rückgabewert von `dialog.open()` wird ausgewertet |
+| P24 | zehn tote Tooltips aus beiden Schemata entfernt |
+
+Geprüft: Syntax 10/10, gemeinsame Module 4/4 bitgenau identisch, JSON
+4/4 gültig, `de.po` ohne unübersetzte und ohne `fuzzy` Einträge,
+`msgfmt -c` fehlerfrei, **38 Funktionsprüfungen mit `cjs` bestanden**
+(`PRUEFDATEN/phase2/`). Die Prüfungen enthalten eine Gegenprobe: Der
+alte Code hätte aus `false`, `[]` und `" "` jeweils eine Schwelle von 0
+gemacht – also eine Dauerwarnung.
+
+Nachtest durch den Nutzer: Netzwerkauswahl unverändert, Berichtsordner
+öffnet. **Offen:** ein Speedtest mit `speedtest-cli`, um P3 auch im
+Betrieb zu belegen.
+
+#### Zwei Befunde bereits vorher behoben
+
+- **P27/P28** – Die Vorgabe des Leistensymbols war auf hellen Themes
+  unbrauchbar (weißes V, Kontrast 1,19 : 1). Bei der Umstellung fiel
+  **P28** auf: `on_standardwerte_zuruecksetzen()` hält alle Vorgaben als
+  eigene Kopie und zog nicht nach. **Entscheidung des Nutzers vom
+  22.09.2026: Die Vorgabe bleibt `icon` (farbig)** – es ist seine
+  Gestaltung, und der Tooltip nennt die Alternative. Beide Stellen
+  stehen wieder auf `icon` und stimmen überein.
+
+#### Offen: Phase 2, Gruppe B – sieben Entscheidungen
+
+| Befund | Frage | Empfehlung |
+|---|---|---|
+| P16 | `_gueltig()` fällt aufs Minimum statt auf die Vorgabe | beheben |
+| P18 | Kennzeichen erkennt den Wechsel des Speedtest-Programms nicht | beheben |
+| P30 | Leistensymbol schrumpft nach einer Höhenänderung dauerhaft | beheben |
+| P28 | Vorgaben doppelt gehalten (Schema und Code) | Weg A, B oder C, siehe Befundliste |
+| P29 | Abschnitt „Hardware" erscheint als „Geräte" | Schematext ändern? |
+| P31 | Hardwareberichte sammeln sich unbegrenzt | **Weg B beschlossen**, noch umzusetzen |
+| P26 | Repository ist privat – `git clone` im README scheitert | vor der Veröffentlichung umstellen, nur der Nutzer |
+
+#### Offen: Gruppe C – später oder nur zur Kenntnis
+
+Eigenes Paket wert: **P10** (gespeicherter `hwmon`-Pfad kann veralten –
+der einzige Befund, der stillschweigend falsche Messwerte anzeigen
+würde), **S1/P14** (synchrones `query_filesystem_info`, Spices-Regel
+„avoid synchronous I/O"), **P17** (Fenstererkennung am übersetzten
+Titel, wirkt erst, wenn jemand den Xlet-Namen übersetzt).
+
+Nur zur Kenntnis: P11, P12, P13, P15, P21, P22, P25, S2, S3, S4.
+
+#### Offen: Phase 3
+
+Prüfbericht `PRUEFBERICHT_AP25.md`, Fortschreibung dieses Dokuments und
+der Roadmap, Liste „Vor der Einreichung noch offen", Version
+`0.1.0-dev.25`, `.bak`-Dateien löschen (Kriterium 22), Snapshot,
+Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
+
+#### Erkenntnisse zur Prüfmethodik
+
+Für künftige Arbeiten festgehalten:
+
+- **Das Einstellungsfenster überlebt einen Cinnamon-Neustart.** Es ist
+  ein eigener Prozess und lädt den Übersetzungskatalog einmal beim
+  Öffnen. Nach einem Sprachwechsel muss es geschlossen und neu geöffnet
+  werden; ein Cinnamon-Neustart genügt nicht.
+- **`_getMenuItems()` liefert auch verborgene Einträge.** Sichtbarkeit
+  über `actor.visible` prüfen, nicht über das Vorhandensein.
+- **Gebundene Eigenschaften zeigen den Rohwert**, nicht das Ergebnis
+  von `_gueltig()`. Wirksamkeit von außen messen – etwa die Taktzahl
+  über inotify.
+- **Wird ein Vorgabewert im Schema geändert**, ist
+  `on_standardwerte_zuruecksetzen()` in beiden Komponenten zu prüfen
+  (P28).
+
+### AP25 – Abschlussprüfung vor der Einreichung: Ziel und Akzeptanzkriterien (freigegeben am 21.09.2026)
+
+Grundlage: `ROADMAP_V2.md`, Abschnitt 23 („Veröffentlichung", „Release-Regel") und Abschnitt 24 („Abschlussprüfung vor der Veröffentlichung").
+
+#### Ziel
+
+aVincePulse ist nachweislich einreichungsreif. Applet und Desklet werden vollständig geprüft – Code, Funktion, Robustheit, Langzeitverhalten –, dazu erstmals Installation und Deinstallation nach der Anleitung im README, die Prüfung gegen die heute gültigen Regeln von Cinnamon Spices und die verbliebenen Rechtefragen. Am Ende steht ein Prüfbericht, der zu jedem Punkt der Release-Regel eine belegte Antwort gibt, und eine Liste dessen, was vor dem Einreichen noch vom Nutzer kommen muss.
+
+AP25 prüft und behebt Befunde. Es fügt **keine neuen Funktionen** hinzu.
+
+#### Zwei Punkte, die in Abschnitt 14 bisher fehlten
+
+Bei der Bestandsaufnahme am 21.09.2026 fielen zwei offene Forderungen der Roadmap auf, die hier nicht geführt waren:
+
+- **Rechte an den Grafiken sowie Marken- und Namensfrage.** `ROADMAP_V2.md`, Abschnitt 9, führt beides ausdrücklich als „noch offen"; `08_LIZENZEN_RECHTE/` enthielt bis dahin nur die Prüfung der Speedtest-Programme. Aufgenommen als Kriterien 11 und 12.
+- **Vektorlogo (SVG).** `ROADMAP_V2.md`, Abschnitt 15: „Vor Veröffentlichung wird daraus ein technisch sauberes, eigenständiges Vektorlogo (SVG) erstellt und auf Lesbarkeit bei 16, 20, 24, 32 und 64 Pixel getestet." Im Repository liegt kein SVG. Behandelt über Kriterium 20, siehe unten.
+
+#### Entscheidungen des Nutzers vom 21.09.2026
+
+- **Kopfzeile:** Die seit AP01 veraltete Zeile `Entwicklungsstand: 0.1.0-dev` wird aus allen zehn Quelldateien **ersatzlos gestrichen**. Die Version steht in `metadata.json` und wird dort nach Abschnitt 9, Schritt 0 gepflegt.
+- **Changelog:** `CHANGELOG.md` wird angelegt, zunächst mit einem einzigen Eintrag. Begründung: Der Nutzen entsteht ab dem ersten Update nach der Veröffentlichung; später nachzutragen, was Monate zurückliegt, gelingt erfahrungsgemäß nicht.
+- **`.bak`-Dateien:** Die 37 `.bak`-Dateien des Arbeitsverzeichnisses werden gelöscht, aber erst in **Phase 3**. Während der Prüfung bleiben sie greifbar. Sie sind im Snapshot `0.1.0-dev_AP25-START/BAK-DATEIEN/` gesondert gesichert.
+- **Vektorlogo:** In AP25 wird nur **erprobt**, nicht gezeichnet. Das Messergebnis entscheidet danach.
+- **Langzeittest:** in der Nacht vom 21. auf den 22.09.2026.
+
+**Berichtigung zum Prüfbericht AP19.** Dort heißt es zu Befund H10, die `.bak`-Dateien lägen „in Git-Historie und Snapshots". Das trifft nicht zu. `.gitignore` schließt `*.bak*` aus; am 21.09.2026 mit `git ls-files` und `git log --all --diff-filter=A` geprüft: **keine einzige `.bak`-Datei war jemals im Repository.** Auch die bisherigen AP-Snapshots enthalten keine. Sie liegen ausschließlich in den Vollbackups (`tar.gz`) – und seit AP25-START zusätzlich im Snapshot.
+
+#### Umfang in vier Phasen
+
+**Phase 0 – Vorbereitung.** Snapshot `06_TESTVERSIONEN/0.1.0-dev_AP25-START/`, Prüfdatenverzeichnis `…AP25-PRUEFDATEN/`, Sicherung beider Einstellungsdateien, Werteprüfskript.
+
+**Phase 1 – Prüfen ohne Codeänderung**
+
+| Block | Inhalt |
+|---|---|
+| 1.1 | Vollständige Code-Durchsicht, 8.106 Zeilen, zusätzlich durch einen unabhängigen Prüfer ohne Kenntnis der bisherigen Annahmen (wie AP19) |
+| 1.2 | Funktionstest jeder Einstellung, Schaltfläche und Meldung in beiden Komponenten, **in beiden Sprachen**, umgeschaltet über `cinnamon-xlet-makepot -i` und `-r` |
+| 1.3 | Robustheit: beschädigte Einstellungsdatei, fehlende Sensoren, fehlendes Speedtest-Programm, abgezogenes Laufwerk, fehlende `.mo`, beschädigte Wertedatei, beschädigte Sperrdatei |
+| 1.4 | Langzeittest über Nacht mit Zählung der Messdurchläufe von außen (inotify), Speicher und CPU |
+| 1.5 | Installation und Deinstallation nach beiden READMEs, aus einem frischen Clone, zweimal hintereinander (Update-Fall), einschließlich des Verbleibs von Einstellungen, Berichten und Speedtest-Werten |
+| 1.6 | Cinnamon-Spices-Regeln, heute abgerufen aus `linuxmint/cinnamon-spices-applets` und `-desklets`, Punkt für Punkt gegengeprüft |
+| 1.7 | Struktur des Einreichungspakets trocken aufgebaut und geprüft |
+| 1.8 | Übereinstimmung von Applet und Desklet in Verhalten, Texten und Schemata |
+| 1.9 | Die offen gebliebenen Hinweise aus AP19, Gruppe C, erneut bewertet: G4, G7, H2, H3, H4, H5, H7, H8, H9, H10, H11, H12, H13 |
+| 1.10 | Rechte: Grafiken, Marken- und Namensfrage, Nachholen der Ookla-Nutzungsbedingungen |
+
+**Phase 2 – Befunde bewerten und beheben.** Befundliste mit Schweregrad wie in AP19, Vorschlag zur Einordnung, Freigabe des Nutzers je Gruppe, dann Umsetzung. Größere Änderungen werden als eigenes Paket vorgeschlagen statt hier eingeschoben.
+
+**Phase 3 – Nachweis und Abschluss.** Nachtest, Löschen der `.bak`-Dateien, Prüfbericht `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`, Sicherungsroutine nach Abschnitt 9.
+
+#### Akzeptanzkriterien
+
+1. **Code-Durchsicht** aller zehn Quelldateien abgeschlossen, zusätzlich durch einen unabhängigen Prüfer; jeder Befund mit Datei, Zeile und Nachweisart.
+2. **Funktionstest** jeder Einstellung, Schaltfläche und Meldung in beiden Komponenten bestanden, protokolliert mit Uhrzeit.
+3. **Beide Sprachen geprüft:** Jede sichtbare Zeichenkette erscheint in Deutsch und in Englisch richtig; kein abgeschnittener Text, keine verrutschte Tabelle, keine leere Stelle. Umgeschaltet ohne Eingriff in die Systemsprache.
+4. **Robustheit:** Keiner der Fälle aus Block 1.3 führt zu einem Absturz, zu einer Fehlerflut im Protokoll oder zu stillschweigend falschen Werten.
+5. **Langzeittest:** mindestens acht Stunden, je Taktmarke ein Durchlauf je Komponente, keine Protokollzeile von aVincePulse, Speicherzuwachs belegt und bewertet.
+6. **Installation** nach beiden READMEs erfolgreich, zweimal hintereinander mit gleichem Ergebnis; **Deinstallation** entfernt die Programmverzeichnisse vollständig; was mit Einstellungen, Berichten und Speedtest-Werten geschieht, ist geprüft und im README richtig beschrieben.
+7. **Cinnamon-Spices-Regeln:** Die heute gültigen Vorgaben beider Repositories sind abgerufen, und zu jeder Regel steht in einer Tabelle, ob aVincePulse sie erfüllt und woran das belegt ist. Jede Abweichung ist benannt.
+8. **Einreichungsstruktur** je Komponente vollständig aufgebaut und geprüft; `info.json` mit dem GitHub-Benutzernamen, `README.md` der Komponente, `po/` enthalten, keine vorkompilierten Programme außer Bildern, keine GSettings-Schemas, kein Nachladen fremden Codes.
+9. **Applet und Desklet stimmen überein**, wo sie übereinstimmen sollen; jede bewusste Abweichung ist dokumentiert.
+10. **Die offenen Hinweise aus AP19** sind einzeln entschieden: behoben, in ein späteres Paket verschoben oder mit Begründung geschlossen. Keiner bleibt unbewertet.
+11. **Rechte an den Grafiken** geklärt und in `08_LIZENZEN_RECHTE/GRAFIKEN.md` belegt: Herkunft jeder ausgelieferten Bilddatei, Nutzungsrecht, Lizenzangabe für die Einreichung.
+12. **Marken- und Namensfrage** geprüft und in `08_LIZENZEN_RECHTE/NAME-UND-MARKE.md` festgehalten: der Name „aVincePulse", das Verhältnis zu bestehenden Marken sowie die Nennung von „Speedtest.net" und „LibreSpeed" in den Texten.
+13. **Ookla-Nutzungsbedingungen** nachgeholt oder der erneute Fehlschlag dokumentiert; `SPEEDTEST-PROGRAMME.md` entsprechend fortgeschrieben.
+14. **Ein echter Speedtest je Programm** in je einer Komponente ausgeführt, Bericht und Wertedatei geprüft. Der Nutzer wird vorher informiert, was gemessen wird.
+15. **Einstellungen unverändert:** Nach allen Tests werden die gespeicherten Werte **gegen die Schema-Vorgaben** verglichen, nicht nur gegen die Sicherung. Jede Abweichung ist erklärt.
+16. **Prüfbericht** `PRUEFBERICHT_AP25.md` mit Vorgehen, Befundübersicht, Einzelbefunden, Testprotokollen, der Spices-Tabelle und dem Stand jedes Kriteriums.
+17. **Release-Regel beantwortet:** Zu jedem der acht Punkte aus `ROADMAP_V2.md`, Abschnitt 23, steht im Bericht eine belegte Aussage.
+18. **Liste „Vor der Einreichung noch offen"** mit allem, was nur der Nutzer erledigen kann: Screenshots, Ko-fi-Zahlungsweg, Tests auf weiteren Geräten.
+19. **Changelog** `CHANGELOG.md` angelegt, mit einem Eintrag für die erste Veröffentlichung.
+20. **Panel-Symbol erprobt:** bei allen einstellbaren Panelhöhen, in beiden Varianten (farbig und einfarbig), dazu die Darstellung in der Applet-Liste und im Desklet-Verzeichnis, mit Bildschirmaufnahmen belegt. Befund G4 aus AP19 ist damit entschieden. Das Ergebnis trägt die Entscheidung über das Vektorlogo: Trägt PNG, wird die Forderung aus Roadmap-Abschnitt 15 mit dem Messergebnis begründet auf „nach 1.0" verschoben; trägt es nicht, folgt ein eigenes Paket **AP26 – Logo als Vektor** vor der Einreichung.
+21. **Kopfzeile entfernt:** `Entwicklungsstand: 0.1.0-dev` ist aus allen zehn Quelldateien gestrichen; die vier gemeinsamen Module sind danach weiterhin bitgenau identisch.
+22. **`.bak`-Dateien** in Phase 3 aus dem Arbeitsverzeichnis entfernt, nachdem sie im Snapshot `AP25-START` gesichert sind.
+23. **Abschluss:** Version `0.1.0-dev.25`, Snapshot, Fortschreibung von `PROJECT-STATUS.md` und `ROADMAP_V2.md`, Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
+
+#### Nicht Bestandteil von AP25
+
+- Das Einreichungspaket tatsächlich abschicken (zwei Pull Requests); das ist das Paket danach.
+- Neue Funktionen, auch keine aus der OPTIONAL-Liste.
+- Die Screenshots selbst; AP25 bereitet nur vor, was danach zu tun ist.
+- Weitere Sprachen.
+
+#### Was AP25 nicht lösen kann
+
+- **Das Mausrad** im Einstellungsfenster (Abschnitt 8). Bewerten lässt sich nur, ob Registerkarten (`layout`) das Fenster verkürzen; das wäre ein eigenes Paket.
+- **Die 21 englischen Listenspalten** je Komponente. Bleiben wie in AP24 festgestellt.
+- **Tests auf anderen Geräten.** AP25 stellt dafür eine Prüfliste bereit.
 
 **AP24 – Übersetzung: abgeschlossen am 21.09.2026.** Ergebnis in Abschnitt 6 unter „AP24".
 
@@ -2272,6 +2491,14 @@ git status
 git log -3 --oneline
 git tag --list
 ```
+
+**Stand 22.09.2026: AP25 ist in Arbeit.** Einstiegspunkt ist Abschnitt
+14, Unterabschnitt „AP25 – Zwischenstand vom 22.09.2026, Abend". Dort
+steht, was erledigt ist, welche sieben Entscheidungen offen sind und wo
+die Nachweise liegen. Der Quellcode ist gegenüber dem Tag
+`0.1.0-dev_AP24-END` verändert (Gruppe A der Phase 2), die Version in
+`metadata.json` steht noch auf `0.1.0-dev.24` und wird erst zum
+Abschluss hochgesetzt.
 
 Erwarteter Ausgangspunkt nach AP24:
 

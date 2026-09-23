@@ -404,14 +404,12 @@
         "type": "button",
         "description": "Run a speed test now",
         "callback": "on_speedtest_starten",
-        "tooltip": "The test takes about 20 seconds. The result is saved and is available to the other component as well.",
         "dependency": "speedtest-vorhanden"
     },
     "btn-berichte-speedtest": {
         "type": "button",
         "description": "Open the speed test reports",
-        "callback": "on_berichte_speedtest_oeffnen",
-        "tooltip": "Opens the folder holding the speed test reports. Every measurement writes its own file there, with date and time."
+        "callback": "on_berichte_speedtest_oeffnen"
     },
     "kopf-hardware": {
         "type": "header",
@@ -420,8 +418,7 @@
     "btn-hardware-neu": {
         "type": "button",
         "description": "Detect hardware again",
-        "callback": "on_hardware_neu_erkennen",
-        "tooltip": "Searches for sensors again. Needed after a hardware change, a new drive for instance, or when a value is missing because its driver had not loaded at start-up. Restarting Cinnamon is not required. If the detection finds sensors, interfaces or drives that are new or gone, you are asked whether this window may briefly close and reopen in the same place to refresh the lists. No window is closed without your consent."
+        "callback": "on_hardware_neu_erkennen"
     },
     "hinweis-hardware-neu": {
         "type": "label",
@@ -430,8 +427,7 @@
     "btn-berichte-hardware": {
         "type": "button",
         "description": "Open the hardware reports",
-        "callback": "on_berichte_hardware_oeffnen",
-        "tooltip": "Opens the folder holding the hardware reports. Every detection writes its own file there, with date and time."
+        "callback": "on_berichte_hardware_oeffnen"
     },
     "kopf-zuruecksetzen": {
         "type": "header",
@@ -440,8 +436,7 @@
     "btn-standardwerte": {
         "type": "button",
         "description": "Restore the defaults",
-        "callback": "on_standardwerte_zuruecksetzen",
-        "tooltip": "Restores the update interval, display size, opacity and panel icon to the values shipped with aVincePulse."
+        "callback": "on_standardwerte_zuruecksetzen"
     },
     "kopf-unterstuetzung": {
         "type": "header",

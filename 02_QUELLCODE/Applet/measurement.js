@@ -17,8 +17,6 @@
  * along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  *
- * Entwicklungsstand: 0.1.0-dev
- *
  * Zuständig für die Erfassung und Aufbereitung der Messwerte.
  * Darstellung und UI bleiben in desklet.js bzw. applet.js.
  *
@@ -210,7 +208,9 @@ var MeasurementProvider = class MeasurementProvider {
             this._lastCpuTotal = total;
             this._lastCpuIdle = idle;
 
-            if (totalDelta <= 0)
+            // Nicht "totalDelta <= 0": NaN <= 0 ist false und liefe
+            // durch (Befund P9 aus AP25).
+            if (!(totalDelta > 0))
                 return "--";
 
             const load =
@@ -320,11 +320,14 @@ var MeasurementProvider = class MeasurementProvider {
             "/sys/class/net/" + iface + "/statistics/tx_bytes"
         );
 
-        if (rxText === null || txText === null)
-            return { down: 0, up: 0 };
+        // Eine leere Zaehlerdatei liefert "" und nicht null; Number("")
+        // waere 0 und ergaebe im naechsten Takt einen Messausschlag in
+        // Hoehe des gesamten Zaehlerstands (Befund P6 aus AP25).
+        const rx = this._zahlOderNull(rxText);
+        const tx = this._zahlOderNull(txText);
 
-        const rx = Number(rxText);
-        const tx = Number(txText);
+        if (rx === null || tx === null)
+            return { down: 0, up: 0 };
         const now = GLib.get_monotonic_time() / 1000000;
 
         if (
@@ -456,6 +459,13 @@ var MeasurementProvider = class MeasurementProvider {
             const free =
                 info.get_attribute_uint64("filesystem::free");
 
+            // get_attribute_uint64() liefert 0, wenn das Attribut nicht
+            // gesetzt werden konnte; bei einem vorzeichenlosen Wert ist
+            // "free < 0" nie wahr. Ohne has_attribute() erschiene ein
+            // Dateisystem ohne statvfs als "0 B frei" (Befund P2).
+            if (!info.has_attribute("filesystem::free"))
+                return null;
+
             if (!Number.isFinite(free) || free < 0)
                 return null;
 
@@ -502,6 +512,23 @@ var MeasurementProvider = class MeasurementProvider {
                 (bytes / (1024 * 1024)).toFixed(0),
             unit: "MB"
         };
+    }
+
+    /*
+     * Wandelt einen Rohwert aus /proc oder /sys in eine Zahl um.
+     *
+     * Number() allein genuegt nicht: Number(null), Number(""),
+     * Number(false) und Number([]) ergeben jeweils 0 und sind endlich.
+     * Ein fehlender oder leerer Wert erschiene damit als gueltige Null
+     * (Befund P6 aus AP25, dieselbe Falle wie in AP22).
+     */
+    _zahlOderNull(rohwert) {
+        if (typeof rohwert !== "string" || rohwert.trim() === "")
+            return null;
+
+        const zahl = Number(rohwert);
+
+        return Number.isFinite(zahl) ? zahl : null;
     }
 
     _readFile(path) {
@@ -624,24 +651,24 @@ var MeasurementProvider = class MeasurementProvider {
         const uevent = this._readFile(basis + "/uevent") || "";
 
         if (vorhanden("/wireless") || vorhanden("/phy80211"))
-            return "WLAN";
+            return _("WLAN");
 
         if (/DEVTYPE=wwan/.test(uevent) || name.startsWith("ww"))
-            return "Mobilfunk";
+            return _("Mobile broadband");
 
         if (
             this._readFile(basis + "/type") === "65534" ||
             /DEVTYPE=wireguard/.test(uevent) ||
             /^(tun|tap|wg|ppp|vpn)/.test(name)
         )
-            return "VPN";
+            return _("VPN");
 
         // Ohne zugehoeriges Geraet ist die Schnittstelle rein virtuell,
         // etwa eine Bruecke fuer virtuelle Maschinen oder Docker.
         if (!vorhanden("/device"))
-            return "virtuell";
+            return _("virtual");
 
-        return "LAN";
+        return _("LAN");
     }
 
     /*

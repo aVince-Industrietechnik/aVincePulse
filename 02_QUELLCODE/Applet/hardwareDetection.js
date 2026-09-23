@@ -17,8 +17,6 @@
  * along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  *
- * Entwicklungsstand: 0.1.0-dev
- *
  * Erkennt geeignete hwmon-Sensoren fuer:
  * - CPU-Temperatur
  * - Storage-/NVMe-Temperatur
@@ -659,16 +657,16 @@ var HardwareDetector = class HardwareDetector {
         if (!sensor)
             return "--";
 
-        const text =
-            this._readFile(sensor.path);
+        // _readFile() liefert bei einer leeren Datei "" und nicht null;
+        // Number("") waere 0 und damit eine scheinbar gueltige
+        // Temperatur (Befund P7 aus AP25).
+        const zahl =
+            this._zahlOderNull(this._readFile(sensor.path));
 
-        if (text === null)
+        if (zahl === null)
             return "--";
 
-        let value = Number(text);
-
-        if (!Number.isFinite(value))
-            return "--";
+        let value = zahl;
 
         // Linux hwmon liefert Temperaturen normalerweise
         // in Milligrad Celsius.
@@ -685,16 +683,13 @@ var HardwareDetector = class HardwareDetector {
         if (!sensor)
             return "----";
 
-        const text =
-            this._readFile(sensor.path);
-
-        if (text === null)
-            return "----";
-
-        const value = Number(text);
+        // Wie bei der Temperatur: eine leere Datei ergaebe sonst 0 rpm
+        // (Befund P7 aus AP25).
+        const value =
+            this._zahlOderNull(this._readFile(sensor.path));
 
         if (
-            !Number.isFinite(value) ||
+            value === null ||
             value < 0 ||
             value > 200000
         )
@@ -819,15 +814,18 @@ var HardwareDetector = class HardwareDetector {
         ];
 
         for (const pair of pairs) {
-            const now =
-                Number(this._readFile(basePath + pair[0]));
+            // Number(null) und Number("") ergeben 0 und sind endlich.
+            // Ohne die Pruefung auf einen brauchbaren Rohwert erschiene
+            // ein fehlendes charge_now als "0 %" (Befund P1 aus AP25).
+            const nowRoh = this._readFile(basePath + pair[0]);
+            const fullRoh = this._readFile(basePath + pair[1]);
 
-            const full =
-                Number(this._readFile(basePath + pair[1]));
+            const now = this._zahlOderNull(nowRoh);
+            const full = this._zahlOderNull(fullRoh);
 
             if (
-                Number.isFinite(now) &&
-                Number.isFinite(full) &&
+                now !== null &&
+                full !== null &&
                 full > 0
             ) {
                 const percent = 100 * now / full;
@@ -881,6 +879,23 @@ var HardwareDetector = class HardwareDetector {
             return "OFF";
 
         return "--";
+    }
+
+    /*
+     * Wandelt einen Rohwert aus /sys in eine Zahl um.
+     *
+     * Number() allein genuegt nicht: Number(null), Number(""),
+     * Number(false) und Number([]) ergeben jeweils 0 und sind endlich.
+     * Ein fehlender oder leerer Wert erschiene damit als gueltige Null
+     * (Befund P1 aus AP25, dieselbe Falle wie in AP22).
+     */
+    _zahlOderNull(rohwert) {
+        if (typeof rohwert !== "string" || rohwert.trim() === "")
+            return null;
+
+        const zahl = Number(rohwert);
+
+        return Number.isFinite(zahl) ? zahl : null;
     }
 
     _readFile(path) {

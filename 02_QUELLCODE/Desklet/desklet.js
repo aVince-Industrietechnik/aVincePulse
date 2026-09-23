@@ -17,8 +17,6 @@
  * along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  *
- * Entwicklungsstand: 0.1.0-dev
- *
  * Die Anzeigezeilen werden zentral aus metrics.js erzeugt.
  * Reihenfolge, Sichtbarkeit und eigene Bezeichnungen stammen aus
  * der Messwertliste der Einstellungen, METRICS liefert Vorgabe-
@@ -51,7 +49,11 @@ const Gettext = imports.gettext;
  */
 const UUID = "avincepulse-desklet@avince";
 
-Gettext.bindtextdomain(UUID, GLib.get_user_data_dir() + "/locale");
+// Fester Pfad, nicht get_user_data_dir(): Cinnamon legt die
+// uebersetzten Kataloge durchgehend unter ~/.local/share/locale ab
+// (xlet-settings.py, ExtensionCore.py, Spices.py). Bei gesetztem
+// XDG_DATA_HOME liefen beide sonst auseinander (Befund P20 aus AP25).
+Gettext.bindtextdomain(UUID, GLib.get_home_dir() + "/.local/share/locale");
 
 function _(text) {
     return Gettext.dgettext(UUID, text);
@@ -1266,7 +1268,22 @@ class AVinceHWMonitor extends Desklet.Desklet {
         ]);
 
         this._rueckfrage = dialog;
-        dialog.open();
+
+        // open() liefert false, wenn pushModal scheitert. Ohne diese
+        // Pruefung bliebe _rueckfrage dauerhaft gesetzt, und der
+        // Nutzer saehe nach dem Klick ueberhaupt nichts, da die
+        // Statusmeldung zuvor ausgeblendet wurde (Befund P23).
+        if (!dialog.open()) {
+            this._rueckfrage = null;
+            dialog.destroy();
+
+            if (this._statusAnzeige) {
+                this._statusAnzeige.zeige(
+                    _("The query could not be shown. Please try again.")
+                );
+                this._statusAnzeige.verbergeNachLesezeit();
+            }
+        }
     }
 
     /*
@@ -1606,8 +1623,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
             GLib.mkdir_with_parents(verzeichnis, 0o755);
 
+            // Den URI vom Dateiobjekt bilden lassen, nicht selbst
+            // zusammensetzen: ein Pfad mit Leerzeichen, Umlaut, "#"
+            // oder "?" ergaebe sonst einen ungueltigen URI
+            // (Befund P19 aus AP25).
             Gio.AppInfo.launch_default_for_uri(
-                "file://" + verzeichnis,
+                Gio.File.new_for_path(verzeichnis).get_uri(),
                 null
             );
 

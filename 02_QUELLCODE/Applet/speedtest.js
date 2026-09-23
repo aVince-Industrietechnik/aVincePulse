@@ -17,8 +17,6 @@
  * along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  *
- * Entwicklungsstand: 0.1.0-dev
- *
  * Kapselt Ausfuehrung, Ablage und Auswertung des Speedtests.
  * Applet und Desklet verwenden dieses Modul gemeinsam, damit der
  * Speedtest aus beiden Komponenten ausgeloest werden kann.
@@ -161,7 +159,7 @@ const PROGRAMME = [
             "/snap/bin/librespeed-cli"
         ],
         jitter: true,
-        hinweis: "",
+        hinweis: null,
 
         argumente: () => ["--json"],
 
@@ -198,8 +196,14 @@ const PROGRAMME = [
             "/usr/local/bin/speedtest-cli"
         ],
         jitter: false,
-        hinweis: _("speedtest-cli does not report jitter and is less " +
-                   "accurate on fast connections."),
+        // Pfeilfunktion, nicht der fertige Text: PROGRAMME ist eine
+        // const auf Modulebene und wird beim Import ausgewertet -
+        // also bevor setzeUebersetzung() laeuft. Ein fertiger Text
+        // bliebe dadurch in jeder Sprache englisch (Befund P3 aus
+        // AP25, im Betrieb belegt). Ebenso geloest wie bei
+        // KEIN_PROGRAMM_MELDUNG.
+        hinweis: () => _("speedtest-cli does not report jitter and is " +
+                         "less accurate on fast connections."),
 
         /*
          * --secure erzwingt HTTPS; ohne diese Option spricht
@@ -749,12 +753,13 @@ var SpeedtestRunner = class SpeedtestRunner {
             // Jitter-Wert von speedtest-cli.
             if (def && def.hinweis) {
                 const hu = _("Note on the program");
+                const hinweisText = def.hinweis();
 
                 text +=
                     "\n" +
                     hu + "\n" +
                     "-".repeat(hu.length) + "\n" +
-                    def.hinweis + "\n";
+                    hinweisText + "\n";
             }
 
             GLib.file_set_contents(pfad, text);
@@ -1062,7 +1067,7 @@ var SpeedtestRunner = class SpeedtestRunner {
             GLib.file_set_contents(
                 this._sperrPfad(),
                 Math.floor(Date.now() / 1000) + "\n" +
-                (this._quelle || "unbekannt") + "\n"
+                (this._quelle || _("unknown")) + "\n"
             );
         } catch (e) {
             global.logError(e);

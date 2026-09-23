@@ -17,8 +17,6 @@
  * along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  *
- * Entwicklungsstand: 0.1.0-dev
- *
  * Diese Datei enthält ausschließlich die Beschreibung der Messwerte.
  * Hardware-Erkennung und Messwerterfassung erfolgen getrennt.
  *
@@ -71,6 +69,25 @@ function _(text) {
  * aendern. Geschrieben wird stets fuelle(_("..."), wert), damit
  * xgettext die Vorlage findet.
  */
+/*
+ * Wandelt einen Wert aus der Einstellungsdatei in eine Zahl um.
+ *
+ * Number() allein genuegt nicht: Number(false), Number([]) und
+ * Number(" ") ergeben jeweils 0 (Befund P8 aus AP25). Die
+ * Einstellungsdatei ist von Hand bearbeitbar.
+ */
+function zahlOderNull(wert) {
+    if (typeof wert === "number")
+        return Number.isFinite(wert) ? wert : null;
+
+    if (typeof wert !== "string" || wert.trim() === "")
+        return null;
+
+    const zahl = Number(wert);
+
+    return Number.isFinite(zahl) ? zahl : null;
+}
+
 function fuelle(vorlage, ...werte) {
     let i = 0;
     return String(vorlage).replace(/%s/g, () => {
@@ -461,13 +478,16 @@ function ordneWarnschwellen(liste) {
         vorhanden[id] = true;
 
         const schwelle = ergebnis[id];
-        const warnung = Number(eintrag.warnung);
-        const kritisch = Number(eintrag.kritisch);
+        // Nur Zahlen und nicht leere Texte gelten: false, [] und " "
+        // ergaeben mit Number() jeweils 0 und damit eine Schwelle, die
+        // dauerhaft ausloest (Befund P8 aus AP25).
+        const warnung = zahlOderNull(eintrag.warnung);
+        const kritisch = zahlOderNull(eintrag.kritisch);
 
-        if (eintrag.warnung !== null && eintrag.warnung !== "" && Number.isFinite(warnung))
+        if (warnung !== null)
             schwelle.warnung = warnung;
 
-        if (eintrag.kritisch !== null && eintrag.kritisch !== "" && Number.isFinite(kritisch))
+        if (kritisch !== null)
             schwelle.kritisch = kritisch;
 
         schwelle.aktiv = eintrag.aktiv !== false;
