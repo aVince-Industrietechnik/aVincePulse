@@ -285,8 +285,10 @@ msgstr ""
 
 #: hardwareDetection.js:1049
 msgid ""
-"Identifier: stays the same after a restart and is what the sensor choice in "
-"the settings stores."
+"Identifier: what the sensor choice in the settings stores. Where a "
+"device reports a serial number it is used, so the choice still finds the "
+"same device after a restart, even if the kernel numbers the devices "
+"differently."
 msgstr ""
 
 #: hardwareDetection.js:1057

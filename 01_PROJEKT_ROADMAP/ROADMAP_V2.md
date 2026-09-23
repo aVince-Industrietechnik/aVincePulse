@@ -1704,6 +1704,58 @@ Vorschlag: **OPTIONAL 1.0**, nach der Veröffentlichung. Die Grundlage
 dafür ist mit AP25/B1 gelegt – seither weiß die Hardwareerkennung, zu
 welchem Laufwerk ein Temperatursensor gehört.
 
+### Balkenanzeige für prozentuale Werte
+
+Aufgenommen am 23.09.2026 auf Wunsch des Nutzers, **nicht Teil von
+AP25**.
+
+Zu den Zahlen tritt wahlweise ein Balken, der den Wert auf einen Blick
+zeigt – in der Desklet-Anzeige und in der Hover-Anzeige des Applets.
+
+**Umfang:**
+
+- Zunächst die prozentualen Werte: `LOAD`, `RAM`, `FREE`.
+- Möglicherweise auch die Temperaturen, dann aber **relativ zur
+  Warnschwelle** statt zu einem festen Höchstwert. Eine CPU-Temperatur
+  hat keine natürliche Obergrenze; die Schwelle aus AP18 ist der
+  einzige Bezug, der auf jedem Rechner etwas bedeutet.
+- **Abschaltbar**, wie jede Zusatzfunktion.
+- Die Warnfarben aus AP18 gelten auch für den Balken.
+
+**Zu klären:**
+
+- Wie verhält sich der Balken zu den Spaltenbreiten aus AP10? Die
+  Anzeige richtet sich heute nach dem breitesten Wert.
+- Bei `FREE` ist die Richtung umgekehrt: Ein voller Balken ist dort
+  ein schlechtes Zeichen, bei `LOAD` ein arbeitendes System. Das muss
+  erkennbar sein, ohne die Beschriftung zu lesen.
+
+Vorschlag: **OPTIONAL 1.0**, als eigenes Arbeitspaket **nach der
+Veröffentlichung**.
+
+### GPU-Auslastung
+
+Ebenfalls am 23.09.2026 aufgenommen, ebenfalls nicht Teil von AP25.
+
+Bei AMD steht die Auslastung unter `gpu_busy_percent` im
+`amdgpu`-Zweig von `/sys` und wäre wie die übrigen Werte zu lesen.
+
+**Bei NVIDIA nicht über `hwmon` erreichbar.** Die Karte meldet ihre
+Auslastung ausschließlich über den eigenen Treiber (`nvidia-smi`).
+aVincePulse liest bisher ausschließlich `/sys` – eine bewusste
+Festlegung, die vor einer Erweiterung zu prüfen wäre: Ein Aufruf eines
+fremden Programms je Takt wäre etwas anderes als eine Datei zu lesen.
+
+Am 23.09.2026 auf dem Zweitgerät bestätigt: Dort steckt eine
+NVIDIA-Karte, und sie erscheint unter `/sys/class/hwmon` überhaupt
+nicht. Das `amdgpu` dort gehört zur **integrierten** Grafik des Ryzen.
+
+Vorschlag: **OPTIONAL 1.0**, gemeinsam mit der Balkenanzeige zu
+bewerten.
+
+**Grundsatz für beide Punkte, vom Nutzer vorgegeben:** eigenständige
+Umsetzung, **kein Code aus fremden Desklets**.
+
 ### Verlaufsgrafik
 
 Kleine Verlaufskurve je Messwert, etwa über die letzten Minuten.

@@ -446,10 +446,49 @@ var HardwareDetector = class HardwareDetector {
             (geraete.size > 1 ? " [" + sensor.geraet + "]" : "");
     }
 
+
+    /*
+     * Kennung eines Geraets fuer die gespeicherte Sensorwahl.
+     *
+     * Bevorzugt die Seriennummer, die der Kernel neben dem Geraet
+     * ablegt - bei NVMe unter <hwmon>/device/serial. Sie gehoert zur
+     * Hardware und ueberlebt jeden Neustart, waehrend der Geraetename
+     * die Fundreihenfolge widerspiegelt.
+     *
+     * Ohne Seriennummer bleibt es beim Geraetenamen. Fuer die
+     * uebrigen Chips - coretemp.0, dell_smm_hwmon, thermal_zoneN -
+     * ist das tragfaehig: Ihre Namen ergeben sich aus dem Aufbau des
+     * Rechners, nicht aus einer Zaehlung.
+     *
+     * Das Praefix "sn:" haelt beide Faelle auseinander und macht in
+     * einer gespeicherten Einstellung lesbar, worauf sie sich stuetzt.
+     */
+    _stabileKennung(basePath, geraet) {
+        const roh = this._readFile(basePath + "/device/serial");
+
+        if (typeof roh !== "string")
+            return geraet;
+
+        // Leerzeichen und der Trenner der Kennung wuerden sie sonst
+        // zerlegen; Seriennummern enthalten beides gelegentlich.
+        const serial = roh.trim().replace(/[\s|]+/g, "");
+
+        return serial ? "sn:" + serial : geraet;
+    }
+
     /*
      * Geraet, an dem ein hwmon-Chip haengt, etwa "nvme0" oder
-     * "coretemp.0". Anders als die hwmonN-Nummer bleibt es nach
-     * einem Neustart gleich.
+     * "coretemp.0". Stabiler als die hwmonN-Nummer, aber nicht
+     * zugesichert: Der Kernel vergibt diese Namen in der Reihenfolge,
+     * in der er die Geraete findet. Bei zwei NVMe-Laufwerken kann
+     * "nvme0" nach einem Neustart die andere Platte sein, und ein
+     * abgezogener und wieder verbundener Empfaenger erscheint als
+     * "hidpp_battery_24" statt "hidpp_battery_22" (Befund B9 aus
+     * AP25, auf dem Zweitgeraet belegt).
+     *
+     * Dieser Name dient deshalb nur der Anzeige und dem Abgleich mit
+     * dem gemessenen Laufwerk. Was gespeichert wird, liefert
+     * _stabileKennung().
      */
     _geraetVon(basePath) {
         try {
@@ -557,6 +596,7 @@ var HardwareDetector = class HardwareDetector {
 
     _scanHwmonDirectory(basePath, chip, result) {
         const geraet = this._geraetVon(basePath);
+        const kennung = this._stabileKennung(basePath, geraet);
 
         try {
             const dir = Gio.File.new_for_path(basePath);
@@ -591,7 +631,7 @@ var HardwareDetector = class HardwareDetector {
                         label: label,
                         index: index,
                         geraet: geraet,
-                        key: chip + "|" + geraet + "|temp" + index,
+                        key: chip + "|" + kennung + "|temp" + index,
                         path: basePath + "/" + name
                     });
 
@@ -617,7 +657,7 @@ var HardwareDetector = class HardwareDetector {
                         label: label,
                         index: index,
                         geraet: geraet,
-                        key: chip + "|" + geraet + "|fan" + index,
+                        key: chip + "|" + kennung + "|fan" + index,
                         path: basePath + "/" + name
                     });
                 }
@@ -1165,8 +1205,11 @@ var HardwareDetector = class HardwareDetector {
 
         zeilen.push("");
         zeilen.push(_("Reading: measured while this report was written."));
-        zeilen.push(_("Identifier: stays the same after a restart and is " +
-                      "what the sensor choice in the settings stores."));
+        zeilen.push(_("Identifier: what the sensor choice in the settings " +
+                      "stores. Where a device reports a serial number it is " +
+                      "used, so the choice still finds the same device after " +
+                      "a restart, even if the kernel numbers the devices " +
+                      "differently."));
 
         return zeilen.join("\n") + "\n";
     }

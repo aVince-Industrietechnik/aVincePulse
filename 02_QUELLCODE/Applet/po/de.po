@@ -305,11 +305,15 @@ msgstr "Wert: gemessen bei Erstellung dieses Berichts."
 
 #: hardwareDetection.js:1049
 msgid ""
-"Identifier: stays the same after a restart and is what the sensor choice in "
-"the settings stores."
+"Identifier: what the sensor choice in the settings stores. Where a "
+"device reports a serial number it is used, so the choice still finds the "
+"same device after a restart, even if the kernel numbers the devices "
+"differently."
 msgstr ""
-"Kennung: bleibt nach einem Neustart gleich und wird für die Sensorauswahl in "
-"den Einstellungen gespeichert."
+"Kennung: wird für die Sensorauswahl in den Einstellungen gespeichert. "
+"Meldet ein Gerät eine Seriennummer, wird sie verwendet; die Wahl findet "
+"dann nach einem Neustart dasselbe Gerät wieder, auch wenn der Kernel die "
+"Geräte anders durchnummeriert."
 
 #: hardwareDetection.js:1057
 msgid "not found (system without battery)"

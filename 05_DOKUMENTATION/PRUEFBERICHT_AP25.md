@@ -8,8 +8,9 @@
 > behoben und am Referenzgerät geprüft. **Offen ist allein der
 > Nachweis von B8 auf dem Zweitgerät** – inzwischen erbracht und
 > bestanden. Dabei kam **B9** ans Licht: Eine manuelle Sensorwahl
-> überlebt einen Neustart nicht zuverlässig. **B9 ist noch nicht
-> entschieden.** Version, Tag und Release folgen danach.
+> überlebt einen Neustart nicht zuverlässig. **B9 ist entschieden,
+> behoben und am Referenzgerät geprüft.** Version, Tag und Release
+> folgen nach Phase 3.
 
 Geprüfter Stand: Commit `b1ed015` zuzüglich der Behebungen von B7 und
 B8, die noch nicht committet sind
@@ -110,7 +111,7 @@ unter eigenen Kennungen `B`:
 | B2 | behoben (Prüfwerkzeug) |
 | B4 | keine Änderung |
 | B5 | in der Roadmap, OPTIONAL 1.0 |
-| **B9** | **offen, Entscheidung des Nutzers steht aus** |
+| **B9** | behoben und geprüft |
 
 **B8 wog am schwersten.** Er hob die Behebung von B1 durch eine
 bewusste Handlung des Nutzers wieder auf – „Hardware neu erkennen"
@@ -683,6 +684,12 @@ Zweites Laufwerk als eigene Zeile statt nur über die Auswahl. Das ist
 eine Funktionserweiterung, keine Abweichung, und gehört in
 `ROADMAP_V2.md` – nicht in AP25.
 
+**Am 23.09.2026 sind zwei weitere Wünsche des Nutzers dazugekommen**,
+ebenfalls nicht Teil von AP25 und ebenfalls in Abschnitt 24 der Roadmap
+aufgenommen: eine **abschaltbare Balkenanzeige** für prozentuale Werte
+und die **GPU-Auslastung**. Grundsatz des Nutzers für beide:
+eigenständige Umsetzung, **kein Code aus fremden Desklets**.
+
 #### B6 – Dunkler Kasten hinter dem Desklet (mittel)
 
 Auf dem Tower **und** auf dem Referenzgerät bestätigt.
@@ -908,7 +915,29 @@ gespeicherte Wahl – bestehende Einstellungen fänden ihren Sensor
 nicht mehr und fielen auf „Automatisch" zurück. Das ist vor der ersten
 Veröffentlichung folgenlos, danach nicht mehr.
 
-**Entscheidung des Nutzers steht aus**, ob in AP25 oder später.
+**Entscheidung des Nutzers vom 23.09.2026: jetzt beheben, und zwar
+beides** – Kennung an ein festes Merkmal binden und den Berichtstext
+berichtigen.
+
+**Umgesetzt und geprüft**, Nachweis `phase2/ERGEBNIS-B9.md`. Neue
+Methode `_stabileKennung()` bevorzugt die Seriennummer aus
+`<hwmon>/device/serial`; ohne Seriennummer bleibt es beim Gerätenamen.
+Der Gerätename bleibt im Sensorobjekt erhalten – er wird für die
+Anzeige und für den Laufwerksabgleich aus B1 weiter gebraucht.
+
+Am laufenden System belegt: `nvme|sn:NL9055R005218P2202|temp1` statt
+`nvme|nvme0|temp1`; die übrigen Chips behalten ihren Gerätenamen. Im
+Auswahlfeld erscheint die Seriennummer nicht. **30 Funktionsprüfungen
+bestanden.**
+
+*Ein zweiter Beleg kam beim Umsetzen hinzu:* Auf dem Referenzgerät
+hieß der Maus-Akku am Vormittag `hidpp_battery_22`, am Abend
+`hidpp_battery_24`. Die Annahme aus AP14 trägt also noch weniger weit
+als beim Befund angenommen – sie ist nicht auf NVMe beschränkt.
+
+*Offen:* Ein Nachweis im Betrieb auf dem Zweitgerät wäre erst nach
+einem **Neustart des Towers** aussagekräftig, weil sich die
+Nummerierung nur dann wieder ändern kann.
 
 #### Randnotiz zur Anleitung
 
@@ -1094,7 +1123,7 @@ Aussage.
 | 5 | Abhängigkeiten und Rechte geklärt | erfüllt | `08_LIZENZEN_RECHTE/` |
 | 6 | Lizenz- und Namensfragen geklärt | erfüllt | `NAME-UND-MARKE.md`, GPL-3.0-only |
 | 7 | Dokumentation vorhanden | erfüllt | beide READMEs, `CHANGELOG.md` |
-| 8 | **Tests auf mehreren Rechnern** | **erfüllt** – Prüfliste bestanden, Nachtest und Nachweis von B7/B8 auf dem Zweitgerät bestanden. Der daraus entstandene Befund **B9** ist noch zu entscheiden | Abschnitte 5.5, 5.8 bis 5.10 |
+| 8 | **Tests auf mehreren Rechnern** | **erfüllt** – Prüfliste bestanden, Nachtest und Nachweis von B7/B8 auf dem Zweitgerät bestanden, der daraus entstandene Befund **B9** behoben | Abschnitte 5.5, 5.8 bis 5.10 |
 
 ---
 
@@ -1143,7 +1172,7 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 | **Repository öffentlich stellen** | P26 | sonst scheitert `git clone` aus beiden READMEs |
 | **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
 | **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
-| **B9 entscheiden** | AP25 | manuelle Sensorwahl überlebt einen Neustart nicht zuverlässig; Abschnitt 5.6 |
+| **B9 im Betrieb nachweisen** | AP25, freiwillig | erst nach einem Neustart des Zweitgeräts aussagekräftig; die `cjs`-Prüfung bildet den Fall nach |
 | **Übersetzter Wert in Protokollzeilen** | AP25 | Nebenbefund, fünf Stellen; Abschnitt 8 verlangt unübersetzte Protokolle |
 | **Einreichungspakete neu erzeugen** | AP25 | `metadata.json` hat durch B6 einen Eintrag bekommen; `validate-spice` erneut laufen lassen |
 
