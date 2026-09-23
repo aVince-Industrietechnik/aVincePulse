@@ -1002,6 +1002,12 @@ class AVinceHWMonitor extends Desklet.Desklet {
     _uebernehmeQuellenAuswahl() {
         this._measurement.setzeNetzwerkAuswahl(this.netzWahl);
         this._measurement.setzeLaufwerkAuswahl(this.laufwerkWahl);
+
+        // Der Temperatursensor soll zu dem Laufwerk gehoeren, dessen
+        // freien Platz die Anzeige nennt (Befund B1 aus AP25).
+        if (this._detector)
+            this._detector.setzeLaufwerkGeraet(
+                this._measurement.laufwerkGeraet());
     }
 
     /*

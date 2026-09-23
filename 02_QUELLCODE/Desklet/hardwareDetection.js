@@ -142,6 +142,11 @@ var HardwareDetector = class HardwareDetector {
      */
     constructor(auswahl) {
         this._auswahl = this._normalisiereAuswahl(auswahl);
+
+        // Muss vor detect() stehen: _scoreStorage() liest es.
+        this._laufwerkGeraet = "";
+        this._laufwerkPfad = "";
+
         this._mapping = this.detect();
 
         global.log(
@@ -200,6 +205,75 @@ var HardwareDetector = class HardwareDetector {
             mapping[art] = this._waehleSensor(art);
 
         return mapping;
+    }
+
+    /*
+     * Nennt das Laufwerk, dessen freien Platz die Anzeige zeigt.
+     *
+     * Ohne diese Angabe waehlte die Automatik den Temperatursensor
+     * allein nach der Beschriftung. Auf einem Rechner mit zwei NVMe
+     * tragen beide einen Sensor "Composite", beide erhalten dieselbe
+     * Bewertung, und _selectBest() nimmt bei Gleichstand den zuerst
+     * gefundenen. Angezeigt wurden dann die Temperatur des einen und
+     * der freie Platz des anderen Laufwerks - ohne jeden Hinweis
+     * darauf (Befund B1 aus AP25, auf dem Zweitgeraet gefunden).
+     *
+     * geraet ist der Kernelname der gemessenen Partition, etwa
+     * "nvme0n1p2". Aendert sich nichts, geschieht nichts.
+     */
+    setzeLaufwerkGeraet(geraet) {
+        const name = typeof geraet === "string" ? geraet : "";
+
+        if (name === this._laufwerkGeraet)
+            return;
+
+        this._laufwerkGeraet = name;
+        this._laufwerkPfad = name ? this._blockPfad(name) : "";
+
+        // Die automatische Wahl haengt jetzt vom Laufwerk ab.
+        this._automatisch.storage = this._selectBest(
+            this._sensoren.temperatures,
+            sensor => this._scoreStorage(sensor)
+        );
+
+        this._mapping.storage = this._waehleSensor("storage");
+
+        global.log(
+            "aVincePulse AP25: storage sensor for " +
+            (name || "?") + " (" + this._quelle.storage + ") -> " +
+            this._describe(this._mapping.storage)
+        );
+    }
+
+    /*
+     * Geraetepfad einer Partition, wie ihn /sys/class/block als
+     * Verweisziel nennt - etwa
+     * "../../devices/pci0000:00/.../nvme/nvme0/nvme0n1/nvme0n1p2".
+     *
+     * Der Text genuegt; er muss nicht aufgeloest werden. Gesucht wird
+     * darin spaeter ein einzelnes Pfadglied.
+     */
+    _blockPfad(geraet) {
+        try {
+            return GLib.file_read_link("/sys/class/block/" + geraet) || "";
+        } catch (e) {
+            return "";
+        }
+    }
+
+    /*
+     * Gehoert dieser Sensor zu dem Laufwerk, dessen Platz die Anzeige
+     * nennt?
+     *
+     * Verglichen wird auf ein ganzes Pfadglied, nicht auf einen
+     * Textausschnitt: "nvme0" darf nicht auf "nvme0n1" passen.
+     */
+    _gehoertZumLaufwerk(sensor) {
+        if (!this._laufwerkPfad || !sensor.geraet)
+            return false;
+
+        return ("/" + this._laufwerkPfad + "/")
+            .includes("/" + sensor.geraet + "/");
     }
 
     /*
@@ -586,7 +660,26 @@ var HardwareDetector = class HardwareDetector {
         return -1;
     }
 
+    /*
+     * Bewertung des Speicherplatz-Sensors.
+     *
+     * Der Zuschlag fuer das richtige Laufwerk ist bewusst groesser als
+     * jede Grundbewertung: Ein schwaecher beschrifteter Sensor des
+     * gemessenen Laufwerks ist richtiger als ein "Composite" eines
+     * anderen (Befund B1). Ist kein Laufwerk bekannt oder laesst es
+     * sich keinem Sensor zuordnen, bleibt es beim bisherigen
+     * Verhalten - Rechner mit nur einer Platte aendern sich nicht.
+     */
     _scoreStorage(sensor) {
+        const grund = this._scoreStorageGrund(sensor);
+
+        if (grund < 0)
+            return grund;
+
+        return grund + (this._gehoertZumLaufwerk(sensor) ? 10000 : 0);
+    }
+
+    _scoreStorageGrund(sensor) {
         const chip =
             sensor.chip.toLowerCase();
 

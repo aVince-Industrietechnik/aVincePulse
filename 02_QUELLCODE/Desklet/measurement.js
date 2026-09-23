@@ -786,6 +786,25 @@ var MeasurementProvider = class MeasurementProvider {
     }
 
     /*
+     * Kernelname der gemessenen Partition, etwa "nvme0n1p2", oder "".
+     *
+     * Die Hardwareerkennung braucht ihn, um den Temperatursensor
+     * desselben Laufwerks zu waehlen (Befund B1 aus AP25).
+     */
+    laufwerkGeraet() {
+        const l = this._laufwerk();
+
+        if (l.geraet)
+            return l.geraet;
+
+        // Der Rueckfall nennt nur den Pfad; das Geraet dazu steht in
+        // der Laufwerksliste.
+        const eintrag = this._laufwerke().find(k => k.pfad === l.pfad);
+
+        return eintrag ? eintrag.geraet : "";
+    }
+
+    /*
      * Gemessenes Laufwerk: das gewaehlte, sofern eingehaengt,
      * sonst die Systempartition.
      */

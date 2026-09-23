@@ -437,7 +437,7 @@ class AVincePulseApplet extends Applet.TextIconApplet {
             // Ohne Sensor keine Zeile, unabhaengig von der Einstellung.
             if (availability[id] === false) {
                 global.log(
-                    "aVincePulse AP08: metric hidden, no sensor -> " + id
+                    "aVincePulse AP07: metric hidden, no sensor -> " + id
                 );
                 continue;
             }
@@ -647,6 +647,12 @@ class AVincePulseApplet extends Applet.TextIconApplet {
     _uebernehmeQuellenAuswahl() {
         this._measurement.setzeNetzwerkAuswahl(this.netzWahl);
         this._measurement.setzeLaufwerkAuswahl(this.laufwerkWahl);
+
+        // Der Temperatursensor soll zu dem Laufwerk gehoeren, dessen
+        // freien Platz die Anzeige nennt (Befund B1 aus AP25).
+        if (this._detector)
+            this._detector.setzeLaufwerkGeraet(
+                this._measurement.laufwerkGeraet());
     }
 
     /*

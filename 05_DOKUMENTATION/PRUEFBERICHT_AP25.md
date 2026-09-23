@@ -1,9 +1,11 @@
 # aVincePulse – Prüfbericht AP25 (Abschlussprüfung vor der Einreichung)
 
 > **GERÜST, Stand 23.09.2026. AP25 ist nicht abgeschlossen.**
-> Alles zum Referenzgerät ist belegt und eingetragen. Der Teil zum
-> Zweitgerät ist offen und mit `[OFFEN]` gekennzeichnet; er wird nach
-> Schritt 2 ergänzt. Version, Tag und Release folgen erst danach.
+> Alles zum Referenzgerät ist belegt und eingetragen. Vom Zweitgerät
+> sind **14 von 15 Prüfpunkten bestanden**, einer ist dort nicht
+> prüfbar, der Dauerlauf Z15 läuft noch (Abschnitt 5). Sechs
+> Rückmeldungen sind entschieden; B6 wartet auf die Freigabe zur
+> Umsetzung. Version, Tag und Release folgen erst danach.
 
 Geprüfter Stand: Commit `f670a3d` (Quellcode), Dokumentation bis `a57eccb`
 Version in `metadata.json`: `0.1.0-dev.24` – **unverändert**, AP25 läuft
@@ -83,6 +85,29 @@ bereits im Code behoben.
 > von „Hinweis" getrennt ausgewiesen. Die Summe bleibt 35. Der
 > Zwischenstand ist in Phase 3 entsprechend nachzuziehen.
 
+### Dazu: Befunde vom Zweitgerät
+
+Die Zahlen oben betreffen **Phase 1 auf dem Referenzgerät**. Der Test
+auf dem Tower hat am 23.09.2026 weitere Rückmeldungen ergeben, geführt
+unter eigenen Kennungen `B`:
+
+| | Zahl |
+|---|---|
+| neue Befunde am Programm | **3** – B1 (mittel), B3 (Hinweis), B6 (mittel) |
+| Befund am Prüfwerkzeug | **1** – B2 (gering) |
+| kein Befund | 2 – B4 gehört zu P15, B5 in die Roadmap |
+
+**Keiner davon ist kritisch.** Alle sind am 23.09.2026 entschieden:
+B1, B2 und B3 sind behoben, B4 bleibt unverändert, B5 ist in die
+Roadmap aufgenommen, B6 ist auf Variante B entschieden und wartet auf
+die Freigabe zur Umsetzung. Einzelheiten und Nachweise in
+Abschnitt 5.6.
+
+**B1 verdient dabei die meiste Aufmerksamkeit:** Er zeigt auf jedem
+Rechner mit zwei NVMe-Laufwerken stillschweigend die Temperatur eines
+anderen Laufwerks an, als die Platzanzeige meint – und war auf dem
+Referenzgerät grundsätzlich nicht auffindbar.
+
 ### Behoben in Phase 2, Gruppe A (22.09.2026)
 
 **13 Befunde** ohne Entscheidungsbedarf: P1, P2, P3, P4, P5, P6, P7, P8,
@@ -120,13 +145,13 @@ Veröffentlichung selbst um. **[OFFEN]**
 
 | Befund | Stufe | Tritt auf bei | Stand |
 |---|---|---|---|
-| P1 | mittel | Akku ohne `capacity`, aber mit `charge_full` | **[OFFEN]** |
-| P7 | gering | Sensoren mit leeren Dateien | **[OFFEN]** |
-| P10 | mittel | abweichende `hwmon`-Nummerierung, Treiber-Neuladen | **[OFFEN]** |
-| P11 | gering | mehrere `mains`-Schnittstellen | **[OFFEN]** |
+| P1 | mittel | Akku ohne `capacity`, aber mit `charge_full` | **nicht prüfbar** – der Tower hat keinen Akku |
+| P7 | gering | Sensoren mit leeren Dateien | **im Betrieb belegt** – `iwlwifi_1` bei getrenntem WLAN zeigt `-- °C`, nicht `0` |
+| P10 | mittel | abweichende `hwmon`-Nummerierung, Treiber-Neuladen | für ein späteres Paket vorgemerkt |
+| P11 | gering | mehrere `mains`-Schnittstellen | **nicht prüfbar** – `/sys/class/power_supply` ist leer |
 
-P1 und P7 sind in Gruppe A im Code behoben; offen ist allein der
-Betriebsnachweis auf passender Hardware.
+P1 und P7 sind in Gruppe A im Code behoben. **P7 ist damit auch im
+Betrieb bestätigt**; für P1 fehlt die Hardware auf beiden Geräten.
 
 ### Offen: für ein späteres Paket
 
@@ -363,8 +388,17 @@ laden, oder den Wert über das Einstellungsfenster setzen.
 
 ## 5. Test auf dem Zweitgerät (Tower)
 
-> **[OFFEN] – Schritt 2, noch nicht durchgeführt.**
-> Anleitung: `ZWEITGERAET-TESTEN.md`, Einstieg: `ZWEITGERAET-EINSTIEG.md`
+Durchgeführt am 23.09.2026 auf `tower-linux` gegen den Stand
+`0.1.0-dev.24` (Quellcode `f670a3d`). Anleitung:
+`ZWEITGERAET-TESTEN.md`, Einstieg: `ZWEITGERAET-EINSTIEG.md`.
+
+**Nahezu vollständig.** Z1 bis Z14 sind bestanden, Z4 ist auf diesem
+Gerät nicht prüfbar, Z15 läuft. Sechs Rückmeldungen sind aufgenommen.
+
+Der Tower hat den geprüften Stand vorher bestätigt:
+`git merge-base --is-ancestor f670a3d HEAD` → in Ordnung. Er stand auf
+`73bc7a4`; gegenüber `f670a3d` ist dort nur Dokumentation nachgezogen,
+der **Quellcode ist derselbe**.
 
 ### 5.1 Warum
 
@@ -386,6 +420,16 @@ ausschließlich auf dem Referenzgerät geprüft.
 | Netzwerkkarte | – | **`r8169`** mit Temperatursensor |
 | hwmon ohne Messwerte | – | **`asus`** (0 Temp, 0 Lüfter) |
 | Schnittstellen | wlp2s0, wwan0, virbr0 | eno1, wlp6s0, virbr0 |
+| Bildschirm | 1536 × 1024 | **2560 × 1440** |
+
+Die beiden NVMe sind zwei **Samsung 990 PRO 2 TB**:
+
+| hwmon | Gerät | Inhalt |
+|---|---|---|
+| hwmon1 | `nvme1` | Windows-SSD |
+| hwmon2 | `nvme0` | Linux-SSD, trägt `/` |
+
+Kein Speedtest-Programm installiert – das ist für Z9 so gewollt.
 
 **Gleich ist die Software-Grundlage.** Der Tower prüft andere
 **Hardware**, nicht eine andere Cinnamon-Fassung. Das begrenzt die
@@ -417,30 +461,274 @@ gering bis mittel eingestuft und im Code belegt.
 
 ### 5.5 Ergebnis der Prüfliste Z1 bis Z15
 
-> **[OFFEN]** – wird nach Schritt 2 eingetragen.
-
 | Nr | Prüfung | Ergebnis |
 |---|---|---|
-| Z1 | Beide Bestandteile lassen sich hinzufügen | [OFFEN] |
-| Z2 | Sitzungsprotokoll nach dem Start | [OFFEN] |
-| Z3 | Akku: BATT und STATUS ausgeblendet | [OFFEN] |
-| Z4 | Netzteil, mehrere `mains` | [nicht prüfbar] |
-| Z5 | Temperaturen plausibel | [OFFEN] |
-| Z6 | Lüfter: FAN ausgeblendet | [OFFEN] |
-| Z7 | Sensorauswahl zeigt die Sensoren dieses Rechners | [OFFEN] |
-| Z8 | Laufwerksauswahl | [OFFEN] |
-| Z9 | Ohne Speedtest-Programm | [OFFEN] |
-| Z10 | Warnschwellen | [OFFEN] |
-| Z11 | Hardware neu erkennen, zweimal | [OFFEN] |
-| Z12 | Zurücksetzen, 0 Abweichungen | [OFFEN] |
-| Z13 | Bildschirmauflösung | [OFFEN] |
-| Z14 | Panel-Symbol | [OFFEN] |
-| Z15 | Zwei Stunden Betrieb | [OFFEN] |
+| Z1 | Beide Bestandteile lassen sich hinzufügen | **bestanden** – Applet 164 ms, Desklet 102 ms, beide ohne Fehler |
+| Z2 | Sitzungsprotokoll nach dem Start | **bestanden** – keine aVincePulse-Zeile mit `error`, `exception` oder `warn` im **gesamten** `~/.xsession-errors` |
+| Z3 | Akku: BATT und STATUS ausgeblendet | **bestanden** – beide vollständig ausgeblendet, 12 Zeilen |
+| Z4 | Netzteil, mehrere `mains` | **nicht prüfbar** – `/sys/class/power_supply` ist leer |
+| Z5 | Temperaturen plausibel | **bestanden** – CPU 39–41 °C, SSD 33–34 °C, keine `0 °C`, kein `NaN` |
+| Z6 | Lüfter: FAN ausgeblendet | **bestanden** – vollständig ausgeblendet |
+| Z7 | Sensorauswahl zeigt die Sensoren dieses Rechners | **bestanden** – je drei Sensoren für `nvme0` und `nvme1` (Composite, Sensor 1, Sensor 2), unterscheidbar |
+| Z8 | Laufwerksauswahl | **bestanden** – beide Laufwerke mit freiem Platz |
+| Z9 | Ohne Speedtest-Programm | **bestanden** – Auswahlfeld, Schaltfläche und Menüeintrag verborgen, Hinweis sichtbar, Speedtest-Berichte weiter erreichbar; geprüft in **beiden** Bestandteilen |
+| Z10 | Warnschwellen | **bestanden** – Warnfarbe erscheint, Schwelle zurückgestellt |
+| Z11 | Hardware neu erkennen, zweimal | **bestanden** – je Bestandteil genau **eine** Datei, beim zweiten Mal überschrieben |
+| Z12 | Zurücksetzen | **bestanden** – `werte_pruefen.py` danach `GESAMT: 0 Abweichungen`; die Speedtest-Bedienelemente bleiben verborgen |
+| Z13 | Bildschirmauflösung | **bestanden** – Hover-Anzeige vollständig, „12 rows, font 48px, 70% of 2560×1440"; auf dem Referenzgerät 28 px bei 1536 × 1024 |
+| Z14 | Panel-Symbol | **bestanden** – bei der eingestellten Leistenhöhe erkennbar |
+| Z15 | Zwei Stunden Betrieb | **läuft** seit 13:53, Ausgangswert 88 Protokollzeilen. **[OFFEN]** |
+
+**14 von 15 Prüfpunkten bestanden**, einer nicht prüfbar, einer läuft.
+Kein Prüfpunkt abweichend.
+
+### Mitgeprüft: P29
+
+Der Abschnitt im Einstellungsfenster heißt auf dem Tower
+**„Hardwareerkennung"**. Das belegt zweierlei: Die Korrektur zu P29
+wirkt auch auf einem anderen Rechner, und die Übersetzung ist dort
+richtig eingespielt – die Probe aus `ZWEITGERAET-TESTEN.md`,
+Abschnitt 3.1.
+
+### Betriebsnachweise, die nur hier zu holen waren
+
+**P7 – Sensoren mit leeren Dateien: im Betrieb belegt.**
+Bei getrennter WLAN-Verbindung liefert `iwlwifi_1` keinen Wert. Der
+Hardwarebericht des Towers zeigt dafür **`-- °C`**, nicht `0`. Damit
+ist die Korrektur aus Phase 2, Gruppe A – `_zahlOderNull()` – auf
+echter Hardware bestätigt. Auf dem Referenzgerät war der Fall nicht
+herstellbar.
+
+**B1 – aus dem Hardwarebericht des Towers:**
+
+```
+Speicher : nvme|nvme1|temp1      (Windows-SSD)
+FREE     : /  auf nvme0n1p2      (Linux-SSD)
+```
+
+Zwei verschiedene Laufwerke in einer Anzeige, schwarz auf weiß im
+Bericht. Einzelheiten in Abschnitt 5.6.
+
+### Zeilenzahl als Maß
+
+15 Messwerte abzüglich `BATT`, `STATUS` und `FAN` ergeben **12** – genau
+das wurde gezählt. `getAvailability()` blendet die drei aus, weil weder
+Akku noch Lüftersensor vorhanden sind.
+
+`SPEED`, `PING`, `JITTER` und `LAST` bleiben sichtbar und zeigen `--`.
+Das ist richtig: Sie hängen nicht an `getAvailability()`, sondern am
+Vorhandensein von Messwerten.
+
+### Wertevergleich gegen die Schema-Vorgaben
+
+`werte_pruefen.py` meldet **2 Abweichungen**, beide
+`speedtest-vorhanden: false` gegen die Schema-Vorgabe `true`. Das ist
+**kein Fehler des Programms**, sondern einer des Prüfwerkzeugs – der
+Schlüssel wird zur Laufzeit geschrieben (`applet.js:747`) und ist
+folgerichtig `false`, weil kein Speedtest-Programm installiert ist.
+Aufgenommen als **B2**.
+
+**Die Messwertliste ist unverändert**, und `fan_speed`,
+`battery_charge` und `psu_state` stehen darin weiterhin auf
+`sichtbar: true`. Auch das ist richtig: Das Ausblenden geschieht zur
+Laufzeit über die Verfügbarkeitsprüfung und **greift nicht in die
+gespeicherte Einstellung ein**. Ein Gerätewechsel oder ein
+nachgerüsteter Sensor bringt die Zeilen damit von selbst zurück.
 
 ### 5.6 Befunde des Zweitgeräts
 
-> **[OFFEN]** – neue Befunde werden hier aufgenommen und in
-> `BEFUNDE.md` fortgeschrieben.
+Sechs Rückmeldungen vom Zweitgerät, eigene Kennungen `B`. Alle von
+Claude am Referenzgerät **im Quelltext nachgeprüft**, bevor sie hier
+stehen. Noch nicht in `BEFUNDE.md` übernommen und noch nicht behoben –
+das geschieht nach der Entscheidung des Nutzers.
+
+| Kennung | Stufe | Kurz |
+|---|---|---|
+| **B1** | mittel | SSD-Temperatur und freier Platz gehören zu verschiedenen Laufwerken |
+| **B2** | gering | `werte_pruefen.py` wertet einen Laufzeitwert als Abweichung |
+| **B3** | Hinweis | Protokollkennung `AP08` im Applet, `AP07` im Desklet |
+| **B4** | – | kein Befund; Randnotiz zur Einheit, gehört zu **P15** |
+| **B5** | – | kein Befund; Erweiterungswunsch für die Roadmap |
+| **B6** | mittel | dunkler Kasten hinter dem Desklet |
+
+---
+
+#### B1 – SSD-Temperatur zeigt ein anderes Laufwerk als der freie Platz (mittel)
+
+`hardwareDetection.js:589` und `:640`
+
+```js
+if (label === "composite") return 1000;   // _scoreStorage
+if (score > bestScore) { ... }            // _selectBest, strikt groesser
+```
+
+Beide NVMe tragen einen Sensor mit der Beschriftung `Composite` und
+erhalten damit **dieselbe Bewertung 1000**. Da `_selectBest()` nur bei
+einem **echt größeren** Wert wechselt, gewinnt der zuerst gescannte
+Sensor – auf dem Tower `hwmon1` = `nvme1`, die Windows-SSD. Der freie
+Platz stammt dagegen von `/`, also von `nvme0`.
+
+**Angezeigt werden damit zwei verschiedene Laufwerke in einer Anzeige,
+ohne jeden Hinweis darauf.**
+
+Die Wirkung reicht über eine falsche Zahl hinaus: Eine Warnschwelle auf
+die SSD-Temperatur überwacht dann die Windows-SSD. Die läuft unter Linux
+im Leerlauf und bleibt kühl – die Warnung löst nie aus, während die
+Linux-SSD heiß wird.
+
+*Nachweis:* Code beider Methoden gelesen; auf dem Tower beobachtet.
+
+*Warum erst jetzt:* Das Referenzgerät hat **eine** NVMe. Ein
+Gleichstand kann dort nicht entstehen. Genau dafür war der Test auf
+einem zweiten Gerät angesetzt.
+
+*Einordnung:* Dieselbe Art wie **P10** – ein stillschweigend falscher
+Messwert – und deshalb dieselbe Stufe. B1 ist von beiden jedoch der
+**wahrscheinlichere**: P10 braucht ein neu geladenes Modul, B1 nur zwei
+NVMe-Laufwerke.
+
+*Vorschlag (aus der Tower-Sitzung, hier geprüft):* Bei
+`sensor-storage = auto` den Sensor bevorzugen, dessen `sensor.geraet`
+im `realpath` von `/sys/class/block/<Partition des FREE-Laufwerks>`
+vorkommt. Die Daten liegen vor: Der Sensor führt `geraet` (`nvme0`),
+das Laufwerk seine Partition (`nvme0n1p2`). Findet sich keine
+Zuordnung, bleibt es beim heutigen Verhalten – Geräte mit nur einer
+Platte sind also nicht betroffen. Betrifft `hardwareDetection.js` und
+`measurement.js`, beide gemeinsame Module.
+
+*Übergangslösung:* `sensor-storage` von Hand auf `nvme0` stellen.
+
+#### B2 – `werte_pruefen.py` wertet einen Laufzeitwert als Abweichung (gering)
+
+`speedtest-vorhanden` ist im Schema `{"type": "generic", "default":
+true}` und wird zur Laufzeit von `applet.js:747` geschrieben. Auf einem
+Rechner ohne Speedtest-Programm ist `false` der **richtige** Wert; das
+Prüfwerkzeug meldet ihn dennoch als Abweichung.
+
+**Ein Fehler im Prüfwerkzeug, nicht im Programm.** Er ist trotzdem
+aufzunehmen: Ein Werkzeug, das folgenlose Abweichungen meldet, führt
+dazu, dass echte übersehen werden.
+
+**Beobachtung vom Zweitgerät, noch nicht erklärt.** Nach „Auf
+Standardwerte zurücksetzen" steht `speedtest-vorhanden` bis zum
+nächsten Cinnamon-Start auf `true`, obwohl kein Speedtest-Programm
+vorhanden ist.
+
+Der Code gibt dafür keine Erklärung her:
+`on_standardwerte_zuruecksetzen()` fasst den Schlüssel nicht an, und
+`_aktualisiereSpeedtestVerfuegbarkeit()` (`applet.js:745`) schreibt nur
+bei Abweichung. **Der Mechanismus ist offen** und in Phase 3 zu klären
+oder als Hinweis zu schließen.
+
+*Wirkung: keine.* Die Oberfläche fragt `istVerfuegbar()` zur Laufzeit
+ab und bleibt richtig – auf dem Tower blieben Auswahlfeld,
+Schaltfläche und Menüeintrag auch nach dem Zurücksetzen verborgen
+(Z12). Der gespeicherte Wert ist für die Anzeige ohne Belang.
+
+#### B3 – uneinheitliche Protokollkennung (Hinweis)
+
+`applet.js:440` schreibt `aVincePulse AP08: metric hidden, no sensor`,
+`desklet.js:311` dasselbe mit `AP07`. Beide meinen denselben Vorgang.
+
+#### B4 – kein Befund, gehört zu P15
+
+`FREE` zeigt 1,6 TB, `df` zeigt 1,7T. Ursache: `df` rundet auf. Kein
+Fehler.
+
+Die Randnotiz dazu ist jedoch **P15**: `measurement.js:495` teilt durch
+1024⁴ und beschriftet das Ergebnis mit „TB", richtig wäre „TiB". Es ist
+dieselbe Verwechslung, die P15 bereits für `formatRate` festhält
+(Teilung durch 1024, Beschriftung „KB/s"). **B4 wird deshalb nicht als
+eigener Befund geführt, sondern bei P15 vermerkt**, dessen Umfang sich
+damit von einer auf zwei Stellen erweitert.
+
+#### B5 – kein Befund, Erweiterungswunsch
+
+Zweites Laufwerk als eigene Zeile statt nur über die Auswahl. Das ist
+eine Funktionserweiterung, keine Abweichung, und gehört in
+`ROADMAP_V2.md` – nicht in AP25.
+
+#### B6 – Dunkler Kasten hinter dem Desklet (mittel)
+
+Auf dem Tower **und** auf dem Referenzgerät bestätigt.
+
+`02_QUELLCODE/Desklet/metadata.json` enthält keinen Eintrag
+`prevent-decorations`. Cinnamon wertet ihn so aus
+(`/usr/share/cinnamon/js/ui/desklet.js:143–163`):
+
+```js
+let dec = global.settings.get_int('desklet-decorations');
+let preventDecorations = this.metadata['prevent-decorations'];
+if (preventDecorations == true) { dec = 0; }
+```
+
+Ohne den Eintrag gilt die globale Einstellung „Gestaltung der
+Desklets": `0` ohne Verzierung, `1` mit Rahmen, `2` mit Rahmen und
+Kopfzeile. Bei `1` und `2` legt Cinnamon eine eigene Fläche hinter das
+Desklet.
+
+**Der Widerspruch:** aVincePulse bringt eine eigene Einstellung für die
+Hintergrunddeckkraft mit, ab AP20, Vorgabe `0` – also durchsichtig. Wer
+sie auf 0 stellt, will keine Fläche. Cinnamon legt dann trotzdem eine
+darunter, und die eigene Einstellung wirkt scheinbar nicht.
+
+*Warum es bisher nicht auffiel:* Auf dem Referenzgerät steht
+`desklet-decorations` auf `0`. Sichtbar wird es erst, wenn jemand die
+Cinnamon-Einstellung ändert – was ein Nutzer jederzeit tun kann, ohne
+einen Zusammenhang zu aVincePulse zu vermuten.
+
+*Vorschlag:* `"prevent-decorations": true` in
+`Desklet/metadata.json`, dazu ein Tooltip an der Einstellung
+`hintergrund-deckkraft`, der auf die eigene Fläche hinweist.
+
+*Abzuwägen war:* `prevent-decorations` nimmt dem Nutzer die
+Cinnamon-Verzierung für dieses Desklet **dauerhaft** ab – auch dem, der
+sie bewusst will. Dafür spricht, dass aVincePulse eine eigene, feiner
+einstellbare Fläche mitbringt.
+
+**Entscheidung des Nutzers vom 23.09.2026: Variante B.**
+
+1. `"prevent-decorations": true` in `Desklet/metadata.json`
+2. Tooltip an `hintergrund-deckkraft`, englischer Wortlaut:
+   „At 0 per cent the desklet has no panel. aVincePulse ignores the
+   Cinnamon setting ‚Desklet decorations', so the look is the same with
+   every theme."
+3. Deutsche Entsprechung in `Desklet/po/de.po`:
+   „Bei 0 Prozent hat das Desklet keine Fläche. aVincePulse ignoriert
+   die Cinnamon-Einstellung ‚Gestaltung der Desklets', daher sieht es
+   mit jedem Theme gleich aus."
+
+Danach zu prüfen: **Verschieben und Rechtsklick-Menü bei Deckkraft 0** –
+ohne Cinnamon-Fläche gibt es keinen sichtbaren Rand, an dem angefasst
+wird. **Umsetzung erst nach ausdrücklicher Freigabe des Nutzers.**
+
+---
+
+#### Randnotiz zur Anleitung
+
+`ZWEITGERAET-TESTEN.md`, Abschnitt 2.4, schreibt „Ohne jedes Programm
+verschwindet der Speedtest". Gemeint sind die **Bedienelemente** –
+Auswahlfeld, Schaltfläche, Menüeintrag. Die Messwertzeilen `SPEED`,
+`PING`, `JITTER` und `LAST` bleiben stehen und zeigen `--`; so ist es
+gewollt und im Hinweistext beschrieben. Die Formulierung ist in Phase 3
+zu schärfen.
+
+### Noch zu entscheiden
+
+Entschieden am 23.09.2026:
+
+| Punkt | Entscheidung | Stand |
+|---|---|---|
+| **B1** | beheben | umgesetzt, 32 Funktionsprüfungen bestanden |
+| **B2** | beheben | umgesetzt in `werte_pruefen.py` |
+| **B3** | beheben | umgesetzt, `AP08` → `AP07` |
+| **B4** | keine Änderung | – |
+| **B5** | in die Roadmap | aufgenommen, `ROADMAP_V2.md`, Abschnitt 24, OPTIONAL 1.0 |
+| **B6** | Variante B | **wartet auf Freigabe** |
+
+Die Umsetzung von B1 bis B3 ist am Referenzgerät geprüft, aber **B1
+selbst ist dort nicht beobachtbar** – eine NVMe, kein Gleichstand. Der
+Betriebsnachweis für die Behebung kann nur vom Zweitgerät kommen.
 
 ---
 
@@ -481,7 +769,7 @@ Aussage.
 | 5 | Abhängigkeiten und Rechte geklärt | erfüllt | `08_LIZENZEN_RECHTE/` |
 | 6 | Lizenz- und Namensfragen geklärt | erfüllt | `NAME-UND-MARKE.md`, GPL-3.0-only |
 | 7 | Dokumentation vorhanden | erfüllt | beide READMEs, `CHANGELOG.md` |
-| 8 | **Tests auf mehreren Rechnern** | **[OFFEN]** – Schritt 2 | Abschnitt 5 |
+| 8 | **Tests auf mehreren Rechnern** | **nahezu erfüllt** – 14 von 15 Prüfpunkten bestanden, Z15 läuft | Abschnitt 5 |
 
 ---
 
@@ -505,7 +793,7 @@ Aussage.
 | 14 | Echter Speedtest je Programm | **erfüllt** |
 | 15 | Einstellungen gegen Schema | **erfüllt** |
 | 16 | Dieser Prüfbericht | **in Arbeit** |
-| 17 | Release-Regel beantwortet | **teilweise** – Punkt 8 offen |
+| 17 | Release-Regel beantwortet | **teilweise** – Punkt 8 bis auf Z15 erfüllt |
 | 18 | Liste „Vor der Einreichung noch offen" | **in Arbeit**, Abschnitt 9 |
 | 19 | `CHANGELOG.md` mit Eintrag für die erste Veröffentlichung | **teilweise** – Datei vorhanden, Eintrag steht unter „Unreleased" |
 | 20 | Panel-Symbol erprobt | **erfüllt** |
@@ -530,7 +818,8 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 | **Repository öffentlich stellen** | P26 | sonst scheitert `git clone` aus beiden READMEs |
 | **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
 | **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
-| **Test auf dem Zweitgerät** | AP25 | Schritt 2, läuft |
+| **Dauerlauf Z15 auf dem Zweitgerät** | AP25 | läuft seit 13:53 |
+| **B6 umsetzen** | AP25 | Variante B entschieden, Freigabe steht aus |
 
 ### Bewusst verschoben
 
@@ -544,7 +833,9 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 ### Bekannte Einschränkungen des Prüfumfangs
 
 - **P1 und P11 ohne Betriebsnachweis** – die nötige Hardware steht
-  weder auf dem Referenz- noch auf dem Zweitgerät zur Verfügung.
+  weder auf dem Referenz- noch auf dem Zweitgerät zur Verfügung. Der
+  Tower hat gar keinen Akku und keine Einträge unter
+  `/sys/class/power_supply`.
 - **Nur eine Cinnamon-Fassung geprüft** – beide Geräte laufen Mint 22.3
   mit Cinnamon 6.6.9.
 - **`sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr

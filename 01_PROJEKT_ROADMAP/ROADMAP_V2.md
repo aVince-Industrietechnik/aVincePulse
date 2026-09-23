@@ -1680,6 +1680,30 @@ Vorschlag: OPTIONAL 1.0
 
 Vorschlag: OPTIONAL 1.0. Der CPU-Takt war in Abschnitt 23 unter SPÄTERE VERSION geführt und wird damit vorgezogen.
 
+### Mehrere Laufwerke gleichzeitig anzeigen
+
+Aufgenommen am 23.09.2026 nach dem Test auf dem Zweitgerät (AP25,
+Befund B5).
+
+Heute zeigt aVincePulse **ein** Laufwerk: Temperatur und freier Platz
+des gewählten, alle anderen nur über das Auswahlfeld, jeweils einzeln.
+Auf dem Tower stecken zwei NVMe – eine für Linux, eine für Windows –
+und ein Nutzer mit dieser Ausstattung möchte beide im Blick haben, ohne
+umzuschalten.
+
+Zu klären wäre dabei:
+
+- **Wie viele Zeilen verträgt die Anzeige?** Schon heute sind es 15.
+  Je weiterem Laufwerk kämen zwei hinzu (Temperatur, freier Platz).
+- **Wie werden die Zeilen benannt?** `FREE` allein genügt dann nicht;
+  nötig wäre eine Unterscheidung, die auch übersetzbar bleibt.
+- **Verhältnis zur Messwertliste aus AP13.** Sie ist heute fest
+  aufgebaut; Laufwerke kommen und gehen aber zur Laufzeit.
+
+Vorschlag: **OPTIONAL 1.0**, nach der Veröffentlichung. Die Grundlage
+dafür ist mit AP25/B1 gelegt – seither weiß die Hardwareerkennung, zu
+welchem Laufwerk ein Temperatursensor gehört.
+
 ### Verlaufsgrafik
 
 Kleine Verlaufskurve je Messwert, etwa über die letzten Minuten.
