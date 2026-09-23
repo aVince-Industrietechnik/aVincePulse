@@ -1,6 +1,12 @@
 # aVincePulse auf einem zweiten Gerät testen
 
-Stand: 23.09.2026, angelegt für AP25.
+Stand: 23.09.2026, angelegt für AP25, fortgeschrieben am selben Tag
+nach Phase 2, Gruppe B.
+
+**Zu prüfen ist der Stand ab Commit `f670a3d`** – er enthält die
+Korrekturen zu P16, P18, P28, P29, P30 und P31. Zwei davon ändern, was
+auf dem Zweitgerät zu sehen ist; die betroffenen Stellen sind unten mit
+**Neu seit `f670a3d`** gekennzeichnet.
 
 Vor der Veröffentlichung verlangt `ROADMAP_V2.md`, Abschnitt 23,
 ausdrücklich „Tests auf mehreren unterschiedlichen Rechnern". Bisher ist
@@ -131,6 +137,20 @@ Bestandteile über die Systemeinstellungen hinzufügen.
 **Wichtig:** Der Clone hat den Stand des letzten Commits. Läuft auf dem
 Referenzgerät gerade Phase 2 weiter, vorher `git pull`.
 
+### Probe, ob die Übersetzung wirklich eingespielt ist
+
+**Neu seit `f670a3d`:** Der Abschnitt im Einstellungsfenster heißt jetzt
+**„Hardwareerkennung"**. Vorher stand dort „Geräte" – nicht aus dem
+eigenen Katalog, sondern aus Cinnamons eigenem: Die eigene Übersetzung
+stimmte mit dem englischen Ausgangstext überein und wurde deshalb
+übergangen (Befund P29).
+
+Das ist zugleich eine brauchbare Probe. **Steht dort „Geräte", ist die
+Übersetzung nicht eingespielt.** Dann `cinnamon-xlet-makepot -i`
+wiederholen und das Einstellungsfenster **schließen und neu öffnen** –
+ein Cinnamon-Neustart genügt dafür nicht, das Fenster ist ein eigener
+Prozess und lädt den Katalog nur beim Öffnen.
+
 ## 4. Die Prüfliste für das Zweitgerät
 
 Kurz gehalten – der vollständige Funktionstest ist auf dem
@@ -149,11 +169,42 @@ war**.
 | **Z8** | Laufwerksauswahl | zeigt die eingehängten Laufwerke mit freiem Platz | |
 | **Z9** | **Ohne Speedtest-Programm** (falls keines installiert) | Auswahlfeld, Schaltfläche und Menüeintrag verborgen, Hinweis sichtbar, Berichte weiter erreichbar | |
 | **Z10** | Warnschwellen | eine Schwelle tief setzen, Farbe erscheint; zurücksetzen | |
-| **Z11** | Hardware neu erkennen | Bericht entsteht, nennt die Sensoren dieses Rechners | |
-| **Z12** | Zurücksetzen | alle Werte auf Vorgabe | |
+| **Z11** | Hardware neu erkennen, **zweimal** | beim ersten Mal entsteht `aVP-applet-hardware-bericht.txt` bzw. `aVP-desklet-hardware-bericht.txt` und nennt die Sensoren dieses Rechners; beim zweiten Mal kommt **keine** Datei dazu, sie wird überschrieben | |
+| **Z12** | Zurücksetzen | alle Werte auf Vorgabe, **ohne Ausnahme** | |
 | **Z13** | Bildschirmauflösung | Hover-Anzeige passt sich an, nichts abgeschnitten | |
 | **Z14** | Panel-Symbol | bei der hier eingestellten Leistenhöhe erkennbar | |
 | **Z15** | Zwei Stunden laufen lassen | keine neuen Protokollzeilen, Anzeige stimmt weiter | |
+
+### Zu Z11 und Z12 – neu seit `f670a3d`
+
+**Z11.** Hardwareberichte sammelten sich bisher unbegrenzt an: Jeder
+Druck auf „Hardware neu erkennen" legte eine Datei mit Zeitstempel im
+Namen an, gelöscht wurde nie (Befund P31). Aufeinanderfolgende Berichte
+unterschieden sich nur im Zeitstempel und in der Momentantemperatur –
+der Sensorbestand war derselbe.
+
+Seither führt jeder Bestandteil **genau eine** Datei mit festem Namen,
+die bei jeder Erkennung überschrieben wird. Der Zeitpunkt geht dabei
+nicht verloren, er steht im Bericht selbst unter „Erstellt am".
+
+> Erscheint nach dem zweiten Druck **keine** zweite Datei, ist das
+> richtig so und kein Befund. Ein Befund wäre das Gegenteil.
+
+Ältere Berichte mit Zeitstempel im Namen bleiben unangetastet liegen;
+auf einem frischen Clone gibt es ohnehin keine. Die Speedtest-Berichte
+sind davon nicht berührt – dort ist der Verlauf der Zweck, und dort
+entsteht weiterhin je Messung eine Datei.
+
+**Z12.** Die Schaltfläche „Auf Standardwerte zurücksetzen" hielt die
+Vorgabewerte bisher als eigene Kopie im Code, getrennt vom Schema. Am
+22.09.2026 liefen beide auseinander, und ein Wert blieb beim
+Zurücksetzen stehen (Befund P28). Die Vorgaben kommen jetzt aus dem
+Schema.
+
+Auf dem Zweitgerät ist das eine Gegenprobe auf anderer Hardware, und sie
+ist genau messbar: **Nach dem Zurücksetzen darf kein einziger Wert von
+der Schema-Vorgabe abweichen.** Mit NAS-Zugriff zeigt das
+`werte_pruefen.py` unmittelbar, erwartet wird `GESAMT: 0 Abweichung(en)`.
 
 ### Regeln wie auf dem Referenzgerät
 
