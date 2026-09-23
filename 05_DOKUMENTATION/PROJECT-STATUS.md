@@ -1952,26 +1952,51 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP25 sind abgeschlossen, **AP25 bis auf Phase 3** – Version,
-Snapshot, Tag, Vollbackup und Release stehen noch aus.
+**AP01 bis AP25 sind abgeschlossen.** Version `0.1.0-dev.25`, Tag
+`0.1.0-dev_AP25-END`, GitHub-Release veröffentlicht, Vollbackup mit
+bestandener Wiederherstellungsprobe.
 
-Danach folgt das **Einreichungspaket**: zwei Pull Requests auf
-`cinnamon-spices-applets` und `cinnamon-spices-desklets`, je Komponente
-mit `info.json`, `screenshot.png`, `README.md` und der Struktur
-`UUID/files/UUID/…`.
+**Das Repository ist seit dem 23.09.2026 öffentlich** (Befund P26
+geschlossen), beide READMEs tragen Screenshots, der Ko-fi-Zahlungsweg
+ist verbunden. Aus der Liste „Muss vor der Einreichung erledigt sein"
+ist damit nichts mehr offen.
 
-**Was vor der Einreichung noch zu tun ist, steht vollständig in
-Abschnitt 9 von `PRUEFBERICHT_AP25.md`**, nach Dringlichkeit geordnet.
-Drei Punkte davon kann nur der Nutzer erledigen: Repository öffentlich
-stellen, Screenshots für beide READMEs, Ko-fi-Zahlungsweg.
+### Nächster Schritt: AP26 – drei Punkte aus der Spices-Prüfliste
 
-Aus den früheren Paketen sind dort erledigt: Rechte an den Grafiken,
-Marken- und Namensfrage, Ookla-Nachtrag, Changelog, die veraltete
-Kopfzeile `Entwicklungsstand: 0.1.0-dev` in allen zehn Dateien und die
-Frage nach dem Vektorlogo (mit Messergebnis auf „nach 1.0" verschoben).
-Offen geblieben sind das Mausrad im Einstellungsfenster – ein
-Cinnamon-Verhalten, nicht im Xlet lösbar – und die 21 Beschriftungen
-in den Listenspalten, die Cinnamon nicht übersetzen kann.
+Am 23.09.2026 wurden die Vorgaben beider Spices-Repositories
+durchgesehen und aVincePulse dagegen geprüft. Ergebnis in
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/EINREICHUNG-ANFORDERUNGEN.md`.
+
+Aufbau, Form des Pull Requests und alle **kritischen** Punkte der
+Prüfliste sind erfüllt. **Drei in AP25 zurückgestellte Befunde stehen
+jedoch wörtlich in der Prüfliste der Gutachter:**
+
+| Befund | Was die Prüfliste sagt | Vorschlag |
+|---|---|---|
+| **S1/P14** | synchrone Datei-Aufrufe „avoided at all costs" | beheben |
+| **S3** | `GLib.SOURCE_REMOVE` statt `return false` | beheben, wenige Zeilen |
+| **S4** | Timer legt sich im Rückruf neu an | **nicht** ändern, nur im Code begründen – der Takt folgt der Systemuhr (AP15), ein fester Timer könnte das nicht |
+
+Dazu gehört `"license": "GPL-3.0-only"` in beide `info.json`.
+
+**Danach die Einreichung:** zwei **getrennte** Pull Requests, Titel je
+in der Form `spice name: beschreibung` – ein PR darf nur ein Spice
+enthalten, sonst wird er geschlossen.
+
+### Noch offen, ohne Dringlichkeit
+
+- **Übersetzte Werte in fünf Protokollzeilen** (vier aus AP14, eine aus
+  B7). Abschnitt 8 verlangt unübersetzte Protokolle. Zu entscheiden.
+- **P10, S2, P17** – eigenes Paket nach der Einreichung.
+- **B9 im Betrieb nachweisen**, freiwillig, erst nach einem Neustart des
+  Zweitgeräts aussagekräftig.
+- **P1 und P11** – die nötige Hardware gibt es auf keinem der beiden
+  Geräte.
+
+Bewusst verschoben: das Vektorlogo (mit Messergebnis auf „nach 1.0"),
+das Mausrad im Einstellungsfenster (Cinnamon-Verhalten, nicht im Xlet
+lösbar) und die 21 Beschriftungen in den Listenspalten, die Cinnamon
+nicht übersetzen kann.
 
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
 
@@ -2563,9 +2588,9 @@ git log -3 --oneline
 git tag --list
 ```
 
-**Stand 23.09.2026: AP25 ist abgeschlossen.** Als Nächstes folgt das
-**Einreichungspaket** – zwei Pull Requests auf `cinnamon-spices-applets`
-und `cinnamon-spices-desklets`.
+**Stand 23.09.2026: AP25 ist abgeschlossen.** Als Nächstes folgt
+**AP26** mit drei Punkten aus der Spices-Prüfliste (S1, S3, S4), danach
+die Einreichung mit zwei getrennten Pull Requests.
 
 **Einstiegspunkt ist `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`.** Dort
 steht das Ergebnis vollständig; Abschnitt 10 führt die neun Schritte
