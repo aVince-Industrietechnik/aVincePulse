@@ -469,10 +469,26 @@ var SpeedtestRunner = class SpeedtestRunner {
             const da = vorhanden.some(e => e.def.id === gewaehlt);
 
             if (!da) {
-                const def = PROGRAMME.find(d => d.id === gewaehlt);
-
-                optionen[fuelle(_("Not found: %s"),
-                                def ? def.anzeige : gewaehlt)] = gewaehlt;
+                /*
+                 * Die Beschriftung wird aus dem gespeicherten Wert
+                 * gebildet, nicht aus def.anzeige.
+                 *
+                 * _auswahlKennzeichen() in applet.js und desklet.js
+                 * erkennt einen "Nicht gefunden"-Eintrag daran, dass
+                 * die Beschriftung genau der gefuellten Vorlage mit
+                 * diesem Wert entspricht. Mit def.anzeige
+                 * ("librespeed-cli (LibreSpeed)") gegen den Wert
+                 * ("librespeed-cli") traf der Vergleich nie zu, und
+                 * das Kennzeichen blieb gleich, ob das Programm nun
+                 * fehlte oder vorhanden war - "Hardware neu erkennen"
+                 * bot das Neu-Oeffnen dann nicht an (Befund P18 aus
+                 * AP25).
+                 *
+                 * measurement.js und hardwareDetection.js halten es
+                 * an ihren drei Stellen ebenso; hier war die einzige
+                 * Abweichung.
+                 */
+                optionen[fuelle(_("Not found: %s"), gewaehlt)] = gewaehlt;
             }
         }
 

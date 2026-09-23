@@ -815,7 +815,7 @@ msgid "Open the speed test reports"
 msgstr ""
 
 #. settings-schema.json->kopf-hardware->description
-msgid "Hardware"
+msgid "Hardware detection"
 msgstr ""
 
 #. settings-schema.json->btn-hardware-neu->description

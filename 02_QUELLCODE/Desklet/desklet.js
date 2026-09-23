@@ -897,7 +897,29 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * der Bildschirm). Wie _gueltig() im Applet.
      */
     _gueltig(wert, min, max, vorgabe) {
-        const zahl = Number(wert);
+        /*
+         * Zuerst den Typ pruefen, dann erst umwandeln.
+         *
+         * Number() allein genuegt nicht: Number(null), Number(""),
+         * Number(false) und Number([]) ergeben jeweils 0 und sind
+         * endlich. Der Vorgabewert griffe dann nur noch bei
+         * undefined, NaN oder echtem Text, und ein "value": null in
+         * der Einstellungsdatei ergaebe das Minimum statt der Vorgabe
+         * - beim Messtakt etwa 1 statt 3 Sekunden, also dauerhaft
+         * dreifache Messlast (Befund P16 aus AP25).
+         *
+         * Cinnamons _getValue() ersetzt ausschliesslich undefined
+         * durch den Vorgabewert; ein null kommt unveraendert hier an.
+         * Gleiche Pruefung wie zahlOderNull() in metrics.js.
+         */
+        let zahl;
+
+        if (typeof wert === "number")
+            zahl = wert;
+        else if (typeof wert === "string" && wert.trim() !== "")
+            zahl = Number(wert);
+        else
+            return vorgabe;
 
         if (!Number.isFinite(zahl))
             return vorgabe;
@@ -1547,10 +1569,27 @@ class AVinceHWMonitor extends Desklet.Desklet {
     /*
      * Schreibt den Hardwarebericht als Textdatei.
      *
-     * Jeder Bericht bleibt erhalten und traegt Datum und Uhrzeit im
-     * Dateinamen, wodurch sich die Dateien von selbst chronologisch
-     * sortieren. Das Kuerzel am Anfang zeigt, welche Komponente den
-     * Bericht erstellt hat.
+     * Je Komponente gibt es genau eine Datei, die bei jeder Erkennung
+     * ueberschrieben wird. Das Kuerzel am Anfang zeigt, welche
+     * Komponente den Bericht erstellt hat.
+     *
+     * Vorher trug der Dateiname Datum und Uhrzeit, jeder Druck auf
+     * "Hardware neu erkennen" hinterliess also eine weitere Datei und
+     * geloescht wurde nie. Die Hardware eines Rechners aendert sich
+     * aber selten: Aufeinanderfolgende Berichte unterschieden sich nur
+     * im Zeitstempel und in der Momentantemperatur, der Sensorbestand
+     * war derselbe. Gebraucht wird der letzte Stand, nicht eine Kette
+     * fast gleicher Momentaufnahmen (Befund P31 aus AP25, Weg B).
+     *
+     * Der Zeitpunkt der Erkennung geht dadurch nicht verloren - er
+     * steht im Bericht selbst unter "Erstellt am".
+     *
+     * Die Speedtest-Berichte bleiben unveraendert: dort ist der
+     * Verlauf gerade der Zweck.
+     *
+     * Bereits vorhandene Berichte mit Zeitstempel im Namen werden
+     * nicht angeruehrt. aVincePulse loescht nichts, was der Nutzer
+     * noch lesen will; wer aufraeumen moechte, tut es selbst.
      *
      * Rueckgabe: Pfad oder null.
      */
@@ -1560,20 +1599,9 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
             GLib.mkdir_with_parents(verzeichnis, 0o755);
 
-            const jetzt = new Date();
-            const zwei = zahl => String(zahl).padStart(2, "0");
-
-            const stempel =
-                jetzt.getFullYear() + "-" +
-                zwei(jetzt.getMonth() + 1) + "-" +
-                zwei(jetzt.getDate()) + "_" +
-                zwei(jetzt.getHours()) + "-" +
-                zwei(jetzt.getMinutes()) + "-" +
-                zwei(jetzt.getSeconds());
-
             const pfad = GLib.build_filenamev([
                 verzeichnis,
-                "aVP-desklet" + "-hardware-bericht_" + stempel + ".txt"
+                "aVP-desklet-hardware-bericht.txt"
             ]);
 
             GLib.file_set_contents(
@@ -1687,14 +1715,56 @@ class AVinceHWMonitor extends Desklet.Desklet {
         }
     }
 
+    /*
+     * Vorgabewert einer Einstellung, aus dem Schema gelesen.
+     *
+     * Ohne diese Funktion stand jeder Vorgabewert zweimal im Projekt:
+     * im Schema, das Cinnamon beim ersten Start und im
+     * Einstellungsfenster auswertet, und noch einmal im Code, den
+     * on_standardwerte_zuruecksetzen() verwendet. Am 22.09.2026 liefen
+     * beide auseinander - die geaenderte Vorgabe des Leistensymbols
+     * kam beim Zuruecksetzen nicht an (Befund P28 aus AP25). Das
+     * Schema ist die eine Quelle, hier wird sie gelesen.
+     *
+     * settingsData ist kein dokumentierter Bestandteil der
+     * Einstellungs-API - anders als getValue(), setValue() und
+     * setOptions(). Cinnamon selbst greift durchgehend darauf zu
+     * (settings.js:308, 312, 316, 336), es ist also stabil, aber ein
+     * Implementierungsdetail. Faellt es eines Tages weg, greift der
+     * Ersatzwert; ohne ihn stuende undefined in der Einstellungsdatei.
+     */
+    _vorgabe(schluessel, ersatz) {
+        try {
+            const daten = this.settings && this.settings.settingsData;
+            const eintrag = daten ? daten[schluessel] : null;
+
+            if (eintrag && eintrag.default !== undefined)
+                return eintrag.default;
+
+        } catch (e) {
+            global.logError(e);
+        }
+
+        global.logError(
+            "aVincePulse: no default for \"" + schluessel +
+            "\" in the schema, using the built-in value");
+
+        return ersatz;
+    }
+
     on_standardwerte_zuruecksetzen() {
         if (!this.settings)
             return;
 
-        const schriftgroesse = 14;
-        const schriftstaerke = "600";
-        const intervall = 3;
-        const deckkraft = DEFAULT_HINTERGRUND_DECKKRAFT;
+        // Alle Einzelwerte aus dem Schema, nicht aus dem Code
+        // (Befund P28 aus AP25). Schriftgroesse, Schriftstaerke und
+        // Messtakt standen hier als Zahl bzw. Text mitten in der
+        // Funktion - dieselbe Falle wie beim Leistensymbol im Applet.
+        const schriftgroesse = this._vorgabe("font-size", 14);
+        const schriftstaerke = this._vorgabe("font-weight", "600");
+        const intervall = this._vorgabe("refresh-interval", 3);
+        const deckkraft = this._vorgabe(
+            "hintergrund-deckkraft", DEFAULT_HINTERGRUND_DECKKRAFT);
 
         this.settings.setValue("font-size", schriftgroesse);
         this.settings.setValue("font-weight", schriftstaerke);
@@ -1712,30 +1782,41 @@ class AVinceHWMonitor extends Desklet.Desklet {
         // Komponenten dieselbe automatische Auswahl verwenden, zeigen
         // sie danach dieselben Sensoren.
         for (const art in SENSOR_SCHLUESSEL) {
-            this.settings.setValue(SENSOR_SCHLUESSEL[art], "auto");
-            this["sensorwahl_" + art] = "auto";
+            const schluessel = SENSOR_SCHLUESSEL[art];
+            const wert = this._vorgabe(schluessel, "auto");
+
+            this.settings.setValue(schluessel, wert);
+            this["sensorwahl_" + art] = wert;
         }
 
         // Netzwerkschnittstelle und Laufwerk ebenfalls automatisch.
-        this.settings.setValue("netz-schnittstelle", "auto");
-        this.settings.setValue("laufwerk-free", "auto");
-        this.netzWahl = "auto";
-        this.laufwerkWahl = "auto";
+        const netz = this._vorgabe("netz-schnittstelle", "auto");
+        const laufwerk = this._vorgabe("laufwerk-free", "auto");
+
+        this.settings.setValue("netz-schnittstelle", netz);
+        this.settings.setValue("laufwerk-free", laufwerk);
+        this.netzWahl = netz;
+        this.laufwerkWahl = laufwerk;
         this._uebernehmeQuellenAuswahl();
 
         // Speedtest-Programm wieder automatisch (AP22).
-        this.settings.setValue("speedtest-programm", "auto");
-        this.speedtestProgramm = "auto";
+        const programm = this._vorgabe("speedtest-programm", "auto");
+
+        this.settings.setValue("speedtest-programm", programm);
+        this.speedtestProgramm = programm;
         this._uebernehmeSpeedtestProgramm();
 
         // Warnschwellen: eingeschaltet, Vorgaben.
         const warnListe = standardWarnListe();
 
-        this.settings.setValue("warnschwellen-aktiv", true);
-        this.settings.setValue("warnfarben-satz", WARNFARBEN_VORGABE);
+        const warnAktiv = this._vorgabe("warnschwellen-aktiv", true);
+        const warnfarben = this._vorgabe("warnfarben-satz", WARNFARBEN_VORGABE);
+
+        this.settings.setValue("warnschwellen-aktiv", warnAktiv);
+        this.settings.setValue("warnfarben-satz", warnfarben);
         this.settings.setValue("warnschwellen-liste", warnListe);
-        this.warnAktiv = true;
-        this.warnfarbenSatz = WARNFARBEN_VORGABE;
+        this.warnAktiv = warnAktiv;
+        this.warnfarbenSatz = warnfarben;
         this.warnListe = warnListe;
 
         this._detector.setzeAuswahl(this._sensorAuswahl());

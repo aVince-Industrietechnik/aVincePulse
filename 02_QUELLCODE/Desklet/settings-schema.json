@@ -395,7 +395,7 @@
     },
     "kopf-hardware": {
         "type": "header",
-        "description": "Hardware"
+        "description": "Hardware detection"
     },
     "btn-hardware-neu": {
         "type": "button",

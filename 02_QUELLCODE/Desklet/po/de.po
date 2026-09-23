@@ -843,8 +843,8 @@ msgid "Open the speed test reports"
 msgstr "Speedtest-Berichte öffnen"
 
 #. settings-schema.json->kopf-hardware->description
-msgid "Hardware"
-msgstr "Hardware"
+msgid "Hardware detection"
+msgstr "Hardwareerkennung"
 
 #. settings-schema.json->btn-hardware-neu->description
 msgid "Detect hardware again"

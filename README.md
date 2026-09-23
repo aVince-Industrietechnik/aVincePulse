@@ -183,14 +183,24 @@ want nothing left behind; nothing else on your system is touched.
 |---|---|
 | `~/.config/cinnamon/spices/<uuid>/` | your settings, one file per component |
 | `~/.local/share/avincepulse/speedtest-values` | the most recent speed test result |
-| `~/.local/share/avincepulse/berichte/Hardware/` | hardware detection reports |
-| `~/.local/share/avincepulse/berichte/Speedtest/` | speed test reports |
+| `~/.local/share/avincepulse/berichte/Hardware/` | one hardware detection report per component |
+| `~/.local/share/avincepulse/berichte/Speedtest/` | speed test reports, one per measurement |
 | `~/.local/share/avincepulse/speedtest.lock` | only while a speed test is running |
 
 aVincePulse writes nothing outside these paths.
 
-Reports are never deleted automatically. aVincePulse does not remove
-anything you might want to read.
+**Speed test reports** accumulate and are never deleted. There the
+history is the whole point.
+
+Of the **hardware report** each component keeps exactly one file —
+`aVP-applet-hardware-bericht.txt` and
+`aVP-desklet-hardware-bericht.txt` — and overwrites it on every
+detection. The hardware of a machine rarely changes; what you need is
+the current state, not a chain of nearly identical snapshots. The time
+of the detection is inside the report itself.
+
+No file is ever deleted. Older hardware reports from earlier versions,
+whose names carry a date and time, are left untouched.
 
 ## Settings
 

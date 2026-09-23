@@ -192,14 +192,25 @@ wird nichts verändert.
 |---|---|
 | `~/.config/cinnamon/spices/<uuid>/` | deine Einstellungen, je Bestandteil eine Datei |
 | `~/.local/share/avincepulse/speedtest-values` | das jüngste Speedtest-Ergebnis |
-| `~/.local/share/avincepulse/berichte/Hardware/` | Berichte der Hardwareerkennung |
-| `~/.local/share/avincepulse/berichte/Speedtest/` | Berichte der Speedtests |
+| `~/.local/share/avincepulse/berichte/Hardware/` | je Bestandteil ein Bericht der Hardwareerkennung |
+| `~/.local/share/avincepulse/berichte/Speedtest/` | Berichte der Speedtests, einer je Messung |
 | `~/.local/share/avincepulse/speedtest.lock` | nur während eines laufenden Speedtests |
 
 Außerhalb dieser Pfade schreibt aVincePulse nichts.
 
-Berichte werden nie selbsttätig gelöscht. aVincePulse entfernt nichts,
-was du vielleicht noch lesen willst.
+Die **Speedtest-Berichte** sammeln sich an und werden nie gelöscht.
+Dort ist der Verlauf gerade der Zweck.
+
+Vom **Hardwarebericht** führt jeder Bestandteil genau eine Datei —
+`aVP-applet-hardware-bericht.txt` und
+`aVP-desklet-hardware-bericht.txt` — und überschreibt sie bei jeder
+Erkennung. Die Hardware eines Rechners ändert sich selten; gebraucht
+wird der letzte Stand, nicht eine Kette fast gleicher Momentaufnahmen.
+Der Zeitpunkt der Erkennung steht im Bericht selbst.
+
+Gelöscht wird keine Datei. Ältere Hardwareberichte aus früheren
+Fassungen, deren Name Datum und Uhrzeit trägt, bleiben unangetastet
+liegen.
 
 ## Einstellungen
 
