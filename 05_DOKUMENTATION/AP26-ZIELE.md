@@ -348,6 +348,9 @@ Position, Größe und Deckkraft auf – dazu die Fenster, die sie
 
 **Es sind zwei verschiedene Ursachen, keine davon ein Fehler.**
 
+Gemessen wurde dreimal: die Hardwareerkennung allein, der
+Speedtest allein und beides unmittelbar hintereinander.
+
 ## Hardwareerkennung: die Fenster dahinter
 
 Die Meldung hatte über ihre gesamte Anzeigedauer von 6,7 Sekunden
@@ -418,6 +421,57 @@ Deckkraft 0 belegt, dass der Schutz im Code greift: Eine neue Fläche
 steht anfangs oben links und wird erst mittig gesetzt und sichtbar
 gemacht, wenn ihre Größe feststeht. Sichtbar wäre sie 45 ms lang
 gewesen – gemessen war sie es nie.
+
+## Beide Vorgänge hintereinander – die vollständige Kette
+
+**Auf Wunsch des Nutzers am 23.09.2026 nachgemessen:** erst „Hardware
+neu erkennen", direkt danach der Speedtest, in einer Aufzeichnung.
+
+| Zeit | Text | Ecke | Größe | Deckkraft |
+|---|---|---|---|---|
+| 9 ms | „Hardware neu erkannt …" | **0,0** | 909×309 | **0** |
+| 53 ms | dieselbe | 314,358 | 909×309 | 255 |
+| 6 824 ms | – | – | – | ausgeblendet |
+| 10 172 ms | „Internet-Speedtest läuft …" | 577,474 | 382×77 | 255 |
+| 44 781 ms | „Speedtest abgeschlossen …" | **0,0** | 909×222 | **0** |
+| 44 835 ms | dieselbe | 314,401 | 909×222 | 255 |
+| 49 582 ms | – | – | – | ausgeblendet |
+
+**Drei Meldungen, drei Größen, ein Mittelpunkt:**
+
+| Meldung | Ecke | Größe | Mittelpunkt |
+|---|---|---|---|
+| Hardware neu erkannt | 314,358 | 909×309 | 768,5 / 512,5 |
+| Speedtest läuft | 577,474 | 382×77 | 768,0 / 512,5 |
+| Speedtest abgeschlossen | 314,401 | 909×222 | 768,5 / 512,0 |
+| **Bildschirmmitte (1536×1024)** | | | **768 / 512** |
+
+Die linke obere Ecke wandert von 314,358 nach 577,474 und wieder nach
+314,401 – ein Weg von über 260 px hin und zurück. Der **Mittelpunkt
+bleibt dabei auf einem halben Pixel genau derselbe.**
+
+Das ist die Erklärung in einem Satz: Auf einen großen Kasten folgt ein
+kleiner und darauf wieder ein großer. Jeder ist für sich korrekt
+zentriert, aber die Ränder springen weit, und wer auf den Text blickt,
+sieht ihn wandern.
+
+**Der Schutz gegen das Aufblitzen greift**, zweimal belegt: Die neue
+Fläche steht 44 ms bzw. 54 ms lang bei (0,0), beide Male mit Deckkraft
+**0**. Sichtbar war sie nie.
+
+### Zwei Einschränkungen dieser Messung
+
+- **Ein Anlege-Zustand fehlt.** Zur Meldung „Internet-Speedtest läuft"
+  ist kein (0,0)-Eintrag aufgezeichnet. Die Aufzeichnung tastet nur
+  alle 150 ms ab, solange keine Meldung steht, und 44 ms fallen durch
+  dieses Raster. Dass der Zustand auch dort auftrat, ist aus dem Code
+  zu erwarten, hier aber **nicht gemessen**.
+- **Der interessanteste Fall trat nicht ein.** Zwischen dem Ausblenden
+  der Hardware-Meldung und dem Start des Speedtests lagen 3,3
+  Sekunden. Was geschieht, wenn der Speedtest gestartet wird, **während
+  die Hardware-Meldung noch steht**, ist damit offen. Aus dem Code
+  heraus wäre es derselbe Sprung ohne Pause: `zeige()` zerstört die
+  alte Fläche und legt sofort eine neue an.
 
 ## Bewertung
 
