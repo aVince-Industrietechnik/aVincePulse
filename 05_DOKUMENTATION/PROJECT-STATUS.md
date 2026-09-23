@@ -1990,6 +1990,29 @@ Titel, wirkt erst, wenn jemand den Xlet-Namen übersetzt).
 
 Nur zur Kenntnis: P11, P12, P13, P15, P21, P22, P25, S2, S3, S4.
 
+#### Reihenfolge des weiteren Vorgehens – festgelegt am 23.09.2026
+
+Der Test auf dem Zweitgerät findet **vor** dem Abschluss von AP25
+statt, nicht danach. Entscheidung des Nutzers vom 23.09.2026 auf
+Empfehlung.
+
+| Schritt | Ort | Inhalt |
+|---|---|---|
+| 1 | Referenzgerät | Nachtest P3, Phase 2 Gruppe B, alle Korrekturen fertigstellen |
+| 2 | **Zweitgerät (Tower)** | Prüfliste Z1–Z15 gegen den **korrigierten** Stand |
+| 3 | Referenzgerät | Phase 3: Prüfbericht mit **beiden** Geräten, Version, Snapshot, Commit, Tag, Vollbackup, Release |
+
+**Begründung.** `ROADMAP_V2.md`, Abschnitt 23, führt „Tests auf
+mehreren unterschiedlichen Rechnern" als Bedingung der Release-Regel.
+Ein auf einem Gerät geprüftes Paket könnte die Abschlussprüfung nicht
+ohne Vorbehalt bestanden nennen. Zudem sind **P1** und **P11** gerade
+die Befunde, die auf einem Desktop auftreten können – eine Korrektur
+nach gesetztem Tag und veröffentlichtem Release würde ein eigenes
+Arbeitspaket erzwingen für etwas, das in AP25 gehört.
+
+So testet das Zweitgerät genau den Code, der veröffentlicht werden
+soll, und sein Ergebnis fließt in denselben Prüfbericht.
+
 #### Offen: Phase 3
 
 Prüfbericht `PRUEFBERICHT_AP25.md`, Fortschreibung dieses Dokuments und
