@@ -1456,6 +1456,24 @@ Funktionstest durch den Nutzer am 21.09.2026 in beiden Komponenten, umgeschaltet
 
 Weitere Sprachen außer Deutsch und Englisch (Entscheidung des Nutzers vom 21.09.2026). Die `.pot` ist die Einladung an Muttersprachler; Cinnamon Spices hat dafür ein eigenes Verfahren.
 
+### AP25 – Abschlussprüfung vor der Einreichung
+
+21. bis 23.09.2026. **Prüfung abgeschlossen, Phase 3 offen.**
+
+Umfang wie AP19, zusätzlich Installation und Deinstallation, Abgleich
+gegen die Cinnamon-Spices-Vorgaben, Rechte- und Namensfragen, ein
+echter Speedtest je Programm – und erstmals ein **Test auf einem
+zweiten Gerät**.
+
+35 Befunde aus der Code-Durchsicht, keiner kritisch; neun weitere vom
+Zweitgerät. Einzelheiten in Abschnitt 14, vollständig in
+`PRUEFBERICHT_AP25.md`.
+
+Aus diesem Paket stammen drei Regeln in Abschnitt 8: das gemessene
+Laufwerk gehört zur Hardwareerkennung, Gerätenamen aus `/sys` sind
+nicht zugesichert, und eine zurückgespielte Einstellungsdatei erreicht
+die laufende Komponente nicht.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1642,6 +1660,71 @@ Soll etwas von einem Zustand abhängen, den nur der Code kennt, braucht
 es deshalb einen Schlüssel vom Typ `generic` – ohne eigenes
 Bedienelement –, den die Komponente mit `setValue()` setzt. So gelöst in
 AP22 für `speedtest-vorhanden`.
+
+### Hardwareerkennung: das gemessene Laufwerk gehört dazu
+
+Aus AP25, Befund B8. **Wer einen `HardwareDetector` erzeugt, muss ihm
+auch das gemessene Laufwerk nennen:**
+
+```js
+detector.setzeLaufwerkGeraet(this._measurement.laufwerkGeraet());
+```
+
+Sonst fällt die Wahl des Speichersensors bei zwei gleichartigen
+Platten auf den zuerst gefundenen zurück, und angezeigt werden
+Temperatur und freier Platz **verschiedener** Laufwerke – ohne jeden
+Hinweis darauf.
+
+Es gibt zwei Erzeugungsstellen je Komponente: im Konstruktor und in
+`on_hardware_neu_erkennen()`. Die zweite wurde beim Einbau übersehen.
+`test_b7_b8.js` zählt deshalb Erzeugungsstellen gegen Zuordnungen und
+schlägt an, wenn eine dritte ohne Zuordnung hinzukommt.
+
+Der Aufruf gehört **vor** `_aktualisiereSensorOptionen()`, sonst trägt
+das Auswahlfeld den Eintrag „Automatisch (…)" noch mit dem falschen
+Sensor ein.
+
+### Gerätenamen aus `/sys` sind nicht zugesichert
+
+Aus AP25, Befund B9. Der Kernel vergibt Namen wie `nvme0` oder
+`hidpp_battery_22` **in der Reihenfolge, in der er die Geräte findet**.
+Beides wurde im Betrieb beobachtet:
+
+- Auf dem Zweitgerät war `nvme0` am Vormittag die Linux-SSD, nach
+  einem Neustart die Windows-SSD.
+- Auf dem Referenzgerät hieß der Maus-Akku am Vormittag
+  `hidpp_battery_22`, am Abend `hidpp_battery_24`.
+
+**Was gespeichert wird, braucht ein Merkmal der Hardware**, keine
+Zählung. `_stabileKennung()` bevorzugt deshalb die Seriennummer aus
+`<hwmon>/device/serial` und fällt nur ohne sie auf den Gerätenamen
+zurück.
+
+Der Gerätename bleibt daneben erhalten – für die Anzeige und für den
+Laufwerksabgleich aus B1. Beides sind verschiedene Aufgaben und
+brauchen verschiedene Angaben.
+
+**Ein Text, der dem Nutzer Stabilität zusagt, muss diese Bedingung
+nennen.** Der Hardwarebericht behauptete bis zum 23.09.2026
+„Kennung: bleibt nach einem Neustart gleich" – auf einem Rechner mit
+zwei NVMe war das falsch.
+
+### Eine Einstellungsdatei zurückzuspielen erreicht die laufende Komponente nicht
+
+Aus AP25, Phase 2. Beim Versuch, einen Wert nach einem Test wieder zu
+setzen, standen Datei und laufendes Applet auseinander; auch
+`settings.getValue()` lieferte den alten Wert. Die Formatierung schied
+als Ursache aus – die Datei blieb bis auf den einen Wert zeichengleich.
+
+Cinnamon hält die Einstellungen im Speicher und liest die Datei für
+eine gebundene Einstellung im laufenden Betrieb nicht neu.
+
+**Gefährlich daran:** Der nächste Schreibvorgang Cinnamons kippt die
+Datei zurück. Die Regel aus Abschnitt 9 „Datei vorher sichern, danach
+wiederherstellen" ist deshalb zu ergänzen: Das Zurückspielen allein
+genügt nicht. Entweder die Komponente danach neu laden, oder den Wert
+über das Einstellungsfenster setzen – also über denselben Weg wie der
+Nutzer, was die bestehende Regel ohnehin verlangt.
 
 ### Sichtbare Texte
 
@@ -1869,206 +1952,108 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-AP01 bis AP24 sind abgeschlossen. **Alle Arbeitspakete vor der Veröffentlichung sind damit erledigt.**
+AP01 bis AP25 sind abgeschlossen, **AP25 bis auf Phase 3** – Version,
+Snapshot, Tag, Vollbackup und Release stehen noch aus.
 
-**In Arbeit** ist seit dem 21.09.2026 **AP25 – Abschlussprüfung vor der Einreichung** bei Cinnamon Spices (`ROADMAP_V2.md`, Abschnitt 24). Umfang wie AP19, zusätzlich Installation und Deinstallation, Prüfung gegen die heute gültigen Spices-Vorgaben sowie Tests des Nutzers auf weiteren Geräten. Ziel und Akzeptanzkriterien stehen unten.
+Danach folgt das **Einreichungspaket**: zwei Pull Requests auf
+`cinnamon-spices-applets` und `cinnamon-spices-desklets`, je Komponente
+mit `info.json`, `screenshot.png`, `README.md` und der Struktur
+`UUID/files/UUID/…`.
 
-Danach folgt das **Einreichungspaket**: zwei Pull Requests auf `cinnamon-spices-applets` und `cinnamon-spices-desklets`, je Komponente mit `info.json`, `screenshot.png`, `README.md` und der Struktur `UUID/files/UUID/…`.
+**Was vor der Einreichung noch zu tun ist, steht vollständig in
+Abschnitt 9 von `PRUEFBERICHT_AP25.md`**, nach Dringlichkeit geordnet.
+Drei Punkte davon kann nur der Nutzer erledigen: Repository öffentlich
+stellen, Screenshots für beide READMEs, Ko-fi-Zahlungsweg.
 
-Offene Punkte aus den letzten Paketen:
-
-- **Aus AP22:** Der Wortlaut der Nutzungsbedingungen von Ookla für `speedtest-cli` war am 20.09.2026 nicht abrufbar; `sivel/speedtest-cli` wird seit dem 30.04.2026 nicht mehr gepflegt.
-- **Aus AP23:** Screenshots für beide READMEs fehlen; bei Ko-fi ist noch keine Zahlungsmethode verbunden; kein Changelog; die Zeile `Entwicklungsstand: 0.1.0-dev` in allen zehn Dateiköpfen ist veraltet.
-- **Aus AP23/AP24:** Das Mausrad verstellt im Einstellungsfenster Auswahlfelder (Abschnitt 8). Zu bewerten, ob sich die Zahl der Auswahlfelder verringern lässt.
-- **Aus AP24:** Die 21 Beschriftungen je Komponente in den Listenspalten bleiben englisch – von Cinnamon nicht übersetzbar.
-- **Aus der Roadmap, bis zum 21.09.2026 hier nicht geführt:** Die Rechte an den Grafiken sowie die Marken- und Namensfrage sind laut `ROADMAP_V2.md`, Abschnitt 9, ausdrücklich noch offen. Ebenso verlangt Abschnitt 15 vor der Veröffentlichung ein eigenständiges Vektorlogo (SVG), geprüft bei 16, 20, 24, 32 und 64 Pixel; im Repository liegt keines. Beides ist in AP25 aufgenommen (Kriterien 11, 12 und 20).
+Aus den früheren Paketen sind dort erledigt: Rechte an den Grafiken,
+Marken- und Namensfrage, Ookla-Nachtrag, Changelog, die veraltete
+Kopfzeile `Entwicklungsstand: 0.1.0-dev` in allen zehn Dateien und die
+Frage nach dem Vektorlogo (mit Messergebnis auf „nach 1.0" verschoben).
+Offen geblieben sind das Mausrad im Einstellungsfenster – ein
+Cinnamon-Verhalten, nicht im Xlet lösbar – und die 21 Beschriftungen
+in den Listenspalten, die Cinnamon nicht übersetzen kann.
 
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
 
-**AP25 – Abschlussprüfung vor der Einreichung: in Arbeit seit dem 21.09.2026.**
+### AP25 – Abschlussprüfung: Ergebnis vom 23.09.2026
 
-### AP25 – Zwischenstand vom 22.09.2026, Abend
+**Die Prüfung ist abgeschlossen. Offen ist Phase 3** – Version,
+Snapshot, Tag, Vollbackup und Release.
 
-Dieser Abschnitt ist der Einstiegspunkt für die Fortsetzung, auch mit
-einem anderen Assistenten. Alle Nachweise liegen in
-`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/`; der Gesprächsverlauf
-wird nicht gebraucht.
+**Vollständiger Bericht: `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`.**
+Er ist der Einstiegspunkt für alles Weitere; hier steht nur die
+Zusammenfassung. Alle Nachweise liegen in
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/`.
 
-#### Phase 1 abgeschlossen
+#### Ergebnis in Zahlen
 
-Alle zehn Prüfblöcke durch. **35 Befunde, keiner kritisch.**
-
-| Stufe | Zahl |
+| | |
 |---|---|
-| kritisch | **0** |
-| mittel | 10 |
-| gering | 14 |
-| Hinweis / zur Kenntnis | 10 |
-| Verbesserungsvorschlag | 1 |
+| Befunde der Code-Durchsicht | **35, keiner kritisch** – 20 behoben, 15 einzeln entschieden |
+| Befunde vom Zweitgerät | **9** (B1 bis B9) – 6 am Programm behoben, 1 am Prüfwerkzeug, 2 ohne Handlungsbedarf |
+| Prüfliste Zweitgerät Z1–Z15 | 14 bestanden, Z4 dort nicht prüfbar, **keiner abweichend** |
+| Funktionstest Referenzgerät | 75 Prüfpunkte, **kein Punkt abweichend** |
+| Langzeittest | 613 Minuten, 39,99 Lesezugriffe je Minute, **0 Protokollzeilen** |
+| Funktionsprüfungen mit `cjs` | über 300 in sieben Skripten, alle bestanden |
+| Akzeptanzkriterien | 17 von 23 erfüllt, 4 teilweise, 2 in Phase 3 |
+| Release-Regel, Abschnitt 23 | **alle acht Punkte erfüllt** |
 
-Vollständige Liste mit Nachweis je Befund:
-`PRUEFDATEN/codedurchsicht/BEFUNDE.md`.
+Stufenverteilung der 35 Befunde: mittel 11, gering 13, Hinweis 9,
+zur Kenntnis 1, Verbesserungsvorschlag 1.
 
-Wesentliche Nachweise:
+#### Der Test auf dem Zweitgerät war der wertvollste Teil
 
-- **Langzeittest** 21.09. 21:48 bis 22.09. 08:00, 613 Minuten: 39,99
-  Lesezugriffe je Minute im Mittel, **nie mehr als zwei je Taktmarke**
-  (Befund K1 aus AP19 damit über zehn Stunden als behoben belegt),
-  Speicherzuwachs +2,3 MB, keine Protokollzeile. Das CPU-Plateau aus
-  AP19 trat **nicht** wieder auf: ab 23 Uhr neun Stunden lang zwischen
-  2,82 und 2,89 Prozent. `PRUEFDATEN/langzeit/ERGEBNIS.md`
-- **Funktionstest** 75 Prüfpunkte in vier Etappen, beide Komponenten,
-  beide Sprachen, **kein Punkt abweichend**; nach jeder Etappe alle
-  Werte gegen die Schema-Vorgaben verglichen, jedes Mal null
-  Abweichungen. `PRUEFDATEN/funktionstest/`
-- **Robustheit** R1–R5 bestanden; R1 und R2 haben die Befunde P16 und
-  P18 im Betrieb bewiesen. `PRUEFDATEN/robustheit/ERGEBNIS.md`
-- **Einreichungspakete** für beide Komponenten aufgebaut und mit dem
-  **offiziellen** `validate-spice` aus dem Spices-Repository geprüft:
-  „No errors found." `PRUEFDATEN/einreichung/`
-- **Rechtefragen** geschlossen: `08_LIZENZEN_RECHTE/GRAFIKEN.md`,
-  `NAME-UND-MARKE.md`, Ookla-Nachtrag in `SPEEDTEST-PROGRAMME.md`.
+Geprüft wurde ein Desktop-Tower mit AMD-Prozessor, NVIDIA-Karte, ohne
+Akku, ohne auslesbare Lüfter und mit **zwei gleichartigen
+NVMe-Laufwerken**. Ohne ihn wären **vier stillschweigend falsche
+Anzeigen** in die Einreichung gegangen:
 
-#### Phase 2, Gruppe A abgeschlossen (22.09.2026)
-
-Elf Befunde behoben, alle klein und ohne Entscheidungsbedarf:
-
-| Befund | Änderung |
+| Befund | Was passiert wäre |
 |---|---|
-| P1, P6, P7 | neue Hilfsfunktion `_zahlOderNull()` in `measurement.js` und `hardwareDetection.js`, an acht Stellen angewandt |
-| P8 | `zahlOderNull()` in `metrics.js` für die Warnschwellen |
-| P2 | `has_attribute("filesystem::free")` vor der Auswertung |
-| P9 | `!(totalDelta > 0)` statt `totalDelta <= 0` |
-| P3 | `hinweis` ist eine Pfeilfunktion, Aufrufstelle angepasst |
-| P4 | alle fünf Schnittstellenarten über `_()`, `.pot` und `de.po` ergänzt |
-| P5 | `_("unknown")` statt `"unbekannt"` |
-| P19 | `Gio.File.new_for_path(…).get_uri()` |
-| P20 | fester Pfad `~/.local/share/locale` wie in Cinnamon |
-| P23 | Rückgabewert von `dialog.open()` wird ausgewertet |
-| P24 | zehn tote Tooltips aus beiden Schemata entfernt |
+| **B1** | Temperatur der einen, freier Platz der anderen Platte – in einer Anzeige, ohne Hinweis |
+| **B8** | „Hardware neu erkennen" hob die Behebung von B1 wieder auf |
+| **B9** | eine von Hand gewählte Platte war nach einem Neustart eine andere |
+| **B6** | Cinnamon legte eine dunkle Fläche hinter das Desklet und hebelte die eigene Deckkraft-Einstellung aus |
 
-Geprüft: Syntax 10/10, gemeinsame Module 4/4 bitgenau identisch, JSON
-4/4 gültig, `de.po` ohne unübersetzte und ohne `fuzzy` Einträge,
-`msgfmt -c` fehlerfrei, **38 Funktionsprüfungen mit `cjs` bestanden**
-(`PRUEFDATEN/phase2/`). Die Prüfungen enthalten eine Gegenprobe: Der
-alte Code hätte aus `false`, `[]` und `" "` jeweils eine Schwelle von 0
-gemacht – also eine Dauerwarnung.
+Dazu kamen die Betriebsnachweise für **P7** (Sensor ohne Wert zeigt
+`--`, nicht `0`) und **P10** (die `nvme`-Nummerierung wechselte
+zwischen zwei Starts, die Automatik traf beide Male die richtige
+Platte) – beide auf dem Referenzgerät nicht herstellbar.
 
-Nachtest durch den Nutzer: Netzwerkauswahl unverändert, Berichtsordner
-öffnet. **Offen:** ein Speedtest mit `speedtest-cli`, um P3 auch im
-Betrieb zu belegen.
+**Die Entscheidung vom 23.09.2026, vor dem Abschluss zu testen und
+nicht danach, hat sich bewährt.** Jeder dieser Befunde hätte nach
+gesetztem Tag ein eigenes Arbeitspaket erzwungen.
 
-#### Zwei Befunde bereits vorher behoben
+#### Was bewusst offen bleibt
 
-- **P27/P28** – Die Vorgabe des Leistensymbols war auf hellen Themes
-  unbrauchbar (weißes V, Kontrast 1,19 : 1). Bei der Umstellung fiel
-  **P28** auf: `on_standardwerte_zuruecksetzen()` hält alle Vorgaben als
-  eigene Kopie und zog nicht nach. **Entscheidung des Nutzers vom
-  22.09.2026: Die Vorgabe bleibt `icon` (farbig)** – es ist seine
-  Gestaltung, und der Tooltip nennt die Alternative. Beide Stellen
-  stehen wieder auf `icon` und stimmen überein.
+- **P1 und P11 ohne Betriebsnachweis** – die nötige Hardware gibt es
+  auf keinem der beiden Geräte. Der Tower hat gar keinen Akku und
+  keine Einträge unter `/sys/class/power_supply`.
+- **Nur eine Cinnamon-Fassung geprüft** – beide Geräte laufen
+  Mint 22.3 mit Cinnamon 6.6.9. Der Tower prüft andere **Hardware**,
+  nicht eine andere Cinnamon-Fassung.
+- **P10, S1/P14, P17** – eigenes Paket nach der Einreichung.
+- **Übersetzte Werte in fünf Protokollzeilen** – Abschnitt 8 verlangt
+  unübersetzte Protokolle; noch zu entscheiden.
 
-#### Offen: Phase 2, Gruppe B – sieben Entscheidungen
+Die vollständige Liste dessen, was vor der Einreichung noch zu tun
+ist, steht in Abschnitt 9 des Prüfberichts – darunter drei Punkte,
+die nur der Nutzer erledigen kann: Repository öffentlich stellen,
+Screenshots für beide READMEs, Ko-fi-Zahlungsweg.
 
-| Befund | Frage | Empfehlung |
-|---|---|---|
-| P16 | `_gueltig()` fällt aufs Minimum statt auf die Vorgabe | beheben |
-| P18 | Kennzeichen erkennt den Wechsel des Speedtest-Programms nicht | beheben |
-| P30 | Leistensymbol schrumpft nach einer Höhenänderung dauerhaft | beheben |
-| P28 | Vorgaben doppelt gehalten (Schema und Code) | Weg A, B oder C, siehe Befundliste |
-| P29 | Abschnitt „Hardware" erscheint als „Geräte" | Schematext ändern? |
-| P31 | Hardwareberichte sammeln sich unbegrenzt | **Weg B beschlossen**, noch umzusetzen |
-| P26 | Repository ist privat – `git clone` im README scheitert | vor der Veröffentlichung umstellen, nur der Nutzer |
+#### Berichtigung des Zwischenstands vom 22.09.2026
 
-#### Offen: Gruppe C – später oder nur zur Kenntnis
+Der frühere Zwischenstand an dieser Stelle enthielt zwei Zählfehler,
+die beim Auszählen aus `BEFUNDE.md` auffielen. Beide betrafen die
+Zählweise, nicht den Inhalt.
 
-Eigenes Paket wert: **P10** (gespeicherter `hwmon`-Pfad kann veralten –
-der einzige Befund, der stillschweigend falsche Messwerte anzeigen
-würde), **S1/P14** (synchrones `query_filesystem_info`, Spices-Regel
-„avoid synchronous I/O"), **P17** (Fenstererkennung am übersetzten
-Titel, wirkt erst, wenn jemand den Xlet-Namen übersetzt).
-
-Nur zur Kenntnis: P11, P12, P13, P15, P21, P22, P25, S2, S3, S4.
-
-#### Reihenfolge des weiteren Vorgehens – festgelegt am 23.09.2026
-
-Der Test auf dem Zweitgerät findet **vor** dem Abschluss von AP25
-statt, nicht danach. Entscheidung des Nutzers vom 23.09.2026 auf
-Empfehlung.
-
-| Schritt | Ort | Inhalt |
-|---|---|---|
-| 1 | Referenzgerät | Nachtest P3, Phase 2 Gruppe B, alle Korrekturen fertigstellen |
-| 2 | **Zweitgerät (Tower)** | Prüfliste Z1–Z15 gegen den **korrigierten** Stand |
-| 3 | Referenzgerät | Phase 3: Prüfbericht mit **beiden** Geräten, Version, Snapshot, Commit, Tag, Vollbackup, Release |
-
-**Begründung.** `ROADMAP_V2.md`, Abschnitt 23, führt „Tests auf
-mehreren unterschiedlichen Rechnern" als Bedingung der Release-Regel.
-Ein auf einem Gerät geprüftes Paket könnte die Abschlussprüfung nicht
-ohne Vorbehalt bestanden nennen. Zudem sind **P1** und **P11** gerade
-die Befunde, die auf einem Desktop auftreten können – eine Korrektur
-nach gesetztem Tag und veröffentlichtem Release würde ein eigenes
-Arbeitspaket erzwingen für etwas, das in AP25 gehört.
-
-So testet das Zweitgerät genau den Code, der veröffentlicht werden
-soll, und sein Ergebnis fließt in denselben Prüfbericht.
-
-#### Offen: Phase 3
-
-Prüfbericht `PRUEFBERICHT_AP25.md`, Fortschreibung dieses Dokuments und
-der Roadmap, Liste „Vor der Einreichung noch offen", Version
-`0.1.0-dev.25`, `.bak`-Dateien löschen (Kriterium 22), Snapshot,
-Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
-
-#### Test auf einem zweiten Gerät – vorbereitet am 23.09.2026
-
-`ROADMAP_V2.md`, Abschnitt 23, verlangt vor der Veröffentlichung Tests
-auf mehreren Rechnern. Bisher ist aVincePulse ausschließlich auf dem
-Referenzgerät geprüft (Dell Latitude 5285, Notebook mit Akku,
-Touchscreen, WLAN).
-
-Dafür liegen jetzt bereit:
-
-- **`05_DOKUMENTATION/ZWEITGERAET-TESTEN.md`** – Anleitung von der
-  Vorbereitung bis zur Rückmeldung, mit einer eigenen Prüfliste **Z1
-  bis Z15**. Sie deckt bewusst nur ab, was auf dem Referenzgerät
-  **nicht** prüfbar war.
-- **`05_DOKUMENTATION/werkzeuge/zweitgeraet-pruefen.sh`** – prüft
-  Cinnamon, Sitzungstyp, alle benötigten Werkzeuge, die
-  Speedtest-Programme, den Zugang zu GitHub und zur NAS, und listet
-  am Ende die Sensoren, die Stromversorgung und die
-  Netzwerkschnittstellen des Rechners auf. Ändert nichts und nennt
-  fehlende Pakete samt `apt`-Befehl.
-
-Beide liegen in Git und kommen mit dem Clone auf das Zweitgerät.
-
-**Warum das für AP25 wichtig ist:** Vier Befunde sind auf dem
-Referenzgerät nicht beobachtbar – **P1** (Akku ohne `capacity` zeigt
-„0 %"), **P11** (mehrere `mains`-Schnittstellen), **P10** (abweichende
-`hwmon`-Nummerierung) und **P7** (Sensoren mit leeren Dateien). Dazu
-kommt der Fall, den ein Desktop-Rechner als einziger liefert: **kein
-Akku vorhanden** – `BATT` und `STATUS` müssen dann sauber `--` zeigen
-oder verschwinden.
-
-**Zu beachten:** Das Repository ist privat (Befund P26). Auf dem
-Zweitgerät ist einmalig `gh auth login` nötig, sonst scheitert schon
-der `git clone`.
-
-#### Sicherung des Zwischenstands (23.09.2026, 07:05)
-
-Da die Prüfdaten unter `06_TESTVERSIONEN/` per `.gitignore` **nicht**
-nach GitHub gelangen, wurde der Zwischenstand doppelt gesichert:
-
-- **Commit `164cf41`** auf `main`, auch auf GitHub. **Kein Tag**, und
-  die Version bleibt `0.1.0-dev.24` – AP25 ist nicht abgeschlossen.
-- **Vollbackup** `aVincePulse_Backups/2026-09-23_07-05-47/` mit
-  Archiv (26 MB), Git-Bundle (5,3 MB), `SHA256SUMS.txt` und
-  `BACKUP-INFO.txt`.
-
-Wiederherstellungsprobe bestanden: Prüfsummen `OK`, Klon aus dem Bundle
-mit 46 Commits und 20 Tags auf `164cf41`, Archiv entpackt und
-verglichen – **2211 von 2211 Dateien, null Unterschiede**, darin alle
-121 Prüfdaten-Dateien und 439 `.bak`-Dateien.
+- Die Stufentabelle nannte „mittel 10, gering 14, Hinweis 10". Richtig
+  ist **mittel 11, gering 13, Hinweis 9, zur Kenntnis 1**: **P18** ist
+  „gering bis mittel" eingestuft und gehört in die höhere Stufe, und
+  „zur Kenntnis" war mit „Hinweis" zusammengefasst. Die Summe blieb 35.
+- Gruppe A war als „elf Befunde" beschrieben. Das war die Zahl der
+  **Zeilen** ihrer Änderungstabelle; die erste fasst P1, P6 und P7
+  zusammen. Betroffen waren **13 Befunde**.
 
 #### Erkenntnisse zur Prüfmethodik
 
@@ -2076,8 +2061,8 @@ Für künftige Arbeiten festgehalten:
 
 - **Das Einstellungsfenster überlebt einen Cinnamon-Neustart.** Es ist
   ein eigener Prozess und lädt den Übersetzungskatalog einmal beim
-  Öffnen. Nach einem Sprachwechsel muss es geschlossen und neu geöffnet
-  werden; ein Cinnamon-Neustart genügt nicht.
+  Öffnen. Nach einem Sprachwechsel muss es geschlossen und neu
+  geöffnet werden; ein Cinnamon-Neustart genügt nicht.
 - **`_getMenuItems()` liefert auch verborgene Einträge.** Sichtbarkeit
   über `actor.visible` prüfen, nicht über das Vorhandensein.
 - **Gebundene Eigenschaften zeigen den Rohwert**, nicht das Ergebnis
@@ -2085,7 +2070,20 @@ Für künftige Arbeiten festgehalten:
   über inotify.
 - **Wird ein Vorgabewert im Schema geändert**, ist
   `on_standardwerte_zuruecksetzen()` in beiden Komponenten zu prüfen
-  (P28).
+  (P28). Seit der Behebung von P28 liest die Funktion die Vorgaben aus
+  dem Schema; die Regel gilt weiter für die beiden Listen.
+- **Quelltext lässt sich ohne laufendes Cinnamon prüfen.** Methoden
+  werden über Klammernzählung als Text aus der Datei geschnitten und
+  mit `cjs` ausgewertet – geprüft wird dann der ausgelieferte Code,
+  nicht eine Nachbildung. Gemeinsame Module lassen sich als Modul
+  laden, wenn `imports.ui.main` durch eine Attrappe ersetzt und
+  `GI_TYPELIB_PATH` auf die Typelibs von Cinnamon und Muffin gesetzt
+  wird.
+- **Eine Prüfung kann selbst falsch sein.** In AP25 schlugen drei
+  Prüfungen an, obwohl der Code richtig war – zweimal, weil eine
+  Annahme über Pfadglieder nicht stimmte, einmal, weil `indexOf` einen
+  Methodennamen im **Kommentar** fand. Wer eine Prüfung schreibt, muss
+  bei einem Fehlschlag zuerst die Prüfung prüfen.
 
 ### AP25 – Abschlussprüfung vor der Einreichung: Ziel und Akzeptanzkriterien (freigegeben am 21.09.2026)
 
@@ -2565,19 +2563,36 @@ git log -3 --oneline
 git tag --list
 ```
 
-**Stand 22.09.2026: AP25 ist in Arbeit.** Einstiegspunkt ist Abschnitt
-14, Unterabschnitt „AP25 – Zwischenstand vom 22.09.2026, Abend". Dort
-steht, was erledigt ist, welche sieben Entscheidungen offen sind und wo
-die Nachweise liegen. Der Quellcode ist gegenüber dem Tag
-`0.1.0-dev_AP24-END` verändert (Gruppe A der Phase 2), die Version in
-`metadata.json` steht noch auf `0.1.0-dev.24` und wird erst zum
-Abschluss hochgesetzt.
+**Stand 23.09.2026: Die Prüfung von AP25 ist abgeschlossen, Phase 3
+läuft.**
 
-Erwarteter Ausgangspunkt nach AP24:
+**Einstiegspunkt ist `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`.** Dort
+steht das Ergebnis vollständig; Abschnitt 10 führt die neun Schritte
+von Phase 3 mit ihrem Stand, Abschnitt 9 alles, was vor der Einreichung
+noch zu tun ist. Abschnitt 14 dieses Dokuments fasst zusammen.
+
+Was in Phase 3 noch aussteht: Version `0.1.0-dev.25` in beide
+`metadata.json` und beide Testinstallationen, Einreichungspakete neu
+bauen und erneut mit `validate-spice` prüfen, `.bak`-Dateien entfernen
+(Kriterium 22), Snapshot `0.1.0-dev_AP25-END/`, Commit, Tag, Vollbackup
+mit Wiederherstellungsprobe, GitHub-Release.
+
+Der Quellcode ist gegenüber dem Tag `0.1.0-dev_AP24-END` deutlich
+verändert; die Version in `metadata.json` steht noch auf
+`0.1.0-dev.24` und wird zum Abschluss hochgesetzt.
+
+**Zwei Geräte.** Entwickelt und geprüft wird auf dem Referenzgerät
+(Dell Latitude 5285) mit dem Arbeitsverzeichnis auf der NAS. Das
+Zweitgerät (`tower-linux`) arbeitet aus einem Git-Clone unter
+`~/aVincePulse`; Anleitung und Einstieg dort:
+`ZWEITGERAET-TESTEN.md` und `ZWEITGERAET-EINSTIEG.md`. Bei jeder
+Anweisung ist anzugeben, für welches der beiden Geräte sie gilt.
+
+Erwarteter Ausgangspunkt:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
 - Referenz-Tag: `0.1.0-dev_AP24-END`, Versionsnummer `0.1.0-dev.24`
-- AP01 bis AP24 abgeschlossen; alle Arbeitspakete vor der Veröffentlichung sind erledigt
+- AP01 bis AP24 abgeschlossen, AP25 bis auf Phase 3
 - Vorhanden: `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
 - Nächstes Arbeitspaket: Abschlussprüfung vor der Einreichung bei Cinnamon Spices; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 

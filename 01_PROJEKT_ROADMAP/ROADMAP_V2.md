@@ -1777,6 +1777,7 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 9. AP22 – Speedtest-Programm vor der Veröffentlichung (abgeschlossen am 20.09.2026)
 10. AP23 – Unterstützen-Hinweis, README und Lizenz (abgeschlossen am 21.09.2026)
 11. AP24 – Übersetzung Deutsch/Englisch (abgeschlossen am 21.09.2026)
+12. AP25 – Abschlussprüfung vor der Einreichung (begonnen am 21.09.2026, Prüfung abgeschlossen am 23.09.2026)
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1954,6 +1955,21 @@ Abschnitt 14.
 ### Abschlussprüfung vor der Veröffentlichung
 
 Vor dem Einreichen bei Cinnamon Spices (Abschnitt 12) erfolgt eine Abschlussprüfung: Umfang wie AP19, zusätzlich Installation und Deinstallation, Prüfung gegen die dann gültigen Spices-Vorgaben sowie Tests des Nutzers auf weiteren Geräten (Desktop-PC, AMD- bzw. NVIDIA-Grafik, weitere Notebooks), die nicht vom Entwicklungsrechner aus geprüft werden können.
+
+**Durchgeführt als AP25, 21. bis 23.09.2026. Prüfung abgeschlossen.**
+Vollständiger Bericht: `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`.
+
+- **35 Befunde** aus der Code-Durchsicht, **keiner kritisch**; 20 behoben, 15 bewertet und einzeln entschieden.
+- **Zweitgerät geprüft** – ein Desktop-Tower mit AMD-Prozessor, NVIDIA-Karte, ohne Akku, ohne auslesbare Lüfter, mit zwei gleichartigen NVMe-Laufwerken. Prüfliste Z1 bis Z15: 14 bestanden, einer dort nicht prüfbar, keiner abweichend.
+- **Neun weitere Befunde** (B1 bis B9) entstanden erst auf dem Zweitgerät; sechs am Programm behoben, einer am Prüfwerkzeug, zwei ohne Handlungsbedarf.
+
+**Der Test auf dem zweiten Gerät hat sich damit als der wertvollste Teil des Pakets erwiesen.** Ohne ihn wären vier stillschweigend falsche Messwerte in die Einreichung gegangen: die Temperatur eines anderen Laufwerks als angezeigt (B1, B8, B9) und eine dunkle Fläche hinter dem Desklet, die die eigene Deckkraft-Einstellung aushebelte (B6). Dazu kamen die Betriebsnachweise für **P7** und **P10**, die auf dem Referenzgerät nicht herstellbar waren.
+
+Die Entscheidung vom 23.09.2026, **vor** dem Abschluss auf dem zweiten Gerät zu testen und nicht danach, hat sich bewährt: Jeder dieser Befunde hätte nach gesetztem Tag ein eigenes Arbeitspaket erzwungen.
+
+**Release-Regel (Abschnitt 23): alle acht Punkte erfüllt.**
+
+Offen bleibt, was nur der Nutzer erledigen kann – Repository öffentlich stellen, Screenshots für beide READMEs, Ko-fi-Zahlungsweg – sowie der Abschluss von Phase 3 (Version, Snapshot, Tag, Vollbackup, Release). Beides steht in Abschnitt 9 des Prüfberichts.
 
 ### Kostenmodell
 

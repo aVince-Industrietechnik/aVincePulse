@@ -1,20 +1,14 @@
 # aVincePulse – Prüfbericht AP25 (Abschlussprüfung vor der Einreichung)
 
-> **GERÜST, Stand 23.09.2026. AP25 ist nicht abgeschlossen.**
-> Alles zum Referenzgerät ist belegt und eingetragen. Vom Zweitgerät
-> sind **14 von 15 Prüfpunkten bestanden**, einer ist dort nicht
-> prüfbar, kein Punkt abweichend (Abschnitt 5). Der Nachtest gegen den
-> korrigierten Stand hat **B7 und B8** zutage gefördert; beide sind
-> behoben und am Referenzgerät geprüft. **Offen ist allein der
-> Nachweis von B8 auf dem Zweitgerät** – inzwischen erbracht und
-> bestanden. Dabei kam **B9** ans Licht: Eine manuelle Sensorwahl
-> überlebt einen Neustart nicht zuverlässig. **B9 ist entschieden,
-> behoben und am Referenzgerät geprüft.** Version, Tag und Release
-> folgen nach Phase 3.
+> **Stand 23.09.2026. Prüfung abgeschlossen, Paket noch nicht.**
+> Phase 1 und Phase 2 sind durch, beide Geräte sind geprüft, alle
+> Befunde sind entschieden. Offen ist **Phase 3** – Version, Snapshot,
+> Tag, Vollbackup und Release – sowie die Punkte, die nur der Nutzer
+> erledigen kann (Abschnitt 9).
 
-Geprüfter Stand: Commit `b1ed015` zuzüglich der Behebungen von B7 und
-B8, die noch nicht committet sind
-Version in `metadata.json`: `0.1.0-dev.24` – **unverändert**, AP25 läuft
+Geprüfter Stand: Commit `92ea1cd`
+Version in `metadata.json`: `0.1.0-dev.24` – **unverändert**, wird in
+Phase 3 auf `0.1.0-dev.25` gesetzt
 Snapshot vor Beginn: `06_TESTVERSIONEN/0.1.0-dev_AP25-START/`
 Prüfdaten (lokal, nicht versioniert): `06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/`
 Grundlage: `ROADMAP_V2.md`, Abschnitte 23 und 24; Akzeptanzkriterien in
@@ -31,8 +25,9 @@ AP25 läuft in drei Phasen, die dritte in drei Schritten an zwei Geräten.
 | 1 | Prüfen ohne Codeänderung: zehn Prüfblöcke | **abgeschlossen** 22.09.2026 |
 | 2 A | elf kleine Befunde ohne Entscheidungsbedarf | **abgeschlossen** 22.09.2026 |
 | 2 B | sechs Befunde mit Entscheidung des Nutzers | **abgeschlossen** 23.09.2026 |
-| – | Test auf dem Zweitgerät (Tower) | **[OFFEN]** |
-| 3 | Bericht, Version, Snapshot, Tag, Backup, Release | **[OFFEN]** |
+| – | Test auf dem Zweitgerät (Tower) | **abgeschlossen** 23.09.2026 |
+| 2 C | neun Rückmeldungen des Zweitgeräts, B1 bis B9 | **abgeschlossen** 23.09.2026 |
+| 3 | Bericht, Version, Snapshot, Tag, Backup, Release | **in Arbeit** |
 
 **Der Test auf dem Zweitgerät findet vor dem Abschluss statt, nicht
 danach.** Entscheidung des Nutzers vom 23.09.2026. Grund: `ROADMAP_V2.md`,
@@ -85,11 +80,11 @@ die nur auf dem Zweitgerät beobachtbar sind – P1 und P7 sind darunter
 bereits im Code behoben.
 
 > **Zwei Abweichungen gegenüber der Tabelle im Zwischenstand vom
-> 22.09.2026**, beide nur Zählweise, nicht Inhalt. Dort steht
+> 22.09.2026**, beide nur Zählweise, nicht Inhalt. Dort stand
 > „mittel 10, gering 14, Hinweis 10". Hier ist **P18** („gering bis
 > mittel") der höheren Stufe zugeschlagen, und **„zur Kenntnis"** ist
-> von „Hinweis" getrennt ausgewiesen. Die Summe bleibt 35. Der
-> Zwischenstand ist in Phase 3 entsprechend nachzuziehen.
+> von „Hinweis" getrennt ausgewiesen. Die Summe bleibt 35. In Phase 3
+> in `PROJECT-STATUS.md` berichtigt (Abschnitt 12).
 
 ### Dazu: Befunde vom Zweitgerät
 
@@ -136,10 +131,10 @@ Referenzgerät grundsätzlich nicht auffindbar.
 P9, P19, P20, P23, P24. Geprüft mit **38 Funktionsprüfungen** unter
 `cjs`, Nachweise in `PRUEFDATEN/phase2/`.
 
-> Der Zwischenstand vom 22.09.2026 spricht von „elf Befunden". Das ist
-> die Zahl der **Zeilen** seiner Änderungstabelle; die erste Zeile fasst
-> P1, P6 und P7 zusammen. Betroffen sind 13 Befunde. In Phase 3
-> nachzuziehen.
+> Der Zwischenstand vom 22.09.2026 sprach von „elf Befunden". Das war
+> die Zahl der **Zeilen** seiner Änderungstabelle; die erste fasst P1,
+> P6 und P7 zusammen. Betroffen sind 13 Befunde. In Phase 3 in
+> `PROJECT-STATUS.md` berichtigt (Abschnitt 12).
 
 Zwei weitere bereits vorher: **P27** (Vorgabe des Leistensymbols auf
 hellen Themes unbrauchbar, Kontrast 1,19 : 1) und die Sofortmaßnahme zu
@@ -161,7 +156,7 @@ jeder Befund zusätzlich im laufenden Betrieb belegt.
 | P31 | Vorschlag | Weg B | `phase2/ERGEBNIS-GRUPPE-B-TEIL2.md` |
 
 **P26** – das Repository ist privat – stellt der Nutzer vor der
-Veröffentlichung selbst um. **[OFFEN]**
+Veröffentlichung selbst um; siehe Abschnitt 9.
 
 ### Offen: nur auf dem Zweitgerät beobachtbar
 
@@ -1152,8 +1147,8 @@ Aussage.
 | 19 | `CHANGELOG.md` mit Eintrag für die erste Veröffentlichung | **teilweise** – Datei vorhanden, Eintrag steht unter „Unreleased" |
 | 20 | Panel-Symbol erprobt | **erfüllt** |
 | 21 | Kopfzeile `Entwicklungsstand` entfernt | **erfüllt** – in keiner Quelldatei mehr |
-| 22 | `.bak`-Dateien entfernt | **[OFFEN]** – Phase 3; derzeit 455 Stück |
-| 23 | Abschluss: Version, Snapshot, Tag, Backup, Release | **[OFFEN]** – Phase 3 |
+| 22 | `.bak`-Dateien entfernt | **in Arbeit** – Phase 3; derzeit 477 Stück, vorher im Snapshot zu sichern |
+| 23 | Abschluss: Version, Snapshot, Tag, Backup, Release | **in Arbeit** – Phase 3 |
 
 **17 von 23 erfüllt, 4 teilweise oder in Arbeit, 2 offen.** Die beiden
 offenen – 22 und 23 – gehören zu Phase 3. Von den vier teilweisen hängt
@@ -1163,18 +1158,30 @@ Kriterium 17 allein am Zweitgerät.
 
 ## 9. Vor der Einreichung noch offen (Kriterium 18)
 
-Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
+Diese Liste ist die Antwort auf Kriterium 18 und zugleich die
+Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 
-### Nur der Nutzer
+### Muss vor der Einreichung erledigt sein
 
 | Punkt | Herkunft | Anmerkung |
 |---|---|---|
-| **Repository öffentlich stellen** | P26 | sonst scheitert `git clone` aus beiden READMEs |
-| **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
-| **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
-| **B9 im Betrieb nachweisen** | AP25, freiwillig | erst nach einem Neustart des Zweitgeräts aussagekräftig; die `cjs`-Prüfung bildet den Fall nach |
-| **Übersetzter Wert in Protokollzeilen** | AP25 | Nebenbefund, fünf Stellen; Abschnitt 8 verlangt unübersetzte Protokolle |
-| **Einreichungspakete neu erzeugen** | AP25 | `metadata.json` hat durch B6 einen Eintrag bekommen; `validate-spice` erneut laufen lassen |
+| **Repository öffentlich stellen** | P26 | **nur der Nutzer.** Solange es privat ist, scheitert der `git clone` aus beiden READMEs bei jedem Fremden – die Installationsanleitung wäre unbrauchbar |
+| **Screenshots für beide READMEs** | AP23 | **nur der Nutzer.** Drei Platzhalter sind gesetzt: Applet im Panel, Hover-Anzeige, Einstellungsfenster |
+| **Einreichungspakete neu erzeugen** | AP25 | die vorhandenen stammen vom 22.09.; seither haben `metadata.json` (B6) und `hardwareDetection.js` (B1, B7, B8, B9) sich geändert. `validate-spice` erneut laufen lassen. **Teil von Phase 3** |
+
+### Sollte vor der Einreichung entschieden sein
+
+| Punkt | Herkunft | Anmerkung |
+|---|---|---|
+| **Ko-fi: Zahlungsweg verbinden** | AP23 | **nur der Nutzer.** Der Unterstützen-Hinweis führt sonst auf eine Seite, die kein Geld annehmen kann. Alternativ den Hinweis vorerst entfernen |
+| **Übersetzter Wert in Protokollzeilen** | AP25 | fünf Stellen (vier aus AP14, eine aus B7). Abschnitt 8 verlangt unübersetzte Protokolle; auf einem englischen System steht dort `automatic`, wer ein Protokoll durchsucht, findet es nicht. Zwei Wege: unübersetzte Kennungen oder die Herkunft dort weglassen |
+
+### Freiwillig
+
+| Punkt | Herkunft | Anmerkung |
+|---|---|---|
+| **B9 im Betrieb nachweisen** | AP25 | erst nach einem **Neustart des Zweitgeräts** aussagekräftig, weil sich die `nvme`-Nummerierung nur dann wieder ändern kann. Die `cjs`-Prüfung bildet den Fall bereits nach |
+| **P1 und P11 auf passender Hardware** | AP25 | ein Gerät mit Akku **ohne** `capacity` bzw. mit mehreren `mains`-Schnittstellen. Steht derzeit nicht zur Verfügung |
 
 ### Bewusst verschoben
 
@@ -1198,13 +1205,70 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 
 ---
 
-## 10. Abschluss
+## 10. Phase 3 – Abschluss
 
-> **[OFFEN] – Phase 3, erst nach dem Zweitgerät.**
+**In Arbeit seit dem 23.09.2026.** Die Prüfung selbst ist beendet; was
+folgt, ist Handwerk.
 
-Reihenfolge: diesen Bericht vervollständigen, `PROJECT-STATUS.md` und
-`ROADMAP_V2.md` fortschreiben, Version `0.1.0-dev.25` in beide
-`metadata.json` und in beide Testinstallationen, `.bak`-Dateien
-entfernen (Kriterium 22), Snapshot `0.1.0-dev_AP25-END/`, Commit, Tag
-`0.1.0-dev_AP25-END`, Vollbackup mit Wiederherstellungsprobe,
-GitHub-Release.
+| Schritt | Inhalt | Stand |
+|---|---|---|
+| 1 | diesen Bericht abschließen | erledigt |
+| 2 | `PROJECT-STATUS.md` fortschreiben | in Arbeit |
+| 3 | `ROADMAP_V2.md`: AP25 als abgeschlossen führen | in Arbeit |
+| 4 | Liste „Vor der Einreichung noch offen" (Abschnitt 9) | erledigt |
+| 5 | Version `0.1.0-dev.25` in beide `metadata.json` und beide Testinstallationen | offen |
+| 6 | Einreichungspakete neu bauen, erneut `validate-spice` | offen |
+| 7 | 477 `.bak`-Dateien entfernen, vorher im Snapshot sichern | offen |
+| 8 | Snapshot `06_TESTVERSIONEN/0.1.0-dev_AP25-END/` | offen |
+| 9 | Commit, Tag `0.1.0-dev_AP25-END`, Vollbackup mit Wiederherstellungsprobe, GitHub-Release | offen |
+
+**Schritt 6 ist nicht wegzulassen.** Die vorhandenen Pakete unter
+`PRUEFDATEN/einreichung/` stammen vom 22.09.2026. Seither hat
+`Desklet/metadata.json` durch **B6** einen Eintrag bekommen, und
+`hardwareDetection.js` hat sich durch B1, B7, B8 und B9 mehrfach
+geändert. Ein „No errors found" vom 22.09. sagt über den heutigen Stand
+nichts aus.
+
+**Schritt 7 vor Schritt 8.** Die `.bak`-Dateien sind im Snapshot
+`AP25-START` bereits gesichert; der Snapshot `AP25-END` soll sie nicht
+enthalten.
+
+## 11. Drei Regeln für Abschnitt 8 des Statusdokuments
+
+Aus den Befunden dieses Pakets, damit sie nicht wiederkehren.
+
+**Wer einen `HardwareDetector` erzeugt, muss ihm das gemessene Laufwerk
+nennen.** Aus **B8**: Es gab zwei Erzeugungsstellen je Komponente und
+nur eine Zuordnung. Eine Prüfung zählt beides gegeneinander.
+
+**Gerätenamen aus `/sys` sind nicht zugesichert.** Aus **B9**: Der
+Kernel vergibt `nvme0`, `hidpp_battery_22` und dergleichen in der
+Reihenfolge, in der er die Geräte findet. Was gespeichert wird, braucht
+ein Merkmal der Hardware – eine Seriennummer, keine Zählung.
+
+**Eine Einstellungsdatei zurückzuspielen erreicht die laufende
+Komponente nicht.** Aus Phase 2, Gruppe B: Datei und Komponente standen
+danach auseinander, und Cinnamons nächster Schreibvorgang hätte die
+Datei zurückgekippt. Nach dem Zurückspielen ist die Komponente neu zu
+laden, oder der Wert wird über das Einstellungsfenster gesetzt – also
+über denselben Weg wie beim Nutzer.
+
+## 12. Zwei Zählfehler im Zwischenstand vom 22.09.2026
+
+Beim Auszählen der Befunde aus `BEFUNDE.md` gefunden. Beide betreffen
+die Zählweise, nicht den Inhalt; die Summe bleibt 35.
+
+**Erledigt:** Der Zwischenstand in `PROJECT-STATUS.md`, Abschnitt 14,
+ist in Phase 3 durch das Ergebnis ersetzt worden; die Berichtigung
+steht dort unter „Berichtigung des Zwischenstands vom 22.09.2026".
+
+**Die Stufentabelle** dort nennt „mittel 10, gering 14, Hinweis 10".
+Richtig ist **mittel 11, gering 13, Hinweis 9, zur Kenntnis 1**. Zwei
+Ursachen: **P18** ist „gering bis mittel" eingestuft und gehört in die
+höhere Stufe, und „zur Kenntnis" war mit „Hinweis" zusammengefasst.
+
+**Gruppe A** ist dort als „elf Befunde" beschrieben. Das ist die Zahl
+der **Zeilen** ihrer Änderungstabelle; die erste Zeile fasst P1, P6 und
+P7 zusammen. Betroffen sind **13 Befunde**.
+
+Beides ist in Phase 3 in `PROJECT-STATUS.md` nachzuziehen.
