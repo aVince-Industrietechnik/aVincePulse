@@ -12,7 +12,30 @@ hinein.
 
 ---
 
-## 1. Einmalig – Anmeldung und Clone
+## 1. Einmalig – Installation, Anmeldung und Clone
+
+### Zuerst: GitHub-CLI installieren
+
+Auf einem frischen Mint ist `gh` nicht vorhanden – am 23.09.2026 beim
+ersten Aufbau aufgefallen.
+
+```bash
+sudo apt install gh
+```
+
+```bash
+gh --version
+```
+
+Erwartet: `gh version 2.4x…`. **Kein Snap nehmen**, sondern das Paket
+aus den normalen Quellen; Snaps kommen schlechter an den
+System-Schlüsselbund, in dem der Zugangstoken liegt.
+
+Das Prüfskript `zweitgeraet-pruefen.sh` meldet ein fehlendes `gh` zwar
+auch, liegt aber selbst im Repository – ohne `gh` kommt man gar nicht
+so weit.
+
+### Dann: anmelden und klonen
 
 Das Repository ist privat (Befund P26). Ohne Anmeldung scheitert schon
 der Clone mit `fatal: could not read Username for 'https://github.com'`.

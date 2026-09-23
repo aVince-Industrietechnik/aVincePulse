@@ -49,9 +49,38 @@ Dort müssen die Zeilen `BATT` und `STATUS` sauber verschwinden oder
 
 ## 2. Vorbereitung auf dem Zweitgerät
 
+### 2.0 GitHub-CLI installieren – vor allem anderen
+
+Am 23.09.2026 beim ersten Aufbau aufgefallen: Auf einem frischen Mint
+ist `gh` nicht vorhanden.
+
+```bash
+sudo apt install gh
+```
+
+Kontrolle:
+
+```bash
+gh --version
+```
+
+Erwartet: eine Zeile `gh version 2.4x…`. Auf dem Referenzgerät ist es
+`2.45.0` aus dem Ubuntu-Paket `gh`.
+
+**Kein Snap nehmen.** Wird `snap install gh` angeboten, das Paket aus
+den normalen Quellen verwenden – Snaps laufen abgeschottet und kommen
+schlechter an den System-Schlüsselbund, in dem der Zugangstoken liegt.
+
+> **Warum dieser Schritt vor 2.1 steht.** Abschnitt 2.1 prüft die
+> Umgebung mit `zweitgeraet-pruefen.sh`, und das Skript meldet auch ein
+> fehlendes `gh`. Es liegt aber **im Repository**, das sich ohne `gh`
+> nicht klonen lässt. Die Prüfung der Voraussetzungen setzte damit die
+> wichtigste Voraussetzung schon voraus. Deshalb hier zuerst.
+
 ### 2.1 Umgebung prüfen
 
-Das Skript prüft alles und ändert nichts:
+Erst nach dem Clone möglich (Abschnitt 2.2). Das Skript prüft alles und
+ändert nichts:
 
 ```bash
 bash 05_DOKUMENTATION/werkzeuge/zweitgeraet-pruefen.sh
