@@ -10,6 +10,21 @@ WLAN und Intel-Grafik.
 
 Ein Desktop-Rechner prüft genau das, was dort nicht vorkommt.
 
+> ## ⚠ Vor jedem Testlauf: `git pull`
+>
+> ```bash
+> cd ~/aVincePulse && git pull
+> ```
+>
+> Auf dem Referenzgerät läuft die Arbeit an AP25 weiter. Ein Clone von
+> gestern hat nicht die heutigen Korrekturen – und dann prüfst du einen
+> Stand, den es nicht mehr gibt. **Auch nach jeder Pause am Tower
+> erneut ziehen.**
+>
+> Danach die Testinstallation aktualisieren (Abschnitt 3) und Cinnamon
+> neu starten, sonst läuft weiter der alte Code aus dem
+> Zwischenspeicher.
+
 ## 1. Warum dieser Test wertvoll ist
 
 Vier der in AP25 gefundenen Befunde lassen sich **nur** auf anderer
