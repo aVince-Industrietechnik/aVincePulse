@@ -6,8 +6,10 @@
 > prüfbar, kein Punkt abweichend (Abschnitt 5). Der Nachtest gegen den
 > korrigierten Stand hat **B7 und B8** zutage gefördert; beide sind
 > behoben und am Referenzgerät geprüft. **Offen ist allein der
-> Nachweis von B8 auf dem Zweitgerät** – nur dort gibt es zwei
-> gleichartige Platten. Version, Tag und Release folgen danach.
+> Nachweis von B8 auf dem Zweitgerät** – inzwischen erbracht und
+> bestanden. Dabei kam **B9** ans Licht: Eine manuelle Sensorwahl
+> überlebt einen Neustart nicht zuverlässig. **B9 ist noch nicht
+> entschieden.** Version, Tag und Release folgen danach.
 
 Geprüfter Stand: Commit `b1ed015` zuzüglich der Behebungen von B7 und
 B8, die noch nicht committet sind
@@ -96,7 +98,7 @@ unter eigenen Kennungen `B`:
 
 | | Zahl |
 |---|---|
-| neue Befunde am Programm | **5** – B1, B6, B8 (mittel), B3, B7 (Hinweis) |
+| neue Befunde am Programm | **6** – B1, B6, B8, B9 (mittel), B3, B7 (Hinweis) |
 | Befund am Prüfwerkzeug | **1** – B2 (gering) |
 | kein Befund | 2 – B4 gehört zu P15, B5 in die Roadmap |
 
@@ -104,10 +106,11 @@ unter eigenen Kennungen `B`:
 
 | Befund | Stand |
 |---|---|
-| B1, B3, B6, B7, B8 | behoben und geprüft |
+| B1, B3, B6, B7, B8 | behoben und auf **beiden** Geräten geprüft |
 | B2 | behoben (Prüfwerkzeug) |
 | B4 | keine Änderung |
 | B5 | in der Roadmap, OPTIONAL 1.0 |
+| **B9** | **offen, Entscheidung des Nutzers steht aus** |
 
 **B8 wog am schwersten.** Er hob die Behebung von B1 durch eine
 bewusste Handlung des Nutzers wieder auf – „Hardware neu erkennen"
@@ -165,7 +168,7 @@ Veröffentlichung selbst um. **[OFFEN]**
 |---|---|---|---|
 | P1 | mittel | Akku ohne `capacity`, aber mit `charge_full` | **nicht prüfbar** – der Tower hat keinen Akku |
 | P7 | gering | Sensoren mit leeren Dateien | **im Betrieb belegt** – `iwlwifi_1` bei getrenntem WLAN zeigt `-- °C`, nicht `0` |
-| P10 | mittel | abweichende `hwmon`-Nummerierung, Treiber-Neuladen | für ein späteres Paket vorgemerkt |
+| P10 | mittel | abweichende `hwmon`-Nummerierung, Treiber-Neuladen | **im Betrieb belegt und für die Automatik abgefangen** – die Nummerierung wechselte zwischen zwei Starts, die Wahl blieb richtig (5.10). Für die **manuelle** Wahl offen: **B9** |
 | P11 | gering | mehrere `mains`-Schnittstellen | **nicht prüfbar** – `/sys/class/power_supply` ist leer |
 
 P1 und P7 sind in Gruppe A im Code behoben. **P7 ist damit auch im
@@ -581,6 +584,7 @@ das geschieht nach der Entscheidung des Nutzers.
 | **B6** | mittel | dunkler Kasten hinter dem Desklet |
 | **B7** | Hinweis | Protokollzeile `AP05 Storage` nennt einen vorläufigen Sensor |
 | **B8** | mittel | „Hardware neu erkennen" hebt die Behebung von B1 wieder auf |
+| **B9** | mittel | manuell gewählter Sensor ist über Neustarts nicht stabil |
 
 ---
 
@@ -839,6 +843,73 @@ zwar genau dort, wo man bei einem Verdacht zuerst nachsieht.
 *Vorschlag:* die `AP05`-Zeile als vorläufig kennzeichnen oder erst nach
 der Laufwerkszuordnung schreiben.
 
+#### B9 – Eine manuelle Sensorwahl überlebt einen Neustart nicht zuverlässig (mittel)
+
+Beim Nachweis von B8 am 23.09.2026 gefunden. **Noch nicht behoben.**
+
+Die gespeicherte Sensorkennung wird so gebildet
+(`hardwareDetection.js:594`):
+
+```js
+key: chip + "|" + geraet + "|temp" + index      // "nvme|nvme0|temp1"
+```
+
+`geraet` ist der Controllername. Bei zwei NVMe-Laufwerken wechselt er
+zwischen Starts: Am Vormittag war `nvme0` die Linux-SSD, nach dem Start
+um 17:54 die **Windows-SSD**.
+
+**Wirkung:** Wer den Sensor von Hand wählt – etwa
+„nvme – Composite **[nvme0]**" – misst nach einem Neustart
+stillschweigend die **andere** Platte. Es gibt keine Meldung; die
+Kennung existiert ja weiterhin, sie zeigt nur woandershin.
+
+**Die Automatik ist nicht betroffen**, seit B1 die Wahl an das
+gemessene Laufwerk bindet statt an eine Nummer. Betroffen ist
+ausschließlich die manuelle Wahl.
+
+**Die Annahme steht falsch im Code**, seit AP14
+(`hardwareDetection.js:450–452`):
+
+```js
+/*
+ * Geraet, an dem ein hwmon-Chip haengt, etwa "nvme0" oder
+ * "coretemp.0". Anders als die hwmonN-Nummer bleibt es nach
+ * einem Neustart gleich.
+ */
+```
+
+Für `coretemp.0` oder `dell_smm` trifft das zu, für NVMe-Controller
+nicht – der Kernel nummeriert sie in der Reihenfolge, in der er sie
+findet, und die ist nicht zugesichert.
+
+**Schwerer wiegt, dass der Hardwarebericht es dem Nutzer zusagt**
+(`hardwareDetection.js:1168`):
+
+> „Kennung: bleibt nach einem Neustart gleich und wird für die
+> Sensorauswahl in den Einstellungen gespeichert."
+
+Das ist auf einem Rechner mit zwei NVMe **falsch** – als sichtbarer
+Text, nicht nur als Kommentar.
+
+*Einordnung:* dieselbe Art wie P10, B1 und B8 – ein stillschweigend
+falscher Messwert – und dieselbe Stufe. Er trifft seltener, weil er
+eine manuelle Wahl voraussetzt; dafür trifft er dauerhaft, bis jemand
+nachsieht.
+
+*Vorschlag des Nutzers:* die Kennung an ein festes Merkmal binden –
+`serial` oder `wwid` aus `/sys/class/nvme/nvmeX/` – oder mindestens
+den Berichtstext berichtigen.
+
+*Geprüft:* Beide Merkmale sind auch auf dem Referenzgerät vorhanden
+und gefüllt.
+
+*Zu bedenken:* Eine geänderte Kennung entwertet jede bereits
+gespeicherte Wahl – bestehende Einstellungen fänden ihren Sensor
+nicht mehr und fielen auf „Automatisch" zurück. Das ist vor der ersten
+Veröffentlichung folgenlos, danach nicht mehr.
+
+**Entscheidung des Nutzers steht aus**, ob in AP25 oder später.
+
 #### Randnotiz zur Anleitung
 
 `ZWEITGERAET-TESTEN.md`, Abschnitt 2.4, schreibt „Ohne jedes Programm
@@ -942,9 +1013,49 @@ aus dem Konstruktor in die Zuordnung verlegt hat, **beweist ihr bloßes
 Erscheinen nach dem Neuerkennen**, dass `setzeLaufwerkGeraet()` dort
 gerufen wird.
 
-**Offen bleibt der Nachweis auf dem Zweitgerät.** Dass die Zuordnung
-bei zwei gleichartigen Platten auch das **richtige** Laufwerk trifft,
-kann das Referenzgerät nicht zeigen – es hat eine NVMe.
+### 5.9 Nachweis von B7 und B8 auf dem Zweitgerät – bestanden
+
+23.09.2026 gegen `a11089c`. Tower-Neustart 17:54:32, Cinnamon-Neustart
+18:12:46; ausgewertet wurden nur Zeilen ab 18:12:46. `sensor-storage`
+stand in beiden Bestandteilen auf „Automatisch".
+
+| Prüfung | Ergebnis |
+|---|---|
+| **B7** | **bestanden** – genau **zwei** `AP05`-Zeilen (18:12:56.871 und 18:12:57.517), beide `hwmon2 (drive: nvme1n1p2, automatisch)`, **keine** `AP25`-Zeile |
+| **B8** | **bestanden** – nach je einem Druck auf „Hardware neu erkennen": Applet 18:14:38.883, Desklet 18:14:52.934, je eine **neue** `AP05`-Zeile mit `hwmon2 / nvme1n1p2`, unmittelbar vor der `AP12`-Zeile |
+| Anzeige | **Applet und Desklet zeigen denselben Wert**, 40 °C. `hwmon2` misst 39 °C, `hwmon1` 33 °C |
+| Berichte | beide nennen `Datenträgertemperatur … hwmon2` |
+| Zuordnung | `/` = `/dev/nvme1n1p2`, `hwmon2` → `nvme1`, Blockpfad `nvme1n1p2` → `nvme/nvme1` – **stimmig** |
+| Rückschritte | 39 Zeilen, **0 Fehler**, **0** `AP08`; Berichtsordner **2 Dateien** mit festen Namen; `werte_pruefen.py` **GESAMT 0** |
+
+Vor der Behebung zeigten Applet und Desklet **33 °C und 40 °C
+nebeneinander**. Jetzt stimmen sie überein, und zwar auf dem Laufwerk,
+dessen freien Platz `FREE` nennt.
+
+### 5.10 P10 im Betrieb belegt – und ein neuer Befund daraus
+
+**Die `nvme`-Nummerierung hat zwischen zwei Starts gewechselt.**
+
+| | Vormittag | nach dem Start 17:54 |
+|---|---|---|
+| Linux-SSD (`/`) | `nvme0n1p2` | **`nvme1n1p2`** |
+| `hwmon2` zeigt auf | `nvme0` | **`nvme1`** |
+| `hwmon1` zeigt auf | `nvme1` | **`nvme0`** (Windows-SSD) |
+
+**Die Automatik traf in beiden Fällen die richtige SSD.** Damit ist
+**P10** – „gespeicherter `hwmon`-Pfad kann auf einen anderen Chip
+zeigen" – nicht nur im Betrieb belegt, sondern für den automatischen
+Weg zugleich als **abgefangen** nachgewiesen. Der Zuschlag aus B1
+bindet die Wahl an das gemessene Laufwerk, nicht an eine Nummer.
+
+Der Nutzer hat ergänzt, dass dem Start eine Treiberinstallation
+vorausging, die Reihenfolge beim Start aber **grundsätzlich** nicht
+zugesichert ist – der Wechsel kann bei jedem Neustart auftreten, nicht
+nur nach einer Treiberänderung. Das ist zutreffend und macht den Befund
+schwerer, nicht leichter.
+
+**Für den manuellen Weg gilt das Gegenteil – siehe B9.**
+
 
 ## 6. Einstellungen gegen die Schema-Vorgaben (Kriterium 15)
 
@@ -983,7 +1094,7 @@ Aussage.
 | 5 | Abhängigkeiten und Rechte geklärt | erfüllt | `08_LIZENZEN_RECHTE/` |
 | 6 | Lizenz- und Namensfragen geklärt | erfüllt | `NAME-UND-MARKE.md`, GPL-3.0-only |
 | 7 | Dokumentation vorhanden | erfüllt | beide READMEs, `CHANGELOG.md` |
-| 8 | **Tests auf mehreren Rechnern** | **fast** – Prüfliste gegen `f670a3d` bestanden, Nachtest gegen `b1ed015` durch; B7 und B8 behoben, B8 auf dem Zweitgerät noch nachzuweisen | Abschnitte 5.5 und 5.8 |
+| 8 | **Tests auf mehreren Rechnern** | **erfüllt** – Prüfliste bestanden, Nachtest und Nachweis von B7/B8 auf dem Zweitgerät bestanden. Der daraus entstandene Befund **B9** ist noch zu entscheiden | Abschnitte 5.5, 5.8 bis 5.10 |
 
 ---
 
@@ -1032,7 +1143,7 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 | **Repository öffentlich stellen** | P26 | sonst scheitert `git clone` aus beiden READMEs |
 | **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
 | **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
-| **Nachweis von B8 auf dem Zweitgerät** | AP25 | „Hardware neu erkennen" in beiden Bestandteilen; Temperatur muss von `nvme0` bleiben |
+| **B9 entscheiden** | AP25 | manuelle Sensorwahl überlebt einen Neustart nicht zuverlässig; Abschnitt 5.6 |
 | **Übersetzter Wert in Protokollzeilen** | AP25 | Nebenbefund, fünf Stellen; Abschnitt 8 verlangt unübersetzte Protokolle |
 | **Einreichungspakete neu erzeugen** | AP25 | `metadata.json` hat durch B6 einen Eintrag bekommen; `validate-spice` erneut laufen lassen |
 
