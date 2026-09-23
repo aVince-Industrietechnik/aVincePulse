@@ -918,7 +918,7 @@ var SpeedtestRunner = class SpeedtestRunner {
                     this._zeitgeber = null;
                     this._zeitUeberschritten = true;
                     this._beendeProzess();
-                    return false;
+                    return GLib.SOURCE_REMOVE;
                 }
             );
 
@@ -1249,7 +1249,7 @@ var StatusAnzeige = class StatusAnzeige {
         this._timeout = Mainloop.timeout_add_seconds(sekunden, () => {
             this._timeout = null;
             this.verberge();
-            return false;
+            return GLib.SOURCE_REMOVE;
         });
     }
 
@@ -1275,7 +1275,7 @@ var StatusAnzeige = class StatusAnzeige {
         this._timeout = Mainloop.timeout_add(millisekunden, () => {
             this._timeout = null;
             this.verberge();
-            return false;
+            return GLib.SOURCE_REMOVE;
         });
     }
 

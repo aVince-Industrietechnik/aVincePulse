@@ -99,6 +99,8 @@ Tags:
 - `0.1.0-dev_AP22-END` – Entwicklungsstand nach Abschluss von AP22
 - `0.1.0-dev_AP23-END` – Entwicklungsstand nach Abschluss von AP23
 - `0.1.0-dev_AP24-END` – Entwicklungsstand nach Abschluss von AP24
+- `0.1.0-dev_AP25-END` – Entwicklungsstand nach Abschluss von AP25
+- `0.1.0-dev_AP26-END` – Entwicklungsstand nach Abschluss von AP26
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1474,6 +1476,37 @@ Laufwerk gehört zur Hardwareerkennung, Gerätenamen aus `/sys` sind
 nicht zugesichert, und eine zurückgespielte Einstellungsdatei erreicht
 die laufende Komponente nicht.
 
+### AP26 – die drei Punkte aus der Spices-Prüfliste
+
+**Abgeschlossen am 23.09.2026.** Ziele, Akzeptanzkriterien und
+Ergebnis in `05_DOKUMENTATION/AP26-ZIELE.md`.
+
+Das letzte Paket vor der Einreichung. Es arbeitet die drei in AP25
+zurückgestellten Befunde ab, die wörtlich in der Prüfliste der
+Gutachter stehen, ergänzt das Lizenzfeld und trifft die offene
+Entscheidung zu den übersetzten Protokollzeilen.
+
+| Punkt | Inhalt |
+|---|---|
+| **S1/P14** | alle Dateisystemabfragen asynchron; die beiden Abfragen je Takt zu einer zusammengefasst |
+| **S3** | 16 Rückgabewerte in 15 Zeitgebern auf `GLib.SOURCE_REMOVE`/`SOURCE_CONTINUE` |
+| **S4** | **nicht geändert**, nur im Code begründet – der Takt folgt der Systemuhr (AP15) |
+| Protokollzeilen | `_quelleKennung` (fest) fürs Protokoll, `_quelle` (übersetzt) bleibt im Bericht |
+| Lizenzfeld | `"license": "GPL-3.0-only"` in beide `info.json` |
+
+Geprüft: Syntax 10/10, **430 Prüfungen in acht Skripten, 0 Fehler**,
+Funktionstest im laufenden Cinnamon, beide Einreichungspakete neu
+gebaut mit „No errors found".
+
+**Der wertvollste Einzelnachweis:** Applet und Desklet messen mit
+einem Versatz von **0 ms**. Damit ist die Entscheidung, den
+Takt-Zeitgeber nicht auf einen periodischen umzustellen (S4), nicht
+nur begründet, sondern belegt.
+
+Aus diesem Paket stammen drei Regeln in Abschnitt 8: Dateisystem­
+abfragen laufen asynchron, ein übersetzter Text taugt nicht als
+Protokollwert, und Zeitgeber-Rückgabewerte werden benannt.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1726,6 +1759,70 @@ genügt nicht. Entweder die Komponente danach neu laden, oder den Wert
 über das Einstellungsfenster setzen – also über denselben Weg wie der
 Nutzer, was die bestehende Regel ohnehin verlangt.
 
+### Dateisystemabfragen laufen asynchron
+
+Aus AP26, Befunde S1 und P14. Die Prüfliste der Cinnamon-Spices-
+Gutachter sagt zu synchronen Zugriffen: „avoided **at all costs** –
+this includes file operations, network calls, subprocess execution and
+dbus/ipc calls."
+
+Der Grund ist bei `query_filesystem_info()` greifbar: Der Aufruf läuft
+im Hauptthread, und bei einem hängenden USB- oder Netzlaufwerk fror
+die Oberfläche ein – alle drei Sekunden erneut.
+
+**Für jede neue Dateisystemabfrage gilt deshalb:**
+
+- `query_filesystem_info_async()` statt `query_filesystem_info()`
+- **alle benötigten Attribute in einem Aufruf.** Vorher fragten
+  `readStorageFree()` und `readStorageFreeAnteil()` getrennt ab, also
+  zweimal je Takt und zweimal über `_laufwerk()`.
+- Das Ergebnis in einen Zwischenspeicher (`_platzSpeicher`), aus dem
+  alles liest, was synchron bleiben muss.
+
+**Was synchron bleiben darf**, sind `/proc`, `/sys` und kleine eigene
+Dateien – sie fallen unter dieselbe Regel, sind aber praktisch
+unbedenklich. In AP25 unter S1 ausdrücklich so bewertet.
+
+**Nicht jede Stelle muss asynchron werden, um asynchron zu sein.** Wo
+ein Wert nur in einer *Beschriftung* steht und nicht in einem *Wert*,
+genügt es, die Beschriftung nachzuziehen. So gelöst beim
+Laufwerk-Auswahlfeld: `_auswahlKennzeichen()` vergleicht ausschließlich
+Werte, und die Rückfrage zum Neu-Öffnen des Fensters (AP16) musste
+deshalb nicht in einen Rückruf wandern.
+
+### Ein übersetzter Text taugt nicht als Protokollwert
+
+Aus AP26. `_quelle[art]` in `hardwareDetection.js` diente zwei Zwecken:
+dem Hardwarebericht, den der Nutzer liest, und den Protokollzeilen
+`AP05` und `AP14`. Der Bericht soll übersetzt sein, das Protokoll nicht
+– auf einem englischen System stand dort `automatic`, auf einem
+deutschen `automatisch`. Wer ein Protokoll nach einem festen Wort
+durchsucht, fand es nicht.
+
+**Wer einen Wert sowohl anzeigt als auch protokolliert, braucht zwei
+Fassungen:** einen übersetzten für die Anzeige und eine feste,
+unübersetzte Kennung fürs Protokoll (`_quelleKennung`: `auto`,
+`manual`, `auto-fallback`).
+
+Das ergänzt die Regel „Protokollzeilen bleiben unübersetzt": Sie gilt
+nicht nur für den Satzbau, sondern auch für jeden **Wert** darin.
+
+### Zeitgeber geben benannte Werte zurück
+
+Aus AP26, Befund S3. `return false` und `return true` in einem
+Zeitgeber-Rückruf sind zwar richtig, sagen aber nicht, was sie
+bewirken. Die Prüfliste der Gutachter verlangt
+`GLib.SOURCE_REMOVE` und `GLib.SOURCE_CONTINUE`.
+
+Zu unterscheiden ist der Rückgabewert des **Rückrufs** vom Rückgabewert
+der **umgebenden Funktion**: In `applet.js` und `desklet.js` steht je
+ein `return true`, das nicht zum Zeitgeber gehört und unverändert
+bleibt.
+
+`test_ap26.js` schneidet jeden `timeout_add`- und `idle_add`-Aufruf
+aus dem Quelltext und prüft seinen Rückgabewert einzeln. Kommt ein
+Zeitgeber hinzu, schlägt die Zählung an.
+
 ### Sichtbare Texte
 
 Sichtbare deutsche Texte verwenden Umlaute und ß (Meldungen, Dialoge, Einstellungen, Berichte, Dateiköpfe). Code-Kommentare und Protokollzeilen bleiben in der Umschreibung (ae, oe, ue, ss). Festgelegt vom Nutzer am 18.09.2026.
@@ -1952,53 +2049,90 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-**AP01 bis AP25 sind abgeschlossen.** Version `0.1.0-dev.25`, Tag
-`0.1.0-dev_AP25-END`, GitHub-Release veröffentlicht, Vollbackup mit
-bestandener Wiederherstellungsprobe.
+**AP01 bis AP26 sind abgeschlossen.** Version `0.1.0-dev.26`, Tag
+`0.1.0-dev_AP26-END`.
 
 **Das Repository ist seit dem 23.09.2026 öffentlich** (Befund P26
 geschlossen), beide READMEs tragen Screenshots, der Ko-fi-Zahlungsweg
-ist verbunden. Aus der Liste „Muss vor der Einreichung erledigt sein"
-ist damit nichts mehr offen.
+ist verbunden. Mit AP26 sind auch die drei Befunde abgearbeitet, die
+wörtlich in der Prüfliste der Spices-Gutachter stehen.
 
-### Nächster Schritt: AP26 – drei Punkte aus der Spices-Prüfliste
+**Vor der Einreichung ist nichts mehr offen.**
 
-Am 23.09.2026 wurden die Vorgaben beider Spices-Repositories
-durchgesehen und aVincePulse dagegen geprüft. Ergebnis in
-`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/EINREICHUNG-ANFORDERUNGEN.md`.
+### Nächster Schritt: die Einreichung
 
-Aufbau, Form des Pull Requests und alle **kritischen** Punkte der
-Prüfliste sind erfüllt. **Drei in AP25 zurückgestellte Befunde stehen
-jedoch wörtlich in der Prüfliste der Gutachter:**
+Zwei **getrennte** Pull Requests gegen die beiden Spices-Repositories.
+Was sie verlangen, steht vollständig in
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/EINREICHUNG-ANFORDERUNGEN.md`
+(nur lokal und im Backup, per `.gitignore` nicht auf GitHub).
 
-| Befund | Was die Prüfliste sagt | Vorschlag |
-|---|---|---|
-| **S1/P14** | synchrone Datei-Aufrufe „avoided at all costs" | beheben |
-| **S3** | `GLib.SOURCE_REMOVE` statt `return false` | beheben, wenige Zeilen |
-| **S4** | Timer legt sich im Rückruf neu an | **nicht** ändern, nur im Code begründen – der Takt folgt der Systemuhr (AP15), ein fester Timer könnte das nicht |
+Das Wichtigste daraus:
 
-Dazu gehört `"license": "GPL-3.0-only"` in beide `info.json`.
+| Vorgabe | Bedeutung |
+|---|---|
+| **Ein PR – ein Spice** | zwei getrennte Pull Requests, keiner darf beide enthalten |
+| Titel `spice name: beschreibung` | etwa `avincepulse-applet@avince: add new applet` |
+| gilt auch für die **Commit-Nachricht** | nicht nur für den PR-Titel |
 
-**Danach die Einreichung:** zwei **getrennte** Pull Requests, Titel je
-in der Form `spice name: beschreibung` – ein PR darf nur ein Spice
-enthalten, sonst wird er geschlossen.
+> „Pull Requests that don't follow this format will be closed."
 
-### Noch offen, ohne Dringlichkeit
+Die fertigen Pakete liegen unter
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`. Sie wurden
+in AP26 aus dem heutigen Quellcode neu gebaut und bestehen beide
+`validate-spice` mit „No errors found" (Protokoll:
+`VALIDATE-2026-09-23-AP26.txt`).
 
-- **Übersetzte Werte in fünf Protokollzeilen** (vier aus AP14, eine aus
-  B7). Abschnitt 8 verlangt unübersetzte Protokolle. Zu entscheiden.
+**Zwei Punkte für die Einreichung selbst:**
+
+- **S2 begründen.** Die Vorgabe empfiehlt `get_user_state_dir()` plus
+  UUID als Ablageort. aVincePulse nutzt `~/.local/share/avincepulse/`
+  und teilt den Ordner bewusst zwischen Applet und Desklet (Grundsatz
+  EIGENSTÄNDIG + KOOPERATIV); eine UUID im Pfad würde das verhindern.
+  Das **Verbot** – nichts ins eigene Installationsverzeichnis
+  schreiben – ist eingehalten.
+- **Den Autor auf GitHub mit `@` erwähnen** entfällt bei einer
+  Neuaufnahme; es gibt noch keinen Autoreneintrag.
+
+### Danach, ohne Dringlichkeit
+
 - **P10, S2, P17** – eigenes Paket nach der Einreichung.
-- **B9 im Betrieb nachweisen**, freiwillig, erst nach einem Neustart des
-  Zweitgeräts aussagekräftig.
+- **B9 im Betrieb nachweisen**, freiwillig, erst nach einem Neustart
+  des Zweitgeräts aussagekräftig.
 - **P1 und P11** – die nötige Hardware gibt es auf keinem der beiden
   Geräte.
+- **Akzeptanzkriterium 2 aus AP26 am laufenden Prozess zählen** – der
+  Nachweis „eine Dateisystemabfrage je Takt" ist im Quelltext belegt
+  und von `test_ap26.js` abgesichert, aber nicht per `strace` gezählt.
 
 Bewusst verschoben: das Vektorlogo (mit Messergebnis auf „nach 1.0"),
 das Mausrad im Einstellungsfenster (Cinnamon-Verhalten, nicht im Xlet
 lösbar) und die 21 Beschriftungen in den Listenspalten, die Cinnamon
 nicht übersetzen kann.
 
-Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen.
+Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher
+schriftlich festlegen und freigeben lassen.
+
+### AP26 – Ergebnis vom 23.09.2026
+
+**Vollständiger Bericht: `05_DOKUMENTATION/AP26-ZIELE.md`** – dort
+stehen Ziele, Akzeptanzkriterien und Nachweise beieinander.
+
+| | |
+|---|---|
+| Punkte der Spices-Prüfliste | **3** – S1/P14 und S3 behoben, S4 bewusst nicht geändert |
+| dazu | Lizenzfeld, unübersetzte Protokollkennung |
+| geänderte Quelldateien | **8** |
+| Prüfungen | **430 in acht Skripten, 0 Fehler** (345 aus AP25 + 85 neu) |
+| Funktionstest | im laufenden Cinnamon, **0 Fehlerzeilen** |
+| Einreichungspakete | neu gebaut, beide **„No errors found"** |
+| Einstellungswerte | **0 geänderte Werte** |
+
+**Gleichlauf Applet/Desklet: 0 ms.** Der Betriebsnachweis für S4.
+
+**Eine Berichtigung zu AP25:** Abschnitt 9 des Prüfberichts nennt fünf
+Protokollzeilen mit übersetztem Wert. Nachgezählt sind es **vier** –
+die `AP14`-Schleife läuft über drei Sensorarten, dazu die eine
+`AP05`-Zeile. An Ursache und Behebung ändert das nichts.
 
 ### AP25 – Abschlussprüfung: Ergebnis vom 23.09.2026
 
@@ -2588,26 +2722,27 @@ git log -3 --oneline
 git tag --list
 ```
 
-**Stand 23.09.2026: AP25 ist abgeschlossen.** Als Nächstes folgt
-**AP26** mit drei Punkten aus der Spices-Prüfliste (S1, S3, S4), danach
-die Einreichung mit zwei getrennten Pull Requests.
+**Stand 23.09.2026: AP26 ist abgeschlossen. Als Nächstes folgt die
+Einreichung bei Cinnamon Spices.**
 
-**Einstiegspunkt ist `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`.** Dort
-steht das Ergebnis vollständig; Abschnitt 10 führt die neun Schritte
-von Phase 3 mit ihrem Stand, Abschnitt 9 alles, was vor der Einreichung
-noch zu tun ist. Abschnitt 14 dieses Dokuments fasst zusammen.
+**Einstiegspunkt ist `05_DOKUMENTATION/AP26-ZIELE.md`** – Ziele,
+Akzeptanzkriterien und Nachweise des letzten Pakets stehen dort
+beieinander. Abschnitt 14 dieses Dokuments nennt den nächsten Schritt,
+`PRUEFBERICHT_AP25.md` bleibt die Grundlage für alles Frühere.
 
-Phase 3 ist durchlaufen: Version `0.1.0-dev.25` gesetzt,
-Einreichungspakete neu gebaut und erneut mit `validate-spice` geprüft
-(beide „No errors found"), 115 `.bak`-Dateien entfernt (Kriterium 22),
-Snapshot `0.1.0-dev_AP25-END/` angelegt, Commit, Tag, Vollbackup mit
-Wiederherstellungsprobe und GitHub-Release.
+**Was die Einreichung verlangt**, steht vollständig in
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/EINREICHUNG-ANFORDERUNGEN.md`.
+Das Entscheidende: **zwei getrennte Pull Requests**, Titel und
+Commit-Nachricht je in der Form `spice name: beschreibung`. Ein PR mit
+beiden Spices wird geschlossen.
 
-**Die gelöschten `.bak`-Dateien liegen als
-`06_TESTVERSIONEN/0.1.0-dev_AP25-BAK-ARCHIV.tar.gz`**, mit
-Wiederherstellungsprobe belegt. Der Snapshot `AP25-START` enthielt nur
-37 der 115 – der Rest war erst während AP25 entstanden und in Git
-nicht erfasst, weil `.bak` in `.gitignore` steht.
+Die fertigen Pakete liegen unter
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`, in AP26 neu
+gebaut, beide mit „No errors found".
+
+**Aus AP25 weiterhin gültig:** Die 115 gelöschten `.bak`-Dateien liegen
+als `06_TESTVERSIONEN/0.1.0-dev_AP25-BAK-ARCHIV.tar.gz`, mit
+Wiederherstellungsprobe belegt.
 
 **Zwei Geräte.** Entwickelt und geprüft wird auf dem Referenzgerät
 (Dell Latitude 5285) mit dem Arbeitsverzeichnis auf der NAS. Das
@@ -2619,10 +2754,10 @@ Anweisung ist anzugeben, für welches der beiden Geräte sie gilt.
 Erwarteter Ausgangspunkt:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP25-END`, Versionsnummer `0.1.0-dev.25`
-- AP01 bis AP25 abgeschlossen
-- Vorhanden: `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
-- Nächstes Arbeitspaket: Abschlussprüfung vor der Einreichung bei Cinnamon Spices; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
+- Referenz-Tag: `0.1.0-dev_AP26-END`, Versionsnummer `0.1.0-dev.26`
+- AP01 bis AP26 abgeschlossen
+- Vorhanden: `AP26-ZIELE.md`, `PRUEFBERICHT_AP25.md`, `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
+- Nächster Schritt: **die Einreichung** – zwei getrennte Pull Requests. Kein weiteres Arbeitspaket ist vorher nötig; für jedes spätere gilt wieder, Ziel und Akzeptanzkriterien vorher schriftlich festzulegen und freigeben zu lassen
 
 ---
 

@@ -146,6 +146,15 @@ var MeasurementProvider = class MeasurementProvider {
         // Auswahl des Benutzers; "auto" verhaelt sich wie bisher.
         this._netzAuswahl = "auto";
         this._laufwerkAuswahl = "auto";
+
+        /*
+         * Zuletzt gemessener freier Platz je Pfad (AP26).
+         *
+         * Gefuellt wird ausschliesslich von _frageLaufwerkAb(), also
+         * asynchron. Beschriftungen und Bericht lesen daraus, ohne
+         * selbst auf das Dateisystem zuzugreifen.
+         */
+        this._platzSpeicher = {};
     }
 
     /*
@@ -405,76 +414,151 @@ var MeasurementProvider = class MeasurementProvider {
 
     /*
      * Freier Speicherplatz des gewaehlten Laufwerks, sonst der
-     * Systempartition.
+     * Systempartition - asynchron (AP26).
+     *
+     * fertig(frei, anteil): frei in Byte, anteil in Prozent der
+     * Groesse fuer die Warnschwellen (AP18). Beides null, wenn der
+     * Wert nicht ermittelbar ist.
      *
      * Die Abfrage erfolgt ueber GIO und damit ausschliesslich fuer das
-     * Dateisystem, in dem der Pfad liegt. Netzlaufwerke werden bewusst
-     * nicht angeboten: Die Abfrage laeuft bei jedem Takt, und ein nicht
-     * erreichbares Netzlaufwerk koennte die Oberflaeche blockieren.
-     *
-     * Rueckgabe in Byte, oder null wenn der Wert nicht ermittelbar ist.
+     * Dateisystem, in dem der Pfad liegt. Netzlaufwerke werden
+     * weiterhin nicht angeboten: Sie sind auch asynchron keine gute
+     * Wahl, weil ein nicht erreichbares Laufwerk bei jedem Takt eine
+     * Abfrage offen liesse.
      */
-    readStorageFree() {
-        return this._freierPlatz(this._laufwerk().pfad);
+    readStorageAsync(fertig) {
+        this._frageLaufwerkAb(this._laufwerk().pfad, (eintrag) => {
+            if (!eintrag) {
+                fertig(null, null);
+                return;
+            }
+
+            fertig(
+                eintrag.frei,
+                eintrag.gesamt
+                    ? eintrag.frei / eintrag.gesamt * 100
+                    : null
+            );
+        });
     }
 
     /*
-     * Freier Speicherplatz des gemessenen Laufwerks in Prozent seiner
-     * Groesse, fuer die Warnschwellen (AP18). null, wenn nicht
-     * ermittelbar.
+     * Fragt freien Platz und Groesse eines Dateisystems asynchron ab
+     * und legt beides im Zwischenspeicher ab.
+     *
+     * Bis AP25 lief die Abfrage synchron im Hauptthread. Die
+     * Spices-Pruefliste verlangt, synchrone Dateizugriffe "at all
+     * costs" zu vermeiden, und der Grund ist hier greifbar: Bei einem
+     * haengenden USB- oder Netzlaufwerk fror die Oberflaeche ein -
+     * alle drei Sekunden erneut (Befund S1 aus AP25).
+     *
+     * Beide Werte kommen aus EINEM Aufruf. Vorher fragten
+     * readStorageFree() und readStorageFreeAnteil() getrennt ab, also
+     * zweimal je Takt und zweimal ueber _laufwerk() (Befund P14).
+     *
+     * fertig(eintrag) wird in jedem Fall gerufen, auch bei einem
+     * Fehler; der Eintrag ist dann null.
      */
-    readStorageFreeAnteil() {
+    _frageLaufwerkAb(pfad, fertig) {
+        const melde = (eintrag) => {
+            this._platzSpeicher[pfad] = eintrag;
+
+            if (fertig)
+                fertig(eintrag);
+        };
+
         try {
-            const info = Gio.File.new_for_path(this._laufwerk().pfad)
-                .query_filesystem_info(
-                    "filesystem::free,filesystem::size",
-                    null
-                );
-
-            const frei = info.get_attribute_uint64("filesystem::free");
-            const gesamt = info.get_attribute_uint64("filesystem::size");
-
-            if (!Number.isFinite(frei) || !(gesamt > 0))
-                return null;
-
-            return frei / gesamt * 100;
-
+            Gio.File.new_for_path(pfad).query_filesystem_info_async(
+                "filesystem::free,filesystem::size",
+                GLib.PRIORITY_DEFAULT,
+                null,
+                (datei, ergebnis) => {
+                    try {
+                        melde(this._platzAusInfo(
+                            datei.query_filesystem_info_finish(ergebnis)));
+                    } catch (e) {
+                        melde(null);
+                    }
+                }
+            );
         } catch (e) {
-            return null;
+            melde(null);
         }
     }
 
-    _freierPlatz(pfad) {
-        try {
-            const file = Gio.File.new_for_path(pfad);
-
-            const info = file.query_filesystem_info(
-                "filesystem::free",
-                null
-            );
-
-            if (!info)
-                return null;
-
-            const free =
-                info.get_attribute_uint64("filesystem::free");
-
-            // get_attribute_uint64() liefert 0, wenn das Attribut nicht
-            // gesetzt werden konnte; bei einem vorzeichenlosen Wert ist
-            // "free < 0" nie wahr. Ohne has_attribute() erschiene ein
-            // Dateisystem ohne statvfs als "0 B frei" (Befund P2).
-            if (!info.has_attribute("filesystem::free"))
-                return null;
-
-            if (!Number.isFinite(free) || free < 0)
-                return null;
-
-            return free;
-
-        } catch (e) {
-            global.logError(e);
+    /*
+     * Wertet das Ergebnis einer Dateisystemabfrage aus.
+     * Rueckgabe { frei, gesamt } in Byte, oder null.
+     */
+    _platzAusInfo(info) {
+        if (!info)
             return null;
+
+        // get_attribute_uint64() liefert 0, wenn das Attribut nicht
+        // gesetzt werden konnte; bei einem vorzeichenlosen Wert ist
+        // "free < 0" nie wahr. Ohne has_attribute() erschiene ein
+        // Dateisystem ohne statvfs als "0 B frei" (Befund P2).
+        if (!info.has_attribute("filesystem::free"))
+            return null;
+
+        const frei = info.get_attribute_uint64("filesystem::free");
+
+        if (!Number.isFinite(frei) || frei < 0)
+            return null;
+
+        const gesamt = info.has_attribute("filesystem::size")
+            ? info.get_attribute_uint64("filesystem::size")
+            : 0;
+
+        return {
+            frei: frei,
+            gesamt: Number.isFinite(gesamt) && gesamt > 0 ? gesamt : null
+        };
+    }
+
+    /*
+     * Fuellt den Zwischenspeicher fuer alle eingehaengten Laufwerke
+     * und ruft danach fertig().
+     *
+     * Gebraucht von den Beschriftungen des Auswahlfeldes und vom
+     * Hardwarebericht: Beide nennen den freien Platz jedes Laufwerks,
+     * und beide duerfen dafuer die Oberflaeche nicht anhalten.
+     */
+    aktualisiereLaufwerkPlatz(fertig) {
+        const pfade = this._laufwerke().map(l => l.pfad);
+
+        // Die Systempartition steht in der Beschriftung von
+        // "Automatisch (...)", auch wenn sie nicht in der Liste ist.
+        if (pfade.indexOf("/") === -1)
+            pfade.push("/");
+
+        let offen = pfade.length;
+
+        if (offen === 0) {
+            if (fertig)
+                fertig();
+            return;
         }
+
+        for (const pfad of pfade)
+            this._frageLaufwerkAb(pfad, () => {
+                if (--offen === 0 && fertig)
+                    fertig();
+            });
+    }
+
+    /*
+     * Zuletzt gemessener freier Platz eines Pfades in Byte, ohne
+     * jeden Zugriff auf das Dateisystem.
+     *
+     * null, solange fuer diesen Pfad noch keine Abfrage zurueck ist;
+     * formatSize() macht daraus "--". Wer einen sicher belegten Wert
+     * braucht, ruft vorher aktualisiereLaufwerkPlatz().
+     */
+    _platzAusSpeicher(pfad) {
+        const eintrag = this._platzSpeicher[pfad];
+
+        return eintrag ? eintrag.frei : null;
     }
 
     /*
@@ -858,7 +942,7 @@ var MeasurementProvider = class MeasurementProvider {
     }
 
     _platzText(pfad) {
-        const groesse = this.formatSize(this._freierPlatz(pfad));
+        const groesse = this.formatSize(this._platzAusSpeicher(pfad));
 
         return fuelle(_("%s %s free"), groesse.value, groesse.unit);
     }
@@ -921,6 +1005,18 @@ var MeasurementProvider = class MeasurementProvider {
      * Berichtsteil ueber Netzwerkschnittstellen und Laufwerke,
      * angehaengt an den Hardwarebericht.
      */
+    /*
+     * Hardwarebericht, asynchron (AP26).
+     *
+     * Der Bericht nennt den freien Platz jedes Laufwerks. Die Werte
+     * werden vorher frisch geholt, damit dort nichts Veraltetes und
+     * kein "--" steht - anders als bei den Beschriftungen des
+     * Auswahlfeldes, die eine Sekunde alte Angabe vertragen.
+     */
+    berichtTextAsync(fertig) {
+        this.aktualisiereLaufwerkPlatz(() => fertig(this.berichtText()));
+    }
+
     berichtText() {
         const zeilen = [];
         const aktiv = this._aktiveSchnittstelle();
@@ -981,7 +1077,7 @@ var MeasurementProvider = class MeasurementProvider {
         ];
 
         for (const l of this._laufwerke()) {
-            const platz = this.formatSize(this._freierPlatz(l.pfad));
+            const platz = this.formatSize(this._platzAusSpeicher(l.pfad));
 
             lwZeilen.push([
                 l.pfad,

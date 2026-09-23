@@ -780,14 +780,34 @@ class AVinceHWMonitor extends Desklet.Desklet {
             this._gueltig(this.refreshInterval, 1, 30, 3)
         );
 
-        // Der naechste Takt liegt auf einer vollen Taktmarke der
-        // Systemuhr, damit Applet und Desklet im selben Moment messen.
+        /*
+         * Ein Einmal-Zeitgeber, der sich im eigenen Rueckruf neu
+         * anlegt - bewusst, nicht aus Versehen.
+         *
+         * Die Spices-Pruefliste nennt das einen haeufigen Fehler und
+         * empfiehlt einen periodischen Zeitgeber ueber den
+         * Rueckgabewert SOURCE_CONTINUE. Der haette einen festen
+         * Abstand; gebraucht wird hier ein veraenderlicher.
+         *
+         * Der naechste Takt liegt auf einer vollen Taktmarke der
+         * Systemuhr, damit Applet und Desklet im selben Moment messen
+         * (AP15). msBisZumNaechstenTakt() rechnet den Abstand dafuer
+         * bei jedem Takt neu aus: Er faellt um die Laufzeit der
+         * Messung kuerzer aus, aendert sich mit dem vom Benutzer
+         * eingestellten Intervall und ueberspringt eine Taktmarke, die
+         * zu nah liegt (TAKT_MINDESTABSTAND_MS).
+         *
+         * Ein periodischer Zeitgeber koennte das nicht leisten; die
+         * beiden Komponenten wuerden auseinanderlaufen. Der Rueckruf
+         * gibt deshalb SOURCE_REMOVE zurueck und setzt den naechsten
+         * Takt selbst.
+         */
         this._timeout = Mainloop.timeout_add(
             Measurement.msBisZumNaechstenTakt(seconds),
             () => {
                 this._timeout = null;
                 this._update();
-                return false;
+                return GLib.SOURCE_REMOVE;
             }
         );
     }
@@ -818,19 +838,11 @@ class AVinceHWMonitor extends Desklet.Desklet {
         const up =
             this._measurement.formatRate(network.up);
 
-        const storageFree =
-            this._measurement.formatSize(
-                this._measurement.readStorageFree()
-            );
-
         this._setValue("cpu_temp", cpu);
         this._setValue("cpu_load", load);
         this._setValue("ram_load", ram);
         this._setValue("storage_temp", ssd);
         this._setValue("fan_speed", fan);
-
-        this._setValue("storage_free", storageFree.value);
-        this._setUnit("storage_free", storageFree.unit);
 
         this._setValue("battery_charge", hardware.batteryCharge);
 
@@ -845,9 +857,32 @@ class AVinceHWMonitor extends Desklet.Desklet {
             storage_temp: ssd,
             cpu_load: load,
             ram_load: ram,
-            storage_free: this._measurement.readStorageFreeAnteil(),
             battery_charge:
                 hardware.psuState === "OFF" ? hardware.batteryCharge : null
+        });
+
+        /*
+         * Der freie Speicherplatz kommt asynchron nach (AP26).
+         *
+         * Die Abfrage lief bis AP25 synchron im Hauptthread und hielt
+         * bei einem haengenden Laufwerk die gesamte Oberflaeche an -
+         * alle drei Sekunden erneut (Befund S1). Wert und Warnschwelle
+         * werden deshalb im Rueckruf gesetzt, wenige Millisekunden
+         * nach den uebrigen Zeilen.
+         *
+         * _bewerteWarnschwellen() laeuft nur ueber die uebergebenen
+         * Schluessel, die anderen Zeilen bleiben also unberuehrt.
+         */
+        this._measurement.readStorageAsync((frei, anteil) => {
+            if (this._entfernt)
+                return;
+
+            const groesse = this._measurement.formatSize(frei);
+
+            this._setValue("storage_free", groesse.value);
+            this._setUnit("storage_free", groesse.unit);
+
+            this._bewerteWarnschwellen({ storage_free: anteil });
         });
 
         this._setValue("net_down", down.value);
@@ -1075,6 +1110,33 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
         // Merkt sich, was das Einstellungsfenster jetzt anbietet.
         this._geschriebeneAuswahl = this._auswahlKennzeichen(geschrieben);
+
+        /*
+         * Die Beschriftungen des Laufwerk-Auswahlfeldes nennen den
+         * freien Platz. Er wird seit AP26 asynchron geholt und steht
+         * beim ersten Aufbau noch nicht zur Verfuegung; dort stuende
+         * dann "--". Sobald die Werte da sind, werden die Optionen ein
+         * zweites Mal gesetzt.
+         *
+         * Nur die BESCHRIFTUNGEN aendern sich dabei, nicht die Werte.
+         * _auswahlKennzeichen() vergleicht ausschliesslich Werte;
+         * _geschriebeneAuswahl bleibt deshalb unberuehrt, und die
+         * Rueckfrage zum Neu-Oeffnen des Fensters (AP16) wird davon
+         * nicht ausgeloest.
+         */
+        this._measurement.aktualisiereLaufwerkPlatz(() => {
+            if (this._entfernt)
+                return;
+
+            try {
+                this.settings.setOptions(
+                    "laufwerk-free",
+                    this._measurement.getLaufwerkOptionen(this.laufwerkWahl)
+                );
+            } catch (e) {
+                global.logError(e);
+            }
+        });
     }
 
     /*
@@ -1404,7 +1466,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
         this._fensterZeitgeber = Mainloop.timeout_add(2000, () => {
             this._fensterZeitgeber = null;
             oeffnen();
-            return false;
+            return GLib.SOURCE_REMOVE;
         });
 
         altesFenster.delete(global.get_current_time());
@@ -1461,7 +1523,7 @@ class AVinceHWMonitor extends Desklet.Desklet {
                 if (rahmen.x === x && rahmen.y === y) {
                     if (++stabil >= 3) {
                         ende();
-                        return false;
+                        return GLib.SOURCE_REMOVE;
                     }
                 } else {
                     stabil = 0;
@@ -1471,10 +1533,10 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
             if (--versuche <= 0) {
                 ende();
-                return false;
+                return GLib.SOURCE_REMOVE;
             }
 
-            return true;
+            return GLib.SOURCE_CONTINUE;
         });
     }
 
@@ -1544,45 +1606,71 @@ class AVinceHWMonitor extends Desklet.Desklet {
                 " | missing: " + (fehlend.join(", ") || "none")
             );
 
-            // Bericht ablegen, damit das Ergebnis nachlesbar ist,
-            // ohne das Systemprotokoll durchsuchen zu muessen.
-            const pfad = this._schreibeHardwareBericht(detector);
-
             // Die Verfuegbarkeit kann sich geaendert haben, deshalb
             // werden die Anzeigezeilen vollstaendig neu aufgebaut.
+            // Das geschieht sofort und wartet nicht auf den Bericht.
             this._baueZeilenNeu();
 
-            const meldung =
-                _("Hardware detected again") + "\n\n" +
-                fuelle(
-                    _("%s of %s sensor-based values available"),
-                    gefunden.length,
-                    Object.keys(verfuegbar).length
-                ) +
-                (fehlend.length
-                    ? "\n" + fuelle(_("Not found: %s"), fehlend.join(", "))
-                    : "") +
-                (pfad
-                    ? "\n\n" + _("Report saved \u2013 reachable from the " +
-                                 "settings under “Open the hardware reports”")
-                    : "") +
-                (auswahlNeu
-                    ? "\n\n" + _("Sensors, interfaces or drives have " +
-                                 "appeared or gone \u2013 the lists are up " +
-                                 "to date.")
-                    : "\n\n" + _("The sensors, interfaces and drives on " +
-                                 "offer are unchanged."));
+            /*
+             * Bericht ablegen, damit das Ergebnis nachlesbar ist, ohne
+             * das Systemprotokoll durchsuchen zu muessen.
+             *
+             * Der Bericht nennt den freien Platz jedes Laufwerks und
+             * holt sich diese Werte seit AP26 asynchron. Meldung und
+             * Rueckfrage stehen deshalb im Rueckruf: Die Meldung sagt
+             * aus, ob der Bericht geschrieben werden konnte.
+             *
+             * auswahlNeu und fensterOffen sind vorher ermittelt und
+             * bleiben gueltig - die Reihenfolge der Pruefungen aendert
+             * sich nicht (AP12, AP16, AP17).
+             */
+            this._schreibeHardwareBericht(detector, (pfad) => {
+                if (this._entfernt)
+                    return;
 
-            if (fensterOffen) {
-                // Erst fragen, dann melden: Meldung und Rueckfrage
-                // stuenden sonst uebereinander in der Bildschirmmitte.
-                this._statusAnzeige.verberge();
-                this._frageNeuOeffnen(meldung);
-                return;
-            }
+                try {
+                    const meldung =
+                        _("Hardware detected again") + "\n\n" +
+                        fuelle(
+                            _("%s of %s sensor-based values available"),
+                            gefunden.length,
+                            Object.keys(verfuegbar).length
+                        ) +
+                        (fehlend.length
+                            ? "\n" + fuelle(_("Not found: %s"),
+                                            fehlend.join(", "))
+                            : "") +
+                        (pfad
+                            ? "\n\n" + _("Report saved \u2013 reachable " +
+                                         "from the settings under " +
+                                         "“Open the hardware reports”")
+                            : "") +
+                        (auswahlNeu
+                            ? "\n\n" + _("Sensors, interfaces or drives " +
+                                         "have appeared or gone \u2013 the " +
+                                         "lists are up to date.")
+                            : "\n\n" + _("The sensors, interfaces and " +
+                                         "drives on offer are unchanged."));
 
-            this._statusAnzeige.zeige(meldung);
-            this._statusAnzeige.verbergeNachLesezeit();
+                    if (fensterOffen) {
+                        // Erst fragen, dann melden: Meldung und
+                        // Rueckfrage stuenden sonst uebereinander in
+                        // der Bildschirmmitte.
+                        this._statusAnzeige.verberge();
+                        this._frageNeuOeffnen(meldung);
+                        return;
+                    }
+
+                    this._statusAnzeige.zeige(meldung);
+                    this._statusAnzeige.verbergeNachLesezeit();
+
+                } catch (e) {
+                    global.logError(e);
+                    this._statusAnzeige.zeige(
+                        _("The hardware detection failed."));
+                    this._statusAnzeige.verbergeNach(8);
+                }
+            });
 
         } catch (e) {
             global.logError(e);
@@ -1616,31 +1704,38 @@ class AVinceHWMonitor extends Desklet.Desklet {
      * nicht angeruehrt. aVincePulse loescht nichts, was der Nutzer
      * noch lesen will; wer aufraeumen moechte, tut es selbst.
      *
-     * Rueckgabe: Pfad oder null.
+     * Der Laufwerksteil des Berichts wird seit AP26 asynchron
+     * geholt; die Funktion meldet ihr Ergebnis deshalb ueber einen
+     * Rueckruf statt ueber den Rueckgabewert.
+     *
+     * fertig(pfad): Pfad der geschriebenen Datei, oder null.
      */
-    _schreibeHardwareBericht(detector) {
-        try {
-            const verzeichnis = this._berichtsVerzeichnis("Hardware");
+    _schreibeHardwareBericht(detector, fertig) {
+        this._measurement.berichtTextAsync((laufwerkTeil) => {
+            let pfad = null;
 
-            GLib.mkdir_with_parents(verzeichnis, 0o755);
+            try {
+                const verzeichnis = this._berichtsVerzeichnis("Hardware");
 
-            const pfad = GLib.build_filenamev([
-                verzeichnis,
-                "aVP-desklet-hardware-bericht.txt"
-            ]);
+                GLib.mkdir_with_parents(verzeichnis, 0o755);
 
-            GLib.file_set_contents(
-                pfad,
-                detector.berichtText("aVincePulse Desklet") +
-                    this._measurement.berichtText()
-            );
+                pfad = GLib.build_filenamev([
+                    verzeichnis,
+                    "aVP-desklet-hardware-bericht.txt"
+                ]);
 
-            return pfad;
+                GLib.file_set_contents(
+                    pfad,
+                    detector.berichtText("aVincePulse Desklet") + laufwerkTeil
+                );
 
-        } catch (e) {
-            global.logError(e);
-            return null;
-        }
+            } catch (e) {
+                global.logError(e);
+                pfad = null;
+            }
+
+            fertig(pfad);
+        });
     }
 
     /*

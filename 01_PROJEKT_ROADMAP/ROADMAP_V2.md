@@ -1777,7 +1777,8 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 9. AP22 – Speedtest-Programm vor der Veröffentlichung (abgeschlossen am 20.09.2026)
 10. AP23 – Unterstützen-Hinweis, README und Lizenz (abgeschlossen am 21.09.2026)
 11. AP24 – Übersetzung Deutsch/Englisch (abgeschlossen am 21.09.2026)
-12. AP25 – Abschlussprüfung vor der Einreichung (begonnen am 21.09.2026, Prüfung abgeschlossen am 23.09.2026)
+12. AP25 – Abschlussprüfung vor der Einreichung (begonnen am 21.09.2026, abgeschlossen am 23.09.2026)
+13. AP26 – die drei Punkte aus der Spices-Prüfliste (abgeschlossen am 23.09.2026)
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
@@ -1969,7 +1970,23 @@ Die Entscheidung vom 23.09.2026, **vor** dem Abschluss auf dem zweiten Gerät zu
 
 **Release-Regel (Abschnitt 23): alle acht Punkte erfüllt.**
 
-Offen bleibt, was nur der Nutzer erledigen kann – Repository öffentlich stellen, Screenshots für beide READMEs, Ko-fi-Zahlungsweg – sowie der Abschluss von Phase 3 (Version, Snapshot, Tag, Vollbackup, Release). Beides steht in Abschnitt 9 des Prüfberichts.
+Alles, was Abschnitt 9 des Prüfberichts noch offen listete, ist seither erledigt: Repository öffentlich gestellt, Screenshots in beiden READMEs, Ko-fi-Zahlungsweg verbunden, Phase 3 abgeschlossen.
+
+### AP26 – die drei Punkte aus der Spices-Prüfliste
+
+**Durchgeführt am 23.09.2026, abgeschlossen.** Ziele, Akzeptanzkriterien und Ergebnis: `05_DOKUMENTATION/AP26-ZIELE.md`.
+
+Das letzte Paket vor der Einreichung. AP25 hatte drei Befunde zurückgestellt, die wörtlich in der Prüfliste der Gutachter stehen:
+
+- **S1/P14 – synchrones `query_filesystem_info`** („avoided at all costs"). Behoben: alle vier Wege laufen asynchron, die beiden Abfragen je Takt wurden zu einer zusammengefasst.
+- **S3 – uneinheitliche Zeitgeber-Rückgaben.** Behoben: 16 Rückgabewerte in 15 Zeitgebern tragen jetzt `GLib.SOURCE_REMOVE` bzw. `SOURCE_CONTINUE`.
+- **S4 – Takt-Zeitgeber legt sich im eigenen Rückruf neu an.** **Bewusst nicht geändert**, nur im Code begründet: Der Takt folgt der Systemuhr, damit Applet und Desklet im selben Moment messen (AP15). Im Betrieb gemessener Versatz: **0 ms**.
+
+Dazu das Lizenzfeld `"license": "GPL-3.0-only"` in beiden `info.json` und die Entscheidung zu den übersetzten Protokollzeilen: Das Protokoll trägt jetzt eine feste Kennung, der Hardwarebericht bleibt übersetzt.
+
+Geprüft mit 430 Prüfungen in acht Skripten (0 Fehler), einem Funktionstest im laufenden Cinnamon und neu gebauten Einreichungspaketen, die beide `validate-spice` mit „No errors found" bestehen.
+
+**Damit ist vor der Einreichung nichts mehr offen.**
 
 ### Kostenmodell
 

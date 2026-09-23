@@ -207,7 +207,21 @@ var HardwareDetector = class HardwareDetector {
             )
         };
 
+        /*
+         * Herkunft der Sensorwahl, in zwei Fassungen (AP26).
+         *
+         * _quelle traegt den uebersetzten Text fuer den
+         * Hardwarebericht, den der Benutzer liest.
+         *
+         * _quelleKennung traegt eine feste, unuebersetzte Kennung fuer
+         * die Protokollzeilen. Abschnitt 8 des Statusdokuments
+         * verlangt unuebersetzte Protokolle: Auf einem englischen
+         * System stand dort bisher "automatic", auf einem deutschen
+         * "automatisch" - wer ein Protokoll nach einem festen Wort
+         * durchsucht, fand es nicht.
+         */
         this._quelle = {};
+        this._quelleKennung = {};
 
         const mapping = {
             battery: this._detectBattery()
@@ -266,7 +280,7 @@ var HardwareDetector = class HardwareDetector {
                 "aVincePulse AP05: Storage sensor -> " +
                 this._describe(this._mapping.storage) +
                 "  (drive: " + (name || "unknown") +
-                ", " + this._quelle.storage + ")"
+                ", " + this._quelleKennung.storage + ")"
             );
         }
     }
@@ -314,7 +328,7 @@ var HardwareDetector = class HardwareDetector {
 
             global.log(
                 "aVincePulse AP14: " + art + " sensor (" +
-                this._quelle[art] + ") -> " +
+                this._quelleKennung[art] + ") -> " +
                 this._describe(this._mapping[art])
             );
         }
@@ -410,6 +424,7 @@ var HardwareDetector = class HardwareDetector {
 
         if (gewuenscht === "auto") {
             this._quelle[art] = _("automatic");
+            this._quelleKennung[art] = "auto";
             return auto;
         }
 
@@ -418,11 +433,18 @@ var HardwareDetector = class HardwareDetector {
 
         if (sensor) {
             this._quelle[art] = _("selected manually");
+            this._quelleKennung[art] = "manual";
             return sensor;
         }
 
         this._quelle[art] = fuelle(
             _("automatic – selected sensor %s was not found"), gewuenscht);
+
+        // Der gewuenschte Sensor gehoert ins Protokoll: Ohne ihn waere
+        // nicht zu erkennen, welcher Sensor verschwunden ist.
+        this._quelleKennung[art] =
+            "auto-fallback, not found: " + gewuenscht;
+
         return auto;
     }
 
