@@ -598,9 +598,11 @@ msgstr ""
 #. settings-schema.json->hintergrund-deckkraft->tooltip
 msgid ""
 "Opacity of the panel behind the values. At 0 per cent the desklet has no "
-"panel, as before. Higher values darken it. Anything above 35 per cent is "
-"deliberately not offered: beyond that the panel turns mid-grey over light "
-"screen content, and the warning colours become hard to read on it."
+"panel, as before. aVincePulse ignores the Cinnamon setting “Desklet "
+"decorations”, so the look is the same with every theme. Higher values "
+"darken it. Anything above 35 per cent is deliberately not offered: "
+"beyond that the panel turns mid-grey over light screen content, and the "
+"warning colours become hard to read on it."
 msgstr ""
 
 #. settings-schema.json->refresh-interval->units

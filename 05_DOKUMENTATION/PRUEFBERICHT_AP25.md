@@ -698,9 +698,35 @@ einstellbare Fläche mitbringt.
    die Cinnamon-Einstellung ‚Gestaltung der Desklets', daher sieht es
    mit jedem Theme gleich aus."
 
-Danach zu prüfen: **Verschieben und Rechtsklick-Menü bei Deckkraft 0** –
-ohne Cinnamon-Fläche gibt es keinen sichtbaren Rand, an dem angefasst
-wird. **Umsetzung erst nach ausdrücklicher Freigabe des Nutzers.**
+**Umgesetzt und bestanden am 23.09.2026**, Nachweis
+`phase2/ERGEBNIS-B6.md`.
+
+Der Tooltip war nicht leer – er trug bereits Text aus AP20, der mit
+„At 0 per cent the desklet has no panel, as before." beginnt. Eingefügt
+wurde deshalb nur der neue Satz, direkt dahinter, statt den ersten zu
+wiederholen.
+
+*Probe:* Der Schematext wurde genommen und damit im neu erzeugten
+Katalog nachgeschlagen – die deutsche Fassung kommt zurück. `msgid` und
+Schematext sind damit zeichengleich; ein Unterschied hätte den Tooltip
+stillschweigend englisch gelassen.
+
+*Am laufenden System:* Nach dem Cinnamon-Neustart führt das Desklet
+`prevent-decorations: true`. Der Nutzer hat „Gestaltung der Desklets"
+nacheinander auf *Umrandung und Kopfzeile*, *Nur Umrandung* und zurück
+gestellt – **ohne jede Auswirkung auf das Desklet**.
+
+Die beiden Punkte, die er ausdrücklich sehen wollte, bei Deckkraft 0:
+**Verschieben geht**, und das **Rechtsklick-Menü öffnet sich** auf der
+durchsichtigen Fläche. Das war die Sorge bei Variante B – ohne
+Cinnamon-Fläche gibt es keinen sichtbaren Rand zum Anfassen.
+
+*Zwei Funde am Rande.* Cinnamon erklärt den Mechanismus im eigenen
+Einstellungsfenster („einige Desklets benötigen es, dass die Umrandung
+oder die Kopfzeile immer vorhanden sind"); es ist also ein vorgesehener
+Weg, kein Kniff. Und **alle übrigen Desklets auf dem Referenzgerät
+setzen `prevent-decorations` bereits** – aVincePulse war das einzige
+ohne.
 
 ---
 
@@ -724,7 +750,7 @@ Entschieden am 23.09.2026:
 | **B3** | beheben | umgesetzt, `AP08` → `AP07` |
 | **B4** | keine Änderung | – |
 | **B5** | in die Roadmap | aufgenommen, `ROADMAP_V2.md`, Abschnitt 24, OPTIONAL 1.0 |
-| **B6** | Variante B | **wartet auf Freigabe** |
+| **B6** | Variante B | umgesetzt, am Referenzgerät bestanden |
 
 Die Umsetzung von B1 bis B3 ist am Referenzgerät geprüft, aber **B1
 selbst ist dort nicht beobachtbar** – eine NVMe, kein Gleichstand. Der
@@ -819,7 +845,7 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 | **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
 | **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
 | **Dauerlauf Z15 auf dem Zweitgerät** | AP25 | läuft seit 13:53 |
-| **B6 umsetzen** | AP25 | Variante B entschieden, Freigabe steht aus |
+| **Einreichungspakete neu erzeugen** | AP25 | `metadata.json` hat durch B6 einen Eintrag bekommen; `validate-spice` erneut laufen lassen |
 
 ### Bewusst verschoben
 
