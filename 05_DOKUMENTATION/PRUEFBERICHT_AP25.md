@@ -3,11 +3,14 @@
 > **GERÜST, Stand 23.09.2026. AP25 ist nicht abgeschlossen.**
 > Alles zum Referenzgerät ist belegt und eingetragen. Vom Zweitgerät
 > sind **14 von 15 Prüfpunkten bestanden**, einer ist dort nicht
-> prüfbar, der Dauerlauf Z15 läuft noch (Abschnitt 5). Sechs
-> Rückmeldungen sind entschieden; B6 wartet auf die Freigabe zur
-> Umsetzung. Version, Tag und Release folgen erst danach.
+> prüfbar, kein Punkt abweichend (Abschnitt 5). Der Nachtest gegen den
+> korrigierten Stand hat **B7 und B8** zutage gefördert; beide sind
+> behoben und am Referenzgerät geprüft. **Offen ist allein der
+> Nachweis von B8 auf dem Zweitgerät** – nur dort gibt es zwei
+> gleichartige Platten. Version, Tag und Release folgen danach.
 
-Geprüfter Stand: Commit `f670a3d` (Quellcode), Dokumentation bis `a57eccb`
+Geprüfter Stand: Commit `b1ed015` zuzüglich der Behebungen von B7 und
+B8, die noch nicht committet sind
 Version in `metadata.json`: `0.1.0-dev.24` – **unverändert**, AP25 läuft
 Snapshot vor Beginn: `06_TESTVERSIONEN/0.1.0-dev_AP25-START/`
 Prüfdaten (lokal, nicht versioniert): `06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/`
@@ -93,15 +96,30 @@ unter eigenen Kennungen `B`:
 
 | | Zahl |
 |---|---|
-| neue Befunde am Programm | **3** – B1 (mittel), B3 (Hinweis), B6 (mittel) |
+| neue Befunde am Programm | **5** – B1, B6, B8 (mittel), B3, B7 (Hinweis) |
 | Befund am Prüfwerkzeug | **1** – B2 (gering) |
 | kein Befund | 2 – B4 gehört zu P15, B5 in die Roadmap |
 
-**Keiner davon ist kritisch.** Alle sind am 23.09.2026 entschieden:
-B1, B2 und B3 sind behoben, B4 bleibt unverändert, B5 ist in die
-Roadmap aufgenommen, B6 ist auf Variante B entschieden und wartet auf
-die Freigabe zur Umsetzung. Einzelheiten und Nachweise in
-Abschnitt 5.6.
+**Keiner davon ist kritisch.** Stand:
+
+| Befund | Stand |
+|---|---|
+| B1, B3, B6, B7, B8 | behoben und geprüft |
+| B2 | behoben (Prüfwerkzeug) |
+| B4 | keine Änderung |
+| B5 | in der Roadmap, OPTIONAL 1.0 |
+
+**B8 wog am schwersten.** Er hob die Behebung von B1 durch eine
+bewusste Handlung des Nutzers wieder auf – „Hardware neu erkennen"
+soll die Erkennung verbessern, nicht verschlechtern. Einzelheiten und
+Nachweise in Abschnitt 5.6 sowie in
+`PRUEFDATEN/phase2/ERGEBNIS-B7-B8.md`.
+
+**Ein Nebenbefund ist dabei offen geblieben:** Die Protokollzeile zum
+Speichersensor enthält einen übersetzten Wert (`automatisch`), obwohl
+Abschnitt 8 Protokollzeilen unübersetzt verlangt. Nicht neu – die vier
+`AP14`-Zeilen tun dasselbe seit AP14 –, aber um eine Stelle vermehrt.
+Zur Entscheidung.
 
 **B1 verdient dabei die meiste Aufmerksamkeit:** Er zeigt auf jedem
 Rechner mit zwei NVMe-Laufwerken stillschweigend die Temperatur eines
@@ -561,6 +579,8 @@ das geschieht nach der Entscheidung des Nutzers.
 | **B4** | – | kein Befund; Randnotiz zur Einheit, gehört zu **P15** |
 | **B5** | – | kein Befund; Erweiterungswunsch für die Roadmap |
 | **B6** | mittel | dunkler Kasten hinter dem Desklet |
+| **B7** | Hinweis | Protokollzeile `AP05 Storage` nennt einen vorläufigen Sensor |
+| **B8** | mittel | „Hardware neu erkennen" hebt die Behebung von B1 wieder auf |
 
 ---
 
@@ -741,6 +761,84 @@ ohne.
 
 ---
 
+#### B8 – „Hardware neu erkennen" hebt die Behebung von B1 wieder auf (mittel)
+
+Beim Nachtest am 23.09.2026 gefunden.
+
+`applet.js:1143` und `desklet.js:1498` erzeugen eine **neue**
+Hardwareerkennung und übergeben sie:
+
+```js
+const detector = new HardwareDetector(this._sensorAuswahl());
+
+this._detector = detector;
+this._measurement.setHardwareDetector(detector);
+this._aktualisiereSensorOptionen();
+```
+
+**`setzeLaufwerkGeraet()` wird dabei nicht gerufen.** Der neue Detector
+kennt das gemessene Laufwerk also nicht, der Zuschlag entfällt, und bei
+Gleichstand gewinnt wieder der zuerst gescannte Sensor.
+
+*Beleg vom Zweitgerät:* Applet 17:03:43 neu erkannt →
+`AP05 Storage hwmon1`, **keine `AP25`-Zeile**; der Hardwarebericht nennt
+`Datenträgertemperatur … hwmon1`; die Anzeige springt auf 33–34 °C,
+und `hwmon1` misst 32 °C. Das Desklet, bei dem nicht neu erkannt wurde,
+zeigt weiterhin 40 °C – **zwei Komponenten, zwei verschiedene
+Laufwerke, gleichzeitig auf demselben Bildschirm.**
+
+*Einordnung:* dieselbe Art wie B1 und P10 – ein stillschweigend
+falscher Messwert – und deshalb dieselbe Stufe. Der Nutzer hat ihn als
+„hoch" gemeldet; der Maßstab des Projekts kennt kritisch / mittel /
+gering / Hinweis, ein „hoch" gibt es nicht.
+
+Erschwerend ist, dass B8 nach einer **bewussten Handlung** des Nutzers
+eintritt, von der er das Gegenteil erwartet: „Hardware neu erkennen"
+soll die Erkennung verbessern, nicht verschlechtern. Und er trifft
+einen Rechner, auf dem die Anzeige vorher richtig war.
+
+*Ursache im Grundsatz:* Es gibt **zwei** Stellen je Komponente, die
+einen `HardwareDetector` erzeugen – im Konstruktor und beim Neuerkennen
+– aber nur **eine**, die ihm das Laufwerk nennt
+(`_uebernehmeQuellenAuswahl()`). Die erste Stelle ist dadurch gedeckt,
+die zweite nicht.
+
+*Vorschlag des Nutzers, hier geprüft:* In beiden Dateien ergänzen:
+
+```js
+detector.setzeLaufwerkGeraet(this._measurement.laufwerkGeraet());
+```
+
+**Mit einer Verbesserung zur vorgeschlagenen Stelle.** Der Nutzer
+schlug „nach `setHardwareDetector()` und vor
+`_schreibeHardwareBericht()`" vor. Richtiger ist unmittelbar nach
+`setHardwareDetector()` und **vor `_aktualisiereSensorOptionen()`** –
+sonst schreibt das Auswahlfeld den Eintrag „Automatisch (…)" noch mit
+dem falschen Sensor.
+
+*Für die Dokumentation:* **Wer einen `HardwareDetector` erzeugt, muss
+ihm auch das gemessene Laufwerk nennen.** Dieselbe Art von Regel wie
+die aus P28 zu den Vorgabewerten. In Abschnitt 8 des Statusdokuments
+aufzunehmen.
+
+#### B7 – Protokollzeile nennt einen vorläufigen Sensor (Hinweis)
+
+Der Konstruktor von `HardwareDetector` protokolliert unmittelbar nach
+`detect()`:
+
+```
+AP05: Storage sensor -> ... hwmon1 ...
+```
+
+`setzeLaufwerkGeraet()` folgt erst danach und setzt auf `hwmon2` um.
+Im Protokoll stehen damit beide Zeilen, die erste ist überholt.
+
+**Die Anzeige ist richtig**, nur das Protokoll führt in die Irre – und
+zwar genau dort, wo man bei einem Verdacht zuerst nachsieht.
+
+*Vorschlag:* die `AP05`-Zeile als vorläufig kennzeichnen oder erst nach
+der Laufwerkszuordnung schreiben.
+
 #### Randnotiz zur Anleitung
 
 `ZWEITGERAET-TESTEN.md`, Abschnitt 2.4, schreibt „Ohne jedes Programm
@@ -761,7 +859,9 @@ Entschieden am 23.09.2026:
 | **B3** | beheben | umgesetzt, `AP08` → `AP07` |
 | **B4** | keine Änderung | – |
 | **B5** | in die Roadmap | aufgenommen, `ROADMAP_V2.md`, Abschnitt 24, OPTIONAL 1.0 |
-| **B6** | Variante B | umgesetzt, am Referenzgerät bestanden |
+| **B6** | Variante B | umgesetzt, auf **beiden** Geräten bestanden |
+| **B7** | beheben | umgesetzt, am Referenzgerät bestanden |
+| **B8** | beheben | umgesetzt, am Referenzgerät bestanden; Nachweis auf dem Zweitgerät offen |
 
 Die Umsetzung von B1 bis B3 ist am Referenzgerät geprüft, aber **B1
 selbst ist dort nicht beobachtbar** – eine NVMe, kein Gleichstand. Der
@@ -809,20 +909,42 @@ das Prüfwerkzeug).
 23.09.2026 vermeiden sollte** – dort ging es allerdings um den Tag und
 das Release, und beides steht noch aus. Der Nachtest holt es nach.
 
-Zu prüfen sind nur die Punkte, die von den Änderungen berührt sind:
+Durchgeführt am 23.09.2026 gegen `b1ed015`.
 
-| Punkt | Warum |
+| Punkt | Ergebnis |
 |---|---|
-| **B1** | Speichertemperatur muss von `nvme0` stammen, demselben Laufwerk wie `FREE`. Vorbedingung: `sensor-storage` auf `auto` |
-| **B6** | kein dunkler Kasten hinter dem Desklet, unabhängig von „Gestaltung der Desklets" |
-| **Z1** | beide Bestandteile laden nach dem Wechsel fehlerfrei |
-| **Z2** | Protokoll: neue Zeile `AP25: storage sensor for …`, Kennung jetzt durchgehend `AP07` statt `AP08` |
-| **Z5** | Temperaturwerte plausibel, jetzt vom richtigen Laufwerk |
-| **Z7** | Sensorauswahl: der Eintrag „Automatisch (…)" nennt jetzt einen anderen Sensor |
-| – | Werte aktualisieren sich fortlaufend (aus Z15 offen geblieben) |
+| **B1 beim Start** | **bestanden** – `AP25: storage sensor for nvme0n1p2 -> hwmon2`, Desklet 16:59:19.796, Applet 16:59:20.162. Das Desklet zeigt 40 °C, `hwmon2` misst 39 °C |
+| **B3** | **bestanden** – 27 Protokollzeilen ab 16:59, davon `AP08`: **0** |
+| **B6** | **bestanden** – kein Kasten bei „Nur Umrandung" und „Umrandung und Kopfzeile"; Verschieben und Rechtsklick in Ordnung |
+| **Z1** | **bestanden** – Desklet 98 ms, Applet 72 ms |
+| **Z2** | **bestanden** – Fehlerzeilen: 0 |
+| **Z5** | **bestanden** |
+| **Z7** | **bestanden** – „Automatisch (nvme – Composite [nvme0])" |
+| Werte aktualisieren sich | **bestanden** – Lasttest mit vier `yes`-Prozessen über 20 s: `LOAD` und `CPU` steigen und fallen in Applet **und** Desklet. Damit ist auch der Rest aus Z15 erledigt |
 
-Die übrigen Punkte sind von den Änderungen nicht berührt und gelten
-weiter.
+**Aber:** Der Nachtest hat einen neuen Befund zutage gefördert – **B8**.
+Die Behebung von B1 wirkt beim Start, wird aber durch „Hardware neu
+erkennen" wieder aufgehoben. Einzelheiten in 5.6.
+
+**B7 und B8 sind inzwischen behoben** und am Referenzgerät geprüft
+(`phase2/ERGEBNIS-B7-B8.md`). Dort ist belegt, dass die Zuordnung beim
+Neuerkennen **erhalten bleibt**:
+
+```
+17:43:29.487  AP05: Storage sensor -> ... hwmon3 ... (drive: nvme0n1p2)
+17:43:29.564  AP12: hardware rescan - available: ...
+17:43:38.149  AP05: Storage sensor -> ... hwmon3 ... (drive: nvme0n1p2)
+17:43:38.213  AP12: hardware rescan - available: ...
+```
+
+Die beiden Behebungen stützen sich dabei gegenseitig: Weil B7 die Zeile
+aus dem Konstruktor in die Zuordnung verlegt hat, **beweist ihr bloßes
+Erscheinen nach dem Neuerkennen**, dass `setzeLaufwerkGeraet()` dort
+gerufen wird.
+
+**Offen bleibt der Nachweis auf dem Zweitgerät.** Dass die Zuordnung
+bei zwei gleichartigen Platten auch das **richtige** Laufwerk trifft,
+kann das Referenzgerät nicht zeigen – es hat eine NVMe.
 
 ## 6. Einstellungen gegen die Schema-Vorgaben (Kriterium 15)
 
@@ -861,7 +983,7 @@ Aussage.
 | 5 | Abhängigkeiten und Rechte geklärt | erfüllt | `08_LIZENZEN_RECHTE/` |
 | 6 | Lizenz- und Namensfragen geklärt | erfüllt | `NAME-UND-MARKE.md`, GPL-3.0-only |
 | 7 | Dokumentation vorhanden | erfüllt | beide READMEs, `CHANGELOG.md` |
-| 8 | **Tests auf mehreren Rechnern** | **erfüllt für `f670a3d`** – 14 von 15 Prüfpunkten bestanden, einer dort nicht prüfbar. Nachtest gegen `cf91d12` offen | Abschnitte 5.5 und 5.8 |
+| 8 | **Tests auf mehreren Rechnern** | **fast** – Prüfliste gegen `f670a3d` bestanden, Nachtest gegen `b1ed015` durch; B7 und B8 behoben, B8 auf dem Zweitgerät noch nachzuweisen | Abschnitte 5.5 und 5.8 |
 
 ---
 
@@ -910,7 +1032,8 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 | **Repository öffentlich stellen** | P26 | sonst scheitert `git clone` aus beiden READMEs |
 | **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
 | **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
-| **Nachtest auf dem Zweitgerät** | AP25 | gegen `cf91d12`, Umfang in Abschnitt 5.8 |
+| **Nachweis von B8 auf dem Zweitgerät** | AP25 | „Hardware neu erkennen" in beiden Bestandteilen; Temperatur muss von `nvme0` bleiben |
+| **Übersetzter Wert in Protokollzeilen** | AP25 | Nebenbefund, fünf Stellen; Abschnitt 8 verlangt unübersetzte Protokolle |
 | **Einreichungspakete neu erzeugen** | AP25 | `metadata.json` hat durch B6 einen Eintrag bekommen; `validate-spice` erneut laufen lassen |
 
 ### Bewusst verschoben

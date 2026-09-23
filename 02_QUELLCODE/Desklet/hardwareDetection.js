@@ -146,6 +146,7 @@ var HardwareDetector = class HardwareDetector {
         // Muss vor detect() stehen: _scoreStorage() liest es.
         this._laufwerkGeraet = "";
         this._laufwerkPfad = "";
+        this._speicherProtokolliert = false;
 
         this._mapping = this.detect();
 
@@ -154,10 +155,21 @@ var HardwareDetector = class HardwareDetector {
             this._describe(this._mapping.cpu)
         );
 
-        global.log(
-            "aVincePulse AP05: Storage sensor -> " +
-            this._describe(this._mapping.storage)
-        );
+        /*
+         * Der Speichersensor wird hier bewusst NICHT protokolliert.
+         *
+         * Er steht zu diesem Zeitpunkt erst vorlaeufig fest: Welches
+         * Laufwerk gemessen wird, erfaehrt die Erkennung erst durch
+         * setzeLaufwerkGeraet(), und auf einem Rechner mit zwei
+         * gleichartigen Platten aendert sich die Wahl dadurch. Eine
+         * Zeile an dieser Stelle nannte den falschen Sensor und stand
+         * dann ueberholt im Protokoll - genau dort, wo man bei einem
+         * Verdacht zuerst nachsieht (Befund B7 aus AP25).
+         *
+         * Die Zeile schreibt stattdessen setzeLaufwerkGeraet(), nach
+         * der Zuordnung, und zwar auch dann, wenn sich kein Laufwerk
+         * ermitteln laesst.
+         */
 
         global.log(
             "aVincePulse AP05: FAN sensor -> " +
@@ -223,26 +235,40 @@ var HardwareDetector = class HardwareDetector {
      */
     setzeLaufwerkGeraet(geraet) {
         const name = typeof geraet === "string" ? geraet : "";
+        const geaendert = name !== this._laufwerkGeraet;
 
-        if (name === this._laufwerkGeraet)
-            return;
+        if (geaendert) {
+            this._laufwerkGeraet = name;
+            this._laufwerkPfad = name ? this._blockPfad(name) : "";
 
-        this._laufwerkGeraet = name;
-        this._laufwerkPfad = name ? this._blockPfad(name) : "";
+            // Die automatische Wahl haengt jetzt vom Laufwerk ab.
+            this._automatisch.storage = this._selectBest(
+                this._sensoren.temperatures,
+                sensor => this._scoreStorage(sensor)
+            );
 
-        // Die automatische Wahl haengt jetzt vom Laufwerk ab.
-        this._automatisch.storage = this._selectBest(
-            this._sensoren.temperatures,
-            sensor => this._scoreStorage(sensor)
-        );
+            this._mapping.storage = this._waehleSensor("storage");
+        }
 
-        this._mapping.storage = this._waehleSensor("storage");
+        /*
+         * Die einzige Protokollzeile zum Speichersensor (Befund B7).
+         *
+         * Geschrieben wird beim ersten Aufruf und danach nur noch,
+         * wenn sich die Zuordnung wirklich aendert. Der erste Aufruf
+         * zaehlt auch dann, wenn er nichts aendert - sonst fehlte die
+         * Zeile auf einem Rechner, dessen Laufwerk sich nicht
+         * ermitteln laesst.
+         */
+        if (geaendert || !this._speicherProtokolliert) {
+            this._speicherProtokolliert = true;
 
-        global.log(
-            "aVincePulse AP25: storage sensor for " +
-            (name || "?") + " (" + this._quelle.storage + ") -> " +
-            this._describe(this._mapping.storage)
-        );
+            global.log(
+                "aVincePulse AP05: Storage sensor -> " +
+                this._describe(this._mapping.storage) +
+                "  (drive: " + (name || "unknown") +
+                ", " + this._quelle.storage + ")"
+            );
+        }
     }
 
     /*

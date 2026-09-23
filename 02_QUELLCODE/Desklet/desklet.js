@@ -1499,6 +1499,25 @@ class AVinceHWMonitor extends Desklet.Desklet {
 
             this._detector = detector;
             this._measurement.setHardwareDetector(detector);
+
+            /*
+             * Die neue Erkennung kennt das gemessene Laufwerk noch
+             * nicht. Ohne diese Zeile faellt sie bei zwei
+             * gleichartigen Platten wieder auf den zuerst gefundenen
+             * Sensor zurueck, und "Hardware neu erkennen" machte die
+             * Zuordnung aus Befund B1 zunichte (Befund B8 aus AP25,
+             * auf dem Zweitgeraet belegt).
+             *
+             * Die Zeile steht vor _aktualisiereSensorOptionen(): Sonst
+             * traegt das Auswahlfeld den Eintrag "Automatisch (...)"
+             * noch mit dem falschen Sensor ein.
+             *
+             * Regel: Wer einen HardwareDetector erzeugt, muss ihm auch
+             * das gemessene Laufwerk nennen.
+             */
+            detector.setzeLaufwerkGeraet(
+                this._measurement.laufwerkGeraet());
+
             this._aktualisiereSensorOptionen();
 
             // Nur wenn Sensoren, Schnittstellen oder Laufwerke
