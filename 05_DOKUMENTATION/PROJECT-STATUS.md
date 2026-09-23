@@ -1997,6 +1997,22 @@ der Roadmap, Liste „Vor der Einreichung noch offen", Version
 `0.1.0-dev.25`, `.bak`-Dateien löschen (Kriterium 22), Snapshot,
 Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
 
+#### Sicherung des Zwischenstands (23.09.2026, 07:05)
+
+Da die Prüfdaten unter `06_TESTVERSIONEN/` per `.gitignore` **nicht**
+nach GitHub gelangen, wurde der Zwischenstand doppelt gesichert:
+
+- **Commit `164cf41`** auf `main`, auch auf GitHub. **Kein Tag**, und
+  die Version bleibt `0.1.0-dev.24` – AP25 ist nicht abgeschlossen.
+- **Vollbackup** `aVincePulse_Backups/2026-09-23_07-05-47/` mit
+  Archiv (26 MB), Git-Bundle (5,3 MB), `SHA256SUMS.txt` und
+  `BACKUP-INFO.txt`.
+
+Wiederherstellungsprobe bestanden: Prüfsummen `OK`, Klon aus dem Bundle
+mit 46 Commits und 20 Tags auf `164cf41`, Archiv entpackt und
+verglichen – **2211 von 2211 Dateien, null Unterschiede**, darin alle
+121 Prüfdaten-Dateien und 439 `.bak`-Dateien.
+
 #### Erkenntnisse zur Prüfmethodik
 
 Für künftige Arbeiten festgehalten:
