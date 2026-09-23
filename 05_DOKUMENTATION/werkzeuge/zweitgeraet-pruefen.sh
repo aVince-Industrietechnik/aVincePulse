@@ -42,7 +42,11 @@ for paar in "cjs:cinnamon-common" "git:git" "rsync:rsync" \
     w=${paar%%:*}; p=${paar#*:}
     if command -v "$w" >/dev/null; then ok "$w"; else fehlt "$w" "$p"; fi
 done
-if command -v gh >/dev/null; then ok "gh (GitHub-CLI)"; else fehlt "gh (GitHub-CLI)" "gh"; fi
+if command -v gh >/dev/null; then
+    ok "gh (GitHub-CLI)"
+else
+    hinw "gh (GitHub-CLI) fehlt - nur noetig, wenn KEIN SSH-Schluessel bei GitHub hinterlegt ist (sudo apt install gh)"
+fi
 if python3 -c "import polib" 2>/dev/null; then ok "python3-polib"; else fehlt "python3-polib" "python3-polib"; fi
 if python3 -c "import PIL"   2>/dev/null; then ok "python3-PIL (nur fuer Bildpruefungen)"; else hinw "python3-PIL fehlt - nur fuer Bildpruefungen noetig (python3-pil)"; fi
 
@@ -60,17 +64,47 @@ done
 [ $gefunden -eq 0 ] && hinw "speedtest-cli nicht gefunden - aus den Paketquellen: sudo apt install speedtest-cli"
 
 titel "Zugriff auf das Repository"
-if command -v gh >/dev/null; then
-    if gh auth status >/dev/null 2>&1; then
-        ok "gh angemeldet als $(gh api user --jq .login 2>/dev/null)"
-        if gh repo view aVince-Industrietechnik/aVincePulse --json name >/dev/null 2>&1; then
-            ok "Zugriff auf aVince-Industrietechnik/aVincePulse"
-        else
-            fehlt "kein Zugriff auf das Repository (es ist privat)" "gh-zugriff"
-        fi
-    else
-        fehlt "gh ist nicht angemeldet - 'gh auth login' ausfuehren" "gh-login"
+#
+# Das Repository ist privat (Befund P26). Es gibt zwei gangbare Wege,
+# und es genuegt, wenn EINER davon traegt:
+#
+#   - ein bei GitHub hinterlegter SSH-Schluessel (wie auf dem
+#     Referenzgeraet), oder
+#   - eine Anmeldung ueber gh.
+#
+# Geprueft wird deshalb, was zaehlt: Kommt eine Verbindung zum
+# Repository zustande? Eine Pruefung allein auf gh meldete am
+# 23.09.2026 einen Mangel, obwohl der Zugang ueber SSH einwandfrei
+# lief.
+#
+REPO_SSH="git@github.com:aVince-Industrietechnik/aVincePulse.git"
+REPO_HTTPS="https://github.com/aVince-Industrietechnik/aVincePulse.git"
+zugang=0
+
+# BatchMode verhindert, dass ssh nach einer Passphrase fragt und das
+# Skript stehen bleibt; ohne Zeitgrenze haengt es an einer Firewall.
+if GIT_TERMINAL_PROMPT=0 \
+   GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new" \
+   git ls-remote "$REPO_SSH" HEAD >/dev/null 2>&1; then
+    ok "Zugriff ueber SSH-Schluessel"
+    zugang=1
+fi
+
+if [ $zugang -eq 0 ] && GIT_TERMINAL_PROMPT=0 git ls-remote "$REPO_HTTPS" HEAD >/dev/null 2>&1; then
+    ok "Zugriff ueber HTTPS (gespeicherte Anmeldung)"
+    zugang=1
+fi
+
+if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+    ok "gh angemeldet als $(gh api user --jq .login 2>/dev/null)"
+    if [ $zugang -eq 0 ] && gh repo view aVince-Industrietechnik/aVincePulse --json name >/dev/null 2>&1; then
+        ok "Zugriff ueber gh"
+        zugang=1
     fi
+fi
+
+if [ $zugang -eq 0 ]; then
+    fehlt "kein Zugriff auf das private Repository" "repo-zugang"
 fi
 
 titel "Zugriff auf die NAS"
@@ -113,10 +147,13 @@ if [ ${#fehlend[@]} -eq 0 ]; then
     printf "  \033[32mAlles Noetige vorhanden.\033[0m\n"
 else
     printf "  \033[31m%d Punkt(e) fehlen.\033[0m Vorschlag:\n\n" "${#fehlend[@]}"
-    pakete=$(printf '%s\n' "${fehlend[@]}" | grep -v '^gh-' | sort -u | tr '\n' ' ')
+    pakete=$(printf '%s\n' "${fehlend[@]}" | grep -v '^repo-' | sort -u | tr '\n' ' ')
     [ -n "${pakete// }" ] && printf "    sudo apt install %s\n" "$pakete"
-    printf '%s\n' "${fehlend[@]}" | grep -q '^gh-login'  && printf "    gh auth login\n"
-    printf '%s\n' "${fehlend[@]}" | grep -q '^gh-zugriff' && printf "    Zugang zum privaten Repository klaeren\n"
+    if printf '%s\n' "${fehlend[@]}" | grep -q '^repo-zugang'; then
+        printf "    Zugang zum privaten Repository herstellen - einer der beiden Wege:\n"
+        printf "      SSH-Schluessel bei GitHub hinterlegen (Settings -> SSH and GPG keys)\n"
+        printf "      oder: sudo apt install gh && gh auth login\n"
+    fi
 fi
 [ ${#warnung[@]} -gt 0 ] && printf "\n  %d Hinweis(e), siehe oben.\n" "${#warnung[@]}"
 echo

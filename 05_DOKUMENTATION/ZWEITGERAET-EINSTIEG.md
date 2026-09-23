@@ -12,33 +12,57 @@ hinein.
 
 ---
 
-## 1. Einmalig – Installation, Anmeldung und Clone
+## 1. Einmalig – Zugang einrichten und klonen
 
-### Zuerst: GitHub-CLI installieren
+Das Repository ist privat (Befund P26). Ohne Zugang scheitert schon der
+Clone mit `fatal: could not read Username for 'https://github.com'`.
 
-Auf einem frischen Mint ist `gh` nicht vorhanden – am 23.09.2026 beim
-ersten Aufbau aufgefallen.
+Es gibt **zwei Wege, und einer genügt.**
+
+### Weg A – SSH-Schlüssel, empfohlen
+
+So arbeitet auch das Referenzgerät. Kein zusätzliches Programm nötig.
+
+Schlüssel erzeugen, falls noch keiner da ist:
+
+```bash
+ls ~/.ssh/id_ed25519.pub || ssh-keygen -t ed25519 -C "tower"
+```
+
+Öffentlichen Teil anzeigen und vollständig kopieren:
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+Auf github.com unter **Settings → SSH and GPG keys → New SSH key**
+einfügen. Dann prüfen:
+
+```bash
+ssh -T git@github.com
+```
+
+Erwartet: `Hi <Benutzername>! You've successfully authenticated…`
+Die Meldung, dass GitHub keine Shell anbietet, gehört dazu.
+
+Clone:
+
+```bash
+cd ~ && git clone git@github.com:aVince-Industrietechnik/aVincePulse.git && ls aVincePulse
+```
+
+### Weg B – GitHub-CLI
+
+Nur nötig, wenn kein SSH-Schlüssel hinterlegt werden soll. Auf einem
+frischen Mint ist `gh` nicht vorhanden:
 
 ```bash
 sudo apt install gh
 ```
 
-```bash
-gh --version
-```
-
-Erwartet: `gh version 2.4x…`. **Kein Snap nehmen**, sondern das Paket
-aus den normalen Quellen; Snaps kommen schlechter an den
-System-Schlüsselbund, in dem der Zugangstoken liegt.
-
-Das Prüfskript `zweitgeraet-pruefen.sh` meldet ein fehlendes `gh` zwar
-auch, liegt aber selbst im Repository – ohne `gh` kommt man gar nicht
-so weit.
-
-### Dann: anmelden und klonen
-
-Das Repository ist privat (Befund P26). Ohne Anmeldung scheitert schon
-der Clone mit `fatal: could not read Username for 'https://github.com'`.
+**Kein Snap nehmen**, sondern das Paket aus den normalen Quellen; Snaps
+kommen schlechter an den System-Schlüsselbund, in dem der Zugangstoken
+liegt. Dann:
 
 ```bash
 gh auth login
@@ -47,6 +71,17 @@ gh auth login
 ```bash
 cd ~ && gh repo clone aVince-Industrietechnik/aVincePulse && ls aVincePulse
 ```
+
+> Beim Anmelden fragt `gh` nach dem Protokoll. Liegt bereits ein
+> SSH-Schlüssel bei GitHub, dort **SSH** wählen und das Hochladen des
+> Schlüssels mit **Skip** übergehen – er ist schon hinterlegt.
+
+### Warum das vor dem Prüfskript steht
+
+`zweitgeraet-pruefen.sh` prüft den Repository-Zugang mit und meldet ihn,
+wenn er fehlt. Das Skript liegt aber **im Repository**, das sich ohne
+Zugang nicht klonen lässt. Die Prüfung der Voraussetzungen setzte damit
+die wichtigste Voraussetzung schon voraus.
 
 Erscheinen danach `01_PROJEKT_ROADMAP`, `02_QUELLCODE` und die übrigen
 Ordner, ist der Clone da.

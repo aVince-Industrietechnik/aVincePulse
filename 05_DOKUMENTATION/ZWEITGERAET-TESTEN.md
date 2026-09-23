@@ -49,33 +49,18 @@ Dort müssen die Zeilen `BATT` und `STATUS` sauber verschwinden oder
 
 ## 2. Vorbereitung auf dem Zweitgerät
 
-### 2.0 GitHub-CLI installieren – vor allem anderen
-
-Am 23.09.2026 beim ersten Aufbau aufgefallen: Auf einem frischen Mint
-ist `gh` nicht vorhanden.
-
-```bash
-sudo apt install gh
-```
-
-Kontrolle:
-
-```bash
-gh --version
-```
-
-Erwartet: eine Zeile `gh version 2.4x…`. Auf dem Referenzgerät ist es
-`2.45.0` aus dem Ubuntu-Paket `gh`.
-
-**Kein Snap nehmen.** Wird `snap install gh` angeboten, das Paket aus
-den normalen Quellen verwenden – Snaps laufen abgeschottet und kommen
-schlechter an den System-Schlüsselbund, in dem der Zugangstoken liegt.
+### 2.0 Zugang zuerst – vor allem anderen
 
 > **Warum dieser Schritt vor 2.1 steht.** Abschnitt 2.1 prüft die
-> Umgebung mit `zweitgeraet-pruefen.sh`, und das Skript meldet auch ein
-> fehlendes `gh`. Es liegt aber **im Repository**, das sich ohne `gh`
-> nicht klonen lässt. Die Prüfung der Voraussetzungen setzte damit die
-> wichtigste Voraussetzung schon voraus. Deshalb hier zuerst.
+> Umgebung mit `zweitgeraet-pruefen.sh`, und das Skript prüft den
+> Repository-Zugang mit. Es liegt aber **im Repository**, das sich ohne
+> Zugang nicht klonen lässt. Die Prüfung der Voraussetzungen setzte
+> damit die wichtigste Voraussetzung schon voraus. Der Zugang steht
+> deshalb in **2.2**; er ist vor 2.1 zu erledigen.
+
+Am 23.09.2026 beim ersten Aufbau aufgefallen: Auf einem frischen Mint
+ist `gh` nicht vorhanden. Ein hinterlegter SSH-Schlüssel macht `gh`
+jedoch entbehrlich – siehe 2.2.
 
 ### 2.1 Umgebung prüfen
 
@@ -93,26 +78,66 @@ Diese Liste ist zugleich die Grundlage für den Test.
 
 ### 2.2 Zugang zum Repository
 
-**Das Repository ist privat** (Befund P26). Ohne Anmeldung schlägt
+**Das Repository ist privat** (Befund P26). Ohne Zugang schlägt
 `git clone` fehl:
 
 ```
 fatal: could not read Username for 'https://github.com'
 ```
 
-Einmalig einrichten:
+Es gibt **zwei Wege, und einer genügt.** Das Prüfskript nimmt beide an.
+
+#### Weg A – SSH-Schlüssel, empfohlen
+
+So arbeitet auch das Referenzgerät, und es braucht kein zusätzliches
+Programm.
+
+```bash
+ls ~/.ssh/id_ed25519.pub || ssh-keygen -t ed25519 -C "tower"
+```
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+Den angezeigten Text vollständig kopieren und auf github.com unter
+**Settings → SSH and GPG keys → New SSH key** einfügen. Prüfen:
+
+```bash
+ssh -T git@github.com
+```
+
+Erwartet: `Hi <Benutzername>! You've successfully authenticated…` – die
+Meldung, dass GitHub keine Shell anbietet, gehört dazu.
+
+```bash
+cd ~ && git clone git@github.com:aVince-Industrietechnik/aVincePulse.git && cd aVincePulse
+```
+
+#### Weg B – GitHub-CLI
+
+Nur nötig, wenn kein SSH-Schlüssel hinterlegt werden soll.
+
+```bash
+sudo apt install gh
+```
+
+**Kein Snap nehmen.** Wird `snap install gh` angeboten, das Paket aus
+den normalen Quellen verwenden – Snaps laufen abgeschottet und kommen
+schlechter an den System-Schlüsselbund, in dem der Zugangstoken liegt.
+Auf dem Referenzgerät ist es `2.45.0` aus dem Ubuntu-Paket `gh`.
 
 ```bash
 gh auth login
 ```
 
-Danach:
-
 ```bash
-cd ~
-gh repo clone aVince-Industrietechnik/aVincePulse
-cd aVincePulse
+cd ~ && gh repo clone aVince-Industrietechnik/aVincePulse && cd aVincePulse
 ```
+
+> Beim Anmelden fragt `gh` nach dem Protokoll. Liegt bereits ein
+> SSH-Schlüssel bei GitHub, dort **SSH** wählen und das Hochladen des
+> Schlüssels mit **Skip** übergehen – er ist schon hinterlegt.
 
 ### 2.3 Zugang zur NAS – nur wenn dort gearbeitet werden soll
 
