@@ -215,10 +215,10 @@ war**.
 |---|---|---|---|
 | **Z1** | Beide Bestandteile lassen sich hinzufügen | erscheinen ohne Fehler | |
 | **Z2** | Sitzungsprotokoll nach dem Start | keine Zeile von aVincePulse mit `error`, `exception` oder `warning` | |
-| **Z3** | **Akku** – hat dieser Rechner keinen: BATT und STATUS | zeigen `--` oder sind ausgeblendet, **keine erfundene Zahl, keine 0 %** | |
+| **Z3** | **Akku** – hat dieser Rechner keinen: BATT und STATUS | **beide Zeilen ganz verschwunden.** Ein `--` ist bereits verdächtig, eine `0 %` ein Befund | |
 | **Z4** | Netzteil – mehrere `mains`-Schnittstellen? | STATUS zeigt `ON`, solange der Rechner am Netz hängt (Befund P11) | |
 | **Z5** | Temperaturen | plausible Werte, keine `0 °C`, kein `NaN` | |
-| **Z6** | Lüfter – hat der Rechner mehrere? | eine Drehzahl wird angezeigt oder `----` | |
+| **Z6** | **Lüfter** – meldet `/sys/class/hwmon` keine Drehzahl: FAN | **Zeile ganz verschwunden.** Ein `----` ist bereits verdächtig, eine `0` ein Befund. Mit Sensor: plausible Drehzahl | |
 | **Z7** | Sensorauswahl öffnen | zeigt die Sensoren **dieses** Rechners mit Messwert | |
 | **Z8** | Laufwerksauswahl | zeigt die eingehängten Laufwerke mit freiem Platz | |
 | **Z9** | **Ohne Speedtest-Programm** (falls keines installiert) | Auswahlfeld, Schaltfläche und Menüeintrag verborgen, Hinweis sichtbar, Berichte weiter erreichbar | |
@@ -228,6 +228,53 @@ war**.
 | **Z13** | Bildschirmauflösung | Hover-Anzeige passt sich an, nichts abgeschnitten | |
 | **Z14** | Panel-Symbol | bei der hier eingestellten Leistenhöhe erkennbar | |
 | **Z15** | Zwei Stunden laufen lassen | keine neuen Protokollzeilen, Anzeige stimmt weiter | |
+
+### Zu Z3 und Z6 – ausgeblendet, nicht „--"
+
+Beide Prüfpunkte haben dieselbe Grundlage, und die Erwartung ist
+schärfer, als sie zunächst formuliert war.
+
+`getAvailability()` in `hardwareDetection.js` entscheidet, welche
+Zeilen ein Gerät überhaupt bekommt:
+
+```js
+fan_speed:      this._mapping.fan !== null,
+battery_charge: hasBattery,
+psu_state:      hasBattery
+```
+
+Findet die Erkennung keinen Sensor, wird die Zeile **vollständig
+ausgeblendet**. Die Platzhalter `----` für FAN und `--` für BATT sind
+nur der Rückfall für den Fall, dass eine Zeile angezeigt wird, aber
+gerade keinen Wert liefert.
+
+| Beobachtung | Bewertung |
+|---|---|
+| Zeile fehlt | richtig |
+| Zeile da, zeigt `--` bzw. `----` | **verdächtig** – die Verfügbarkeitsprüfung hat nicht gegriffen |
+| Zeile da, zeigt `0` | **Befund** – eine erfundene Zahl |
+
+**Bei STATUS kommt ein Zweites hinzu.** Ein Desktop meldet häufig eine
+`AC`-Schnittstelle, obwohl kein Akku vorhanden ist. Eine dauerhafte
+Anzeige „PSU ON" wäre dort ohne Aussage, deshalb hängen `battery_charge`
+**und** `psu_state` am Akku, nicht am Netzteil. Meldet `/sys/class/
+power_supply` gar nichts, müssen beide Zeilen weg sein.
+
+**Lüfter: physisch vorhanden heißt nicht auslesbar.** Am 23.09.2026 auf
+dem Tower gesehen – CPU-Wasserkühlung, Grafikkartenlüfter und drei
+Gehäuselüfter, und trotzdem null Drehzahlen unter `/sys/class/hwmon`.
+Gründe: Gehäuse- und CPU-Lüfter hängen am Super-I/O-Chip des Boards,
+dessen Treiber (`nct6775`) oft nicht von selbst lädt; NVIDIA stellt
+seinen Lüfter grundsätzlich nicht über `hwmon` bereit, sondern nur über
+den eigenen Treiber.
+
+aVincePulse liest ausschließlich `hwmon`. Das ist eine Festlegung, kein
+Mangel – **maßgeblich für Z6 ist deshalb, was `/sys/class/hwmon`
+meldet, nicht was im Gehäuse steckt.** Der Prüfbefehl:
+
+```bash
+for d in /sys/class/hwmon/hwmon*; do printf "%-10s %-16s (%s Temp, %s Luefter)\n" "$(basename $d)" "$(cat $d/name 2>/dev/null)" "$(ls $d/temp*_input 2>/dev/null | wc -l)" "$(ls $d/fan*_input 2>/dev/null | wc -l)"; done
+```
 
 ### Zu Z11 und Z12 – neu seit `f670a3d`
 
