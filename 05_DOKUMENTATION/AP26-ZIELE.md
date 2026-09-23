@@ -328,3 +328,125 @@ wenn ein Zeitgeber hinzukommt, dessen Rückgabewert nicht benannt ist.
 Die letzte Prüfung darin ruft `readStorageAsync()` wirklich auf und
 vergleicht das Ergebnis mit `df` – sie prüft also das Verhalten, nicht
 nur den Text.
+
+---
+
+# Nachtrag: die Beobachtung zu den Meldungen in der Bildschirmmitte
+
+**Gemessen am 23.09.2026 nach Abschluss des Pakets.**
+
+Beim Funktionstest fiel dem Nutzer auf, die Texte der Meldungen nach
+„Hardware neu erkennen" und nach dem Speedtest schienen sich „nach
+einer kurzen Sekunde zu verschieben oder ein anderer Text erschien
+darunter". Fotografieren ließ es sich nicht.
+
+Nachgemessen statt vermutet: `PRUEFDATEN/meldung_messen.py` wartet auf
+das Erscheinen einer Meldung und zeichnet dann alle 30 ms Text,
+Position, Größe und Deckkraft auf – dazu die Fenster, die sie
+überlappen. Gelesen wird über `org.Cinnamon.Eval` aus Python
+(`eval.py`), rein lesend.
+
+**Es sind zwei verschiedene Ursachen, keine davon ein Fehler.**
+
+## Hardwareerkennung: die Fenster dahinter
+
+Die Meldung hatte über ihre gesamte Anzeigedauer von 6,7 Sekunden
+**genau einen Zustand**:
+
+```
+x=314  y=358   909x309   Deckkraft 255   "Hardware neu erkannt …"
+```
+
+Kein Textwechsel, keine Positions- oder Größenänderung.
+
+Was sich änderte, lag **dahinter**. Die Aufzeichnung nennt vier
+Fenster, die die Meldung überlappen:
+
+| Fenster | Lage | Überlappung |
+|---|---|---|
+| `Bildschirmfoto` | 523,270 · 489×439 | **mittig, quer durch den Text** |
+| `aVincePulse Applet` | 50,50 · 800×632 | linke Hälfte |
+| `Claude` | Vollbild | ganz |
+| `nemo-desktop` | Vollbild | ganz |
+
+Die Meldung liegt bei 314–1223 × 358–667 und hat Deckkraft **0,55**.
+Alles dahinter scheint durch.
+
+**Das ist Befund H15 aus AP17**, dort wörtlich festgehalten: „ein
+durchscheinendes Fenster hinter einer halbtransparenten Meldung wirkt
+für den Nutzer wie ‚anderer Text in der Meldung'". Die Deckkraft 0,55
+ist die Entscheidung des Nutzers vom 20.09.2026 und ergibt gegen
+reinweißen Inhalt 4,7 : 1.
+
+Im Screenshot des Nutzers ist es zu sehen: Durch die Meldung hindurch
+liest man den Knopf „Hardware neu erkennen" und den Satz „Findet die
+Erkennung neue oder entfernte Sensoren …".
+
+**Warum es sich nicht fotografieren ließ:** Das Aufnahmewerkzeug stand
+selbst mitten hinter der Meldung und erschien und verschwand beim
+Auslösen.
+
+## Speedtest: die Fläche wächst um ihre Mitte
+
+Hier springt tatsächlich etwas, und zwar erwartbar. Der Speedtest
+zeigt zwei Meldungen nacheinander:
+
+| Zeitpunkt | Text | Lage | Größe | Deckkraft |
+|---|---|---|---|---|
+| 0 ms | „Internet-Speedtest läuft …" | 577,474 | 382×77 | 255 |
+| 33 579 ms | „Speedtest abgeschlossen …" | **0,0** | 909×222 | **0** |
+| 33 624 ms | dieselbe | 314,401 | 909×222 | 255 |
+| 38 394 ms | – | – | – | ausgeblendet |
+
+Die linke obere Ecke wandert um **263 px nach links und 73 px nach
+oben**, die Fläche wird **2,4-mal so breit und 2,9-mal so hoch**.
+
+**Beide Meldungen sind dabei exakt zentriert:**
+
+| Meldung | Mittelpunkt |
+|---|---|
+| „läuft …" | 768,0 / 512,5 |
+| Ergebnis | 768,5 / 512,0 |
+| Bildschirmmitte (1536×1024) | 768 / 512 |
+
+Der Text springt also nicht *weg*, die Fläche **wächst um dieselbe
+Mitte herum**. Für das Auge ist das ein Sprung, rechnerisch ist es
+richtig.
+
+**Der Zwischenzustand bei (0,0) ist unsichtbar.** Die Zeile mit
+Deckkraft 0 belegt, dass der Schutz im Code greift: Eine neue Fläche
+steht anfangs oben links und wird erst mittig gesetzt und sichtbar
+gemacht, wenn ihre Größe feststeht. Sichtbar wäre sie 45 ms lang
+gewesen – gemessen war sie es nie.
+
+## Bewertung
+
+**Kein Handlungsbedarf, und kein Zusammenhang mit AP26.** Beide
+Verhaltensweisen bestehen seit AP17 bzw. AP19 und sind dort begründet.
+
+Wer die Meldungen künftig ruhiger machen will, hat zwei Stellschrauben
+– beide mit einem Preis:
+
+- **Die Fläche nicht zentrieren, sondern ihre obere Kante festhalten.**
+  Dann wächst sie nur nach unten. Kurze Meldungen säßen dafür nicht
+  mehr in der Mitte.
+- **Die Deckkraft erhöhen.** Das nähme das Durchscheinen, widerspräche
+  aber der Entscheidung vom 20.09.2026 und verdeckte mehr vom
+  darunterliegenden Fenster.
+
+Festgehalten, damit die Beobachtung nicht erneut als Fehler geprüft
+wird.
+
+## Werkzeug
+
+`06_TESTVERSIONEN/0.1.0-dev_AP26-PRUEFDATEN/meldung_messen.py`
+
+```bash
+python3 meldung_messen.py "'Hardware neu erkennen' druecken" 40 6
+python3 meldung_messen.py "'Internet-Speedtest starten' druecken" 200 8
+```
+
+Das Skript wartet auf den Klick des Nutzers, statt einen Countdown zu
+setzen; der Nutzer muss nichts timen. Es zeichnet auf, bis die Meldung
+verschwunden ist, und läuft bewusst als **einzige** Aufzeichnung
+(Regel aus AP19).
