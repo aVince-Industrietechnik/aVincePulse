@@ -1172,9 +1172,7 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 
 | Punkt | Herkunft | Anmerkung |
 |---|---|---|
-| **Repository öffentlich stellen** | P26 | **nur der Nutzer.** Solange es privat ist, scheitert der `git clone` aus beiden READMEs bei jedem Fremden – die Installationsanleitung wäre unbrauchbar. Vorher geprüft, was dadurch öffentlich würde: keine Zugangsdaten, keine IP-Adressen, keine private E-Mail-Adresse; die Seriennummer einer SSD wurde am 23.09.2026 unkenntlich gemacht |
 | **Screenshots für beide READMEs** | AP23 | **nur der Nutzer.** Drei Platzhalter sind gesetzt: Applet im Panel, Hover-Anzeige, Einstellungsfenster |
-| **Einreichungspakete neu erzeugen** | AP25 | die vorhandenen stammen vom 22.09.; seither haben `metadata.json` (B6) und `hardwareDetection.js` (B1, B7, B8, B9) sich geändert. `validate-spice` erneut laufen lassen. **Teil von Phase 3** |
 
 ### Sollte vor der Einreichung entschieden sein
 
@@ -1194,6 +1192,8 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 | Punkt | Nachweis |
 |---|---|
 | **Ko-fi: Zahlungsweg verbinden** | PayPal und Stripe beide verbunden, Währung Euro; die Adresse im Code (`ko-fi.com/avince`) stimmt mit der Seite überein |
+| **Repository öffentlich stellen – Befund P26 geschlossen** | Clone **ohne Anmeldung** gelingt, Installation nach README wortwörtlich durchgespielt, Ergebnis zeichengleich mit dem Quellcode. Nachweis: `PRUEFDATEN/installation/NACHTEST-P26.md` |
+| **Einreichungspakete neu erzeugt** | Phase 3, Schritt 6: aus dem heutigen Quellcode gebaut, ohne `.bak`-Dateien, beide bestehen `validate-spice` mit „No errors found". Nachweis: `PRUEFDATEN/einreichung/VALIDATE-2026-09-23.txt` |
 
 ### Bewusst verschoben
 
