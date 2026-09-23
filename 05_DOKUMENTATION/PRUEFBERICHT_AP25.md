@@ -392,8 +392,15 @@ Durchgeführt am 23.09.2026 auf `tower-linux` gegen den Stand
 `0.1.0-dev.24` (Quellcode `f670a3d`). Anleitung:
 `ZWEITGERAET-TESTEN.md`, Einstieg: `ZWEITGERAET-EINSTIEG.md`.
 
-**Nahezu vollständig.** Z1 bis Z14 sind bestanden, Z4 ist auf diesem
-Gerät nicht prüfbar, Z15 läuft. Sechs Rückmeldungen sind aufgenommen.
+**Prüfliste vollständig durchlaufen:** 14 von 15 Punkten bestanden,
+Z4 ist auf diesem Gerät nicht prüfbar. Kein Punkt abweichend. Sechs
+Rückmeldungen sind aufgenommen und entschieden.
+
+> **Wichtig für die Einordnung.** Die Prüfliste lief gegen den Code
+> von `f670a3d`. Die daraus entstandenen Korrekturen B1, B2, B3 und B6
+> sind **danach** entstanden; der heutige Stand ist `cf91d12` mit zehn
+> geänderten Quelldateien. Ein **Nachtest auf dem Zweitgerät steht
+> deshalb aus** – Einzelheiten unter 5.7.
 
 Der Tower hat den geprüften Stand vorher bestätigt:
 `git merge-base --is-ancestor f670a3d HEAD` → in Ordnung. Er stand auf
@@ -477,10 +484,14 @@ gering bis mittel eingestuft und im Code belegt.
 | Z12 | Zurücksetzen | **bestanden** – `werte_pruefen.py` danach `GESAMT: 0 Abweichungen`; die Speedtest-Bedienelemente bleiben verborgen |
 | Z13 | Bildschirmauflösung | **bestanden** – Hover-Anzeige vollständig, „12 rows, font 48px, 70% of 2560×1440"; auf dem Referenzgerät 28 px bei 1536 × 1024 |
 | Z14 | Panel-Symbol | **bestanden** – bei der eingestellten Leistenhöhe erkennbar |
-| Z15 | Zwei Stunden Betrieb | **läuft** seit 13:53, Ausgangswert 88 Protokollzeilen. **[OFFEN]** |
+| Z15 | Zwei Stunden Betrieb | **bestanden** – 13:53 bis 15:53, Protokoll **88 → 88 Zeilen**, also keine einzige neue. Danach zeigten alle Messwertzeilen Werte; `SPEED`, `PING`, `JITTER` und `LAST` standen auf `--`, weil damals noch kein Speedtest-Programm installiert war |
 
-**14 von 15 Prüfpunkten bestanden**, einer nicht prüfbar, einer läuft.
-Kein Prüfpunkt abweichend.
+**14 von 15 Prüfpunkten bestanden**, einer auf diesem Gerät nicht
+prüfbar. **Kein Prüfpunkt abweichend.**
+
+Zu Z15 offen geblieben: Dass sich die Werte im Zweistundenlauf
+**fortlaufend aktualisieren**, wurde nicht gezielt beobachtet – nur,
+dass am Ende alle Zeilen Werte trugen. Beim Nachtest kurz mitzuprüfen.
 
 ### Mitgeprüft: P29
 
@@ -758,6 +769,61 @@ Betriebsnachweis für die Behebung kann nur vom Zweitgerät kommen.
 
 ---
 
+### 5.7 Speedtest auf dem Zweitgerät (Kriterium 14)
+
+Nicht verlangt, vom Nutzer zusätzlich durchgeführt – und damit ist
+Kriterium 14 auf **zwei** Rechnern belegt statt auf einem.
+
+Nach der Prüfung von Z9 wurde `speedtest-cli` 2.1.3-2 nachinstalliert.
+Nach dem Cinnamon-Neustart waren Auswahlfeld und Schaltfläche sichtbar –
+die Gegenprobe zu Z9, wo beide verborgen sein mussten.
+
+Applet-Bericht vom 23.09.2026, 16:26:56, Programm automatisch gewählt:
+
+| | aVincePulse | Handtest zum Vergleich |
+|---|---|---|
+| Download | 71,89 MBit/s | 77,9 MBit/s |
+| Upload | 10,72 MBit/s | 10,6 MBit/s |
+| Ping | 17,13 ms | 46,7 ms |
+| Jitter | **nicht gemessen** | – |
+
+„Nicht gemessen" ist richtig: `speedtest-cli` liefert keinen
+Jitter-Wert, und genau darauf weist der Programmhinweis im Bericht hin.
+
+Die Abweichungen zum Handtest sind **keine Befunde**. Ein Speedtest
+misst gegen einen Messserver, den das Programm selbst wählt; Download
+und Upload liegen innerhalb üblicher Schwankung. Der Ping
+unterscheidet sich stärker, weil beide Läufe unterschiedliche Server
+getroffen haben – gemessen wird die Laufzeit dorthin, nicht eine
+Eigenschaft des Anschlusses.
+
+**Keine Fehlerzeile im Protokoll.**
+
+### 5.8 Nachtest gegen den korrigierten Stand – offen
+
+Die Prüfliste lief gegen `f670a3d`. Der heutige Stand `cf91d12`
+unterscheidet sich in zehn Quelldateien (B1, B3, B6; B2 betrifft nur
+das Prüfwerkzeug).
+
+**Das ist genau der Fall, den die Reihenfolge-Entscheidung vom
+23.09.2026 vermeiden sollte** – dort ging es allerdings um den Tag und
+das Release, und beides steht noch aus. Der Nachtest holt es nach.
+
+Zu prüfen sind nur die Punkte, die von den Änderungen berührt sind:
+
+| Punkt | Warum |
+|---|---|
+| **B1** | Speichertemperatur muss von `nvme0` stammen, demselben Laufwerk wie `FREE`. Vorbedingung: `sensor-storage` auf `auto` |
+| **B6** | kein dunkler Kasten hinter dem Desklet, unabhängig von „Gestaltung der Desklets" |
+| **Z1** | beide Bestandteile laden nach dem Wechsel fehlerfrei |
+| **Z2** | Protokoll: neue Zeile `AP25: storage sensor for …`, Kennung jetzt durchgehend `AP07` statt `AP08` |
+| **Z5** | Temperaturwerte plausibel, jetzt vom richtigen Laufwerk |
+| **Z7** | Sensorauswahl: der Eintrag „Automatisch (…)" nennt jetzt einen anderen Sensor |
+| – | Werte aktualisieren sich fortlaufend (aus Z15 offen geblieben) |
+
+Die übrigen Punkte sind von den Änderungen nicht berührt und gelten
+weiter.
+
 ## 6. Einstellungen gegen die Schema-Vorgaben (Kriterium 15)
 
 Verglichen wird **gegen das Schema**, nicht nur gegen eine Sicherung –
@@ -795,7 +861,7 @@ Aussage.
 | 5 | Abhängigkeiten und Rechte geklärt | erfüllt | `08_LIZENZEN_RECHTE/` |
 | 6 | Lizenz- und Namensfragen geklärt | erfüllt | `NAME-UND-MARKE.md`, GPL-3.0-only |
 | 7 | Dokumentation vorhanden | erfüllt | beide READMEs, `CHANGELOG.md` |
-| 8 | **Tests auf mehreren Rechnern** | **nahezu erfüllt** – 14 von 15 Prüfpunkten bestanden, Z15 läuft | Abschnitt 5 |
+| 8 | **Tests auf mehreren Rechnern** | **erfüllt für `f670a3d`** – 14 von 15 Prüfpunkten bestanden, einer dort nicht prüfbar. Nachtest gegen `cf91d12` offen | Abschnitte 5.5 und 5.8 |
 
 ---
 
@@ -816,7 +882,7 @@ Aussage.
 | 11 | Rechte an den Grafiken | **erfüllt** |
 | 12 | Marken- und Namensfrage | **erfüllt** |
 | 13 | Ookla-Nutzungsbedingungen | **erfüllt** |
-| 14 | Echter Speedtest je Programm | **erfüllt** |
+| 14 | Echter Speedtest je Programm | **erfüllt**, auf beiden Geräten |
 | 15 | Einstellungen gegen Schema | **erfüllt** |
 | 16 | Dieser Prüfbericht | **in Arbeit** |
 | 17 | Release-Regel beantwortet | **teilweise** – Punkt 8 bis auf Z15 erfüllt |
@@ -844,7 +910,7 @@ Was nur der Nutzer erledigen kann oder was bewusst verschoben wurde.
 | **Repository öffentlich stellen** | P26 | sonst scheitert `git clone` aus beiden READMEs |
 | **Screenshots für beide READMEs** | AP23 | drei Platzhalter sind gesetzt |
 | **Ko-fi: Zahlungsweg verbinden** | AP23 | noch keine Zahlungsmethode hinterlegt |
-| **Dauerlauf Z15 auf dem Zweitgerät** | AP25 | läuft seit 13:53 |
+| **Nachtest auf dem Zweitgerät** | AP25 | gegen `cf91d12`, Umfang in Abschnitt 5.8 |
 | **Einreichungspakete neu erzeugen** | AP25 | `metadata.json` hat durch B6 einen Eintrag bekommen; `validate-spice` erneut laufen lassen |
 
 ### Bewusst verschoben
