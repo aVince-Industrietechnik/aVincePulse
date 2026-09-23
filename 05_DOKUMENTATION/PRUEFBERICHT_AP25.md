@@ -920,10 +920,17 @@ Methode `_stabileKennung()` bevorzugt die Seriennummer aus
 Der Gerätename bleibt im Sensorobjekt erhalten – er wird für die
 Anzeige und für den Laufwerksabgleich aus B1 weiter gebraucht.
 
-Am laufenden System belegt: `nvme|sn:NL9055R005218P2202|temp1` statt
+Am laufenden System belegt: `nvme|sn:<Seriennummer>|temp1` statt
 `nvme|nvme0|temp1`; die übrigen Chips behalten ihren Gerätenamen. Im
 Auswahlfeld erscheint die Seriennummer nicht. **30 Funktionsprüfungen
 bestanden.**
+
+> Die tatsächliche Seriennummer stand hier bis zum 23.09.2026 im
+> Klartext. Sie wurde vor dem Öffentlichstellen des Repositories
+> unkenntlich gemacht: Sie identifiziert ein Gerät des Entwicklers und
+> gehört nicht in eine öffentliche Dokumentation. Der vollständige
+> Beleg steht in `PRUEFDATEN/phase2/ERGEBNIS-B9.md`, das über
+> `.gitignore` von GitHub ausgeschlossen ist.
 
 *Ein zweiter Beleg kam beim Umsetzen hinzu:* Auf dem Referenzgerät
 hieß der Maus-Akku am Vormittag `hidpp_battery_22`, am Abend
@@ -1165,7 +1172,7 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 
 | Punkt | Herkunft | Anmerkung |
 |---|---|---|
-| **Repository öffentlich stellen** | P26 | **nur der Nutzer.** Solange es privat ist, scheitert der `git clone` aus beiden READMEs bei jedem Fremden – die Installationsanleitung wäre unbrauchbar |
+| **Repository öffentlich stellen** | P26 | **nur der Nutzer.** Solange es privat ist, scheitert der `git clone` aus beiden READMEs bei jedem Fremden – die Installationsanleitung wäre unbrauchbar. Vorher geprüft, was dadurch öffentlich würde: keine Zugangsdaten, keine IP-Adressen, keine private E-Mail-Adresse; die Seriennummer einer SSD wurde am 23.09.2026 unkenntlich gemacht |
 | **Screenshots für beide READMEs** | AP23 | **nur der Nutzer.** Drei Platzhalter sind gesetzt: Applet im Panel, Hover-Anzeige, Einstellungsfenster |
 | **Einreichungspakete neu erzeugen** | AP25 | die vorhandenen stammen vom 22.09.; seither haben `metadata.json` (B6) und `hardwareDetection.js` (B1, B7, B8, B9) sich geändert. `validate-spice` erneut laufen lassen. **Teil von Phase 3** |
 
@@ -1173,7 +1180,6 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 
 | Punkt | Herkunft | Anmerkung |
 |---|---|---|
-| **Ko-fi: Zahlungsweg verbinden** | AP23 | **nur der Nutzer.** Der Unterstützen-Hinweis führt sonst auf eine Seite, die kein Geld annehmen kann. Alternativ den Hinweis vorerst entfernen |
 | **Übersetzter Wert in Protokollzeilen** | AP25 | fünf Stellen (vier aus AP14, eine aus B7). Abschnitt 8 verlangt unübersetzte Protokolle; auf einem englischen System steht dort `automatic`, wer ein Protokoll durchsucht, findet es nicht. Zwei Wege: unübersetzte Kennungen oder die Herkunft dort weglassen |
 
 ### Freiwillig
@@ -1182,6 +1188,12 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 |---|---|---|
 | **B9 im Betrieb nachweisen** | AP25 | erst nach einem **Neustart des Zweitgeräts** aussagekräftig, weil sich die `nvme`-Nummerierung nur dann wieder ändern kann. Die `cjs`-Prüfung bildet den Fall bereits nach |
 | **P1 und P11 auf passender Hardware** | AP25 | ein Gerät mit Akku **ohne** `capacity` bzw. mit mehreren `mains`-Schnittstellen. Steht derzeit nicht zur Verfügung |
+
+### Seit dem 23.09.2026 erledigt
+
+| Punkt | Nachweis |
+|---|---|
+| **Ko-fi: Zahlungsweg verbinden** | PayPal und Stripe beide verbunden, Währung Euro; die Adresse im Code (`ko-fi.com/avince`) stimmt mit der Seite überein |
 
 ### Bewusst verschoben
 
