@@ -7,8 +7,8 @@
 > erledigen kann (Abschnitt 9).
 
 Geprüfter Stand: Commit `92ea1cd`
-Version in `metadata.json`: `0.1.0-dev.24` – **unverändert**, wird in
-Phase 3 auf `0.1.0-dev.25` gesetzt
+Version in `metadata.json`: `0.1.0-dev.25` – gesetzt am 23.09.2026 in
+Phase 3, Schritt 5
 Snapshot vor Beginn: `06_TESTVERSIONEN/0.1.0-dev_AP25-START/`
 Prüfdaten (lokal, nicht versioniert): `06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/`
 Grundlage: `ROADMAP_V2.md`, Abschnitte 23 und 24; Akzeptanzkriterien in
@@ -1216,11 +1216,11 @@ folgt, ist Handwerk.
 | 2 | `PROJECT-STATUS.md` fortschreiben | in Arbeit |
 | 3 | `ROADMAP_V2.md`: AP25 als abgeschlossen führen | in Arbeit |
 | 4 | Liste „Vor der Einreichung noch offen" (Abschnitt 9) | erledigt |
-| 5 | Version `0.1.0-dev.25` in beide `metadata.json` und beide Testinstallationen | offen |
-| 6 | Einreichungspakete neu bauen, erneut `validate-spice` | offen |
-| 7 | 477 `.bak`-Dateien entfernen, vorher im Snapshot sichern | offen |
-| 8 | Snapshot `06_TESTVERSIONEN/0.1.0-dev_AP25-END/` | offen |
-| 9 | Commit, Tag `0.1.0-dev_AP25-END`, Vollbackup mit Wiederherstellungsprobe, GitHub-Release | offen |
+| 5 | Version `0.1.0-dev.25` in beide `metadata.json` und beide Testinstallationen | erledigt |
+| 6 | Einreichungspakete neu bauen, erneut `validate-spice` | erledigt – beide **„No errors found"** |
+| 7 | `.bak`-Dateien entfernen, vorher sichern | erledigt – 115 entfernt, Archiv angelegt |
+| 8 | Snapshot `06_TESTVERSIONEN/0.1.0-dev_AP25-END/` | erledigt – 78 Dateien, keine `.bak` |
+| 9 | Commit, Tag `0.1.0-dev_AP25-END`, Vollbackup mit Wiederherstellungsprobe, GitHub-Release | in Arbeit |
 
 **Schritt 6 ist nicht wegzulassen.** Die vorhandenen Pakete unter
 `PRUEFDATEN/einreichung/` stammen vom 22.09.2026. Seither hat
@@ -1229,9 +1229,24 @@ folgt, ist Handwerk.
 geändert. Ein „No errors found" vom 22.09. sagt über den heutigen Stand
 nichts aus.
 
-**Schritt 7 vor Schritt 8.** Die `.bak`-Dateien sind im Snapshot
-`AP25-START` bereits gesichert; der Snapshot `AP25-END` soll sie nicht
-enthalten.
+**Zu Schritt 7 – eine Annahme, die nicht stimmte.** Der Plan ging davon
+aus, die `.bak`-Dateien seien im Snapshot `AP25-START` bereits
+gesichert. Beim Nachprüfen stellte sich heraus: Dort liegen **37**, im
+Arbeitsverzeichnis lagen **115**; 51 der 83 Namen fehlten. Der Großteil
+war erst während AP25 entstanden, und Git erfasst sie nicht, weil
+`.bak` in `.gitignore` steht.
+
+Vor dem Löschen wurde deshalb
+`06_TESTVERSIONEN/0.1.0-dev_AP25-BAK-ARCHIV.tar.gz` angelegt und mit
+einer Wiederherstellungsprobe belegt: **115 von 115 Dateien
+zeichengleich**. Erst danach wurde gelöscht.
+
+Die 366 `.bak`-Dateien **innerhalb** von `06_TESTVERSIONEN/` blieben
+unangetastet – sie gehören zu den Snapshots früherer Arbeitspakete.
+
+Nach dem Löschen erneut geprüft: Syntax 10/10, gemeinsame Module 4/4
+bitgenau identisch, JSON 4/4 gültig, beide `de.po` fehlerfrei, und alle
+sieben Prüfskripte zusammen **345 Prüfungen, 0 Fehler**.
 
 ## 11. Drei Regeln für Abschnitt 8 des Statusdokuments
 

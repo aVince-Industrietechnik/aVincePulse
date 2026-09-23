@@ -4,9 +4,9 @@ Stand: 21.09.2026 (AP24 abgeschlossen)
 Projekt: aVincePulse  
 Repository: `aVince-Industrietechnik/aVincePulse`  
 Standard-Branch: `main`  
-Aktueller Referenzstand: `0.1.0-dev_AP24-END`  
-Vorheriger Referenzstand: `0.1.0-dev_AP23-END`  
-Versionsnummer in `metadata.json`: `0.1.0-dev.24` (Regel aus Abschnitt 9, Schritt 0)  
+Aktueller Referenzstand: `0.1.0-dev_AP25-END`  
+Vorheriger Referenzstand: `0.1.0-dev_AP24-END`  
+Versionsnummer in `metadata.json`: `0.1.0-dev.25` (Regel aus Abschnitt 9, Schritt 0)  
 Lizenz: GPL-3.0 (seit AP23, Datei `LICENSE` im Wurzelverzeichnis)
 
 ## 1. Zweck dieses Dokuments
@@ -2563,23 +2563,26 @@ git log -3 --oneline
 git tag --list
 ```
 
-**Stand 23.09.2026: Die Prüfung von AP25 ist abgeschlossen, Phase 3
-läuft.**
+**Stand 23.09.2026: AP25 ist abgeschlossen.** Als Nächstes folgt das
+**Einreichungspaket** – zwei Pull Requests auf `cinnamon-spices-applets`
+und `cinnamon-spices-desklets`.
 
 **Einstiegspunkt ist `05_DOKUMENTATION/PRUEFBERICHT_AP25.md`.** Dort
 steht das Ergebnis vollständig; Abschnitt 10 führt die neun Schritte
 von Phase 3 mit ihrem Stand, Abschnitt 9 alles, was vor der Einreichung
 noch zu tun ist. Abschnitt 14 dieses Dokuments fasst zusammen.
 
-Was in Phase 3 noch aussteht: Version `0.1.0-dev.25` in beide
-`metadata.json` und beide Testinstallationen, Einreichungspakete neu
-bauen und erneut mit `validate-spice` prüfen, `.bak`-Dateien entfernen
-(Kriterium 22), Snapshot `0.1.0-dev_AP25-END/`, Commit, Tag, Vollbackup
-mit Wiederherstellungsprobe, GitHub-Release.
+Phase 3 ist durchlaufen: Version `0.1.0-dev.25` gesetzt,
+Einreichungspakete neu gebaut und erneut mit `validate-spice` geprüft
+(beide „No errors found"), 115 `.bak`-Dateien entfernt (Kriterium 22),
+Snapshot `0.1.0-dev_AP25-END/` angelegt, Commit, Tag, Vollbackup mit
+Wiederherstellungsprobe und GitHub-Release.
 
-Der Quellcode ist gegenüber dem Tag `0.1.0-dev_AP24-END` deutlich
-verändert; die Version in `metadata.json` steht noch auf
-`0.1.0-dev.24` und wird zum Abschluss hochgesetzt.
+**Die gelöschten `.bak`-Dateien liegen als
+`06_TESTVERSIONEN/0.1.0-dev_AP25-BAK-ARCHIV.tar.gz`**, mit
+Wiederherstellungsprobe belegt. Der Snapshot `AP25-START` enthielt nur
+37 der 115 – der Rest war erst während AP25 entstanden und in Git
+nicht erfasst, weil `.bak` in `.gitignore` steht.
 
 **Zwei Geräte.** Entwickelt und geprüft wird auf dem Referenzgerät
 (Dell Latitude 5285) mit dem Arbeitsverzeichnis auf der NAS. Das
@@ -2591,8 +2594,8 @@ Anweisung ist anzugeben, für welches der beiden Geräte sie gilt.
 Erwarteter Ausgangspunkt:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP24-END`, Versionsnummer `0.1.0-dev.24`
-- AP01 bis AP24 abgeschlossen, AP25 bis auf Phase 3
+- Referenz-Tag: `0.1.0-dev_AP25-END`, Versionsnummer `0.1.0-dev.25`
+- AP01 bis AP25 abgeschlossen
 - Vorhanden: `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
 - Nächstes Arbeitspaket: Abschlussprüfung vor der Einreichung bei Cinnamon Spices; Ziel und Akzeptanzkriterien vorher schriftlich festlegen und freigeben lassen
 
