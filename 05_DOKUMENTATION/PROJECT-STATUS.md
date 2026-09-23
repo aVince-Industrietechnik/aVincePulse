@@ -1997,6 +1997,40 @@ der Roadmap, Liste „Vor der Einreichung noch offen", Version
 `0.1.0-dev.25`, `.bak`-Dateien löschen (Kriterium 22), Snapshot,
 Commit, Tag, Vollbackup mit Wiederherstellungsprobe, GitHub-Release.
 
+#### Test auf einem zweiten Gerät – vorbereitet am 23.09.2026
+
+`ROADMAP_V2.md`, Abschnitt 23, verlangt vor der Veröffentlichung Tests
+auf mehreren Rechnern. Bisher ist aVincePulse ausschließlich auf dem
+Referenzgerät geprüft (Dell Latitude 5285, Notebook mit Akku,
+Touchscreen, WLAN).
+
+Dafür liegen jetzt bereit:
+
+- **`05_DOKUMENTATION/ZWEITGERAET-TESTEN.md`** – Anleitung von der
+  Vorbereitung bis zur Rückmeldung, mit einer eigenen Prüfliste **Z1
+  bis Z15**. Sie deckt bewusst nur ab, was auf dem Referenzgerät
+  **nicht** prüfbar war.
+- **`05_DOKUMENTATION/werkzeuge/zweitgeraet-pruefen.sh`** – prüft
+  Cinnamon, Sitzungstyp, alle benötigten Werkzeuge, die
+  Speedtest-Programme, den Zugang zu GitHub und zur NAS, und listet
+  am Ende die Sensoren, die Stromversorgung und die
+  Netzwerkschnittstellen des Rechners auf. Ändert nichts und nennt
+  fehlende Pakete samt `apt`-Befehl.
+
+Beide liegen in Git und kommen mit dem Clone auf das Zweitgerät.
+
+**Warum das für AP25 wichtig ist:** Vier Befunde sind auf dem
+Referenzgerät nicht beobachtbar – **P1** (Akku ohne `capacity` zeigt
+„0 %"), **P11** (mehrere `mains`-Schnittstellen), **P10** (abweichende
+`hwmon`-Nummerierung) und **P7** (Sensoren mit leeren Dateien). Dazu
+kommt der Fall, den ein Desktop-Rechner als einziger liefert: **kein
+Akku vorhanden** – `BATT` und `STATUS` müssen dann sauber `--` zeigen
+oder verschwinden.
+
+**Zu beachten:** Das Repository ist privat (Befund P26). Auf dem
+Zweitgerät ist einmalig `gh auth login` nötig, sonst scheitert schon
+der `git clone`.
+
 #### Sicherung des Zwischenstands (23.09.2026, 07:05)
 
 Da die Prüfdaten unter `06_TESTVERSIONEN/` per `.gitignore` **nicht**
