@@ -9,15 +9,16 @@ speicher, freien Plattenplatz, Lüfterdrehzahl, Akku, die laufende
 Netzwerkgeschwindigkeit und die Ergebnisse eines Internet-Speedtests —
 als Applet im Panel, als Desklet auf dem Schreibtisch oder beides.
 
-> **Entwicklungsfassung.** Dies ist `0.1.0-dev.23`. Das Programm
-> funktioniert und wird auf dem Referenzgerät täglich benutzt, ist aber
-> bisher nur auf diesem einen Rechner geprüft worden. Die Oberfläche
-> ist derzeit nur auf Deutsch; die Übersetzung ins Englische ist der
-> nächste Schritt. Noch nicht bei Cinnamon Spices eingereicht.
+> **Entwicklungsfassung.** Dies ist `0.1.0-dev.25`. Das Programm
+> funktioniert, wird täglich benutzt und hat eine vollständige
+> Abschlussprüfung hinter sich: 35 Befunde aus der Code-Durchsicht,
+> keiner kritisch, dazu eine Prüfliste auf einem zweiten Rechner —
+> einem Desktop mit AMD-Prozessor, ohne Akku und mit zwei
+> gleichartigen NVMe-Laufwerken —, die neun weitere ergab. Die
+> Oberfläche spricht Deutsch und Englisch. Noch nicht bei Cinnamon
+> Spices eingereicht.
 
-<!-- SCREENSHOT-PLATZHALTER-1: Applet mit geoeffneter Hover-Anzeige -->
-<!-- Wird vor der Veroeffentlichung durch ein Bild ersetzt:          -->
-<!-- ![Das Applet mit geöffneter Hover-Anzeige](docs/screenshot-applet.png) -->
+![Das Applet mit geöffneter Hover-Anzeige](docs/screenshot-applet.png)
 
 ## Zwei Bestandteile, jeder für sich
 
@@ -34,8 +35,7 @@ andere: Jedes liest seine Sensoren selbst und jedes kann den Speedtest
 auslösen. Geteilt wird nur das letzte Speedtest-Ergebnis — ein Test aus
 dem einen ist also im anderen zu sehen.
 
-<!-- SCREENSHOT-PLATZHALTER-2: Desklet auf dem Schreibtisch -->
-<!-- ![Das Desklet auf dem Schreibtisch](docs/screenshot-desklet.png) -->
+![Das Desklet auf dem Schreibtisch](docs/screenshot-desklet.png)
 
 ## Was gemessen wird
 
@@ -218,8 +218,7 @@ Beide Bestandteile werden getrennt eingestellt, über das gewohnte
 Einstellungsfenster von Cinnamon, und jeder hat eine Schaltfläche, die
 alle Vorgaben wiederherstellt.
 
-<!-- SCREENSHOT-PLATZHALTER-3: Einstellungsfenster -->
-<!-- ![Das Einstellungsfenster](docs/screenshot-settings.png) -->
+![Das Einstellungsfenster](docs/screenshot-settings.png)
 
 Einstellbar sind unter anderem: Aktualisierungsintervall, Anzeigegröße,
 Schriftgröße und -stärke, Deckkraft der Hintergrundfläche, das

@@ -8,15 +8,14 @@ aVincePulse shows CPU and storage temperature, load, memory, free disk
 space, fan speed, battery, live network throughput and internet speed
 test results — as a panel applet, as a desktop desklet, or both.
 
-> **Development version.** This is `0.1.0-dev.23`. It works and is used
-> daily on the reference machine, but it has so far only been tested on
-> that one computer. The user interface is currently available in
-> German only; an English translation is the next step. Not yet
-> submitted to Cinnamon Spices.
+> **Development version.** This is `0.1.0-dev.25`. It works, is used
+> daily, and has been through a full review: 35 findings from a code
+> read-through, none critical, and a checklist run on a second machine
+> — a desktop with an AMD processor, no battery and two identical NVMe
+> drives — which turned up nine more. The interface speaks English and
+> German. Not yet submitted to Cinnamon Spices.
 
-<!-- SCREENSHOT PLACEHOLDER 1: applet with the hover display open   -->
-<!-- To be replaced with an image before release:                    -->
-<!-- ![The applet with its hover display](docs/screenshot-applet.png) -->
+![The applet with its hover display](docs/screenshot-applet.png)
 
 ## Two components, each on its own
 
@@ -33,8 +32,7 @@ own sensors and each can run the speed test. What they do share is the
 last speed test result, so a test started in one is visible in the
 other.
 
-<!-- SCREENSHOT PLACEHOLDER 2: desklet on the desktop -->
-<!-- ![The desklet on the desktop](docs/screenshot-desklet.png) -->
+![The desklet on the desktop](docs/screenshot-desklet.png)
 
 ## What it measures
 
@@ -207,8 +205,7 @@ whose names carry a date and time, are left untouched.
 Both components are configured separately, through the normal Cinnamon
 settings window, and each has a button to restore every default.
 
-<!-- SCREENSHOT PLACEHOLDER 3: settings window -->
-<!-- ![The settings window](docs/screenshot-settings.png) -->
+![The settings window](docs/screenshot-settings.png)
 
 Among the settings: update interval, display size, font size and
 weight, background dimming, the panel icon, what a left click does,

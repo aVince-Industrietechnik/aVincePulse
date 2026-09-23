@@ -1170,9 +1170,10 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 
 ### Muss vor der Einreichung erledigt sein
 
-| Punkt | Herkunft | Anmerkung |
-|---|---|---|
-| **Screenshots für beide READMEs** | AP23 | **nur der Nutzer.** Drei Platzhalter sind gesetzt: Applet im Panel, Hover-Anzeige, Einstellungsfenster |
+**Nichts mehr.** Am 23.09.2026 wurden die letzten drei Punkte
+geschlossen: Repository öffentlich, Ko-fi-Zahlungsweg verbunden,
+Screenshots aufgenommen und eingebunden. Einzelheiten unter
+„Seit dem 23.09.2026 erledigt".
 
 ### Sollte vor der Einreichung entschieden sein
 
@@ -1194,6 +1195,8 @@ Arbeitsliste vor dem Einreichen. Sie ist nach Dringlichkeit geordnet.
 | **Ko-fi: Zahlungsweg verbinden** | PayPal und Stripe beide verbunden, Währung Euro; die Adresse im Code (`ko-fi.com/avince`) stimmt mit der Seite überein |
 | **Repository öffentlich stellen – Befund P26 geschlossen** | Clone **ohne Anmeldung** gelingt, Installation nach README wortwörtlich durchgespielt, Ergebnis zeichengleich mit dem Quellcode. Nachweis: `PRUEFDATEN/installation/NACHTEST-P26.md` |
 | **Einreichungspakete neu erzeugt** | Phase 3, Schritt 6: aus dem heutigen Quellcode gebaut, ohne `.bak`-Dateien, beide bestehen `validate-spice` mit „No errors found". Nachweis: `PRUEFDATEN/einreichung/VALIDATE-2026-09-23.txt` |
+| **Screenshots für beide READMEs** | drei Bilder unter `docs/`, in beiden READMEs eingebunden; dieselben Bilder als `screenshot.png` in den Einreichungspaketen, die danach erneut `validate-spice` bestanden. Einzelheiten zur Entstehung in `docs/LIESMICH-SCREENSHOTS.txt` |
+| **Veralteter Hinweis in beiden READMEs** | stand noch auf `0.1.0-dev.23`, „nur auf diesem einen Rechner geprüft" und „Oberfläche derzeit nur auf Deutsch". Alle drei Aussagen berichtigt |
 
 ### Bewusst verschoben
 

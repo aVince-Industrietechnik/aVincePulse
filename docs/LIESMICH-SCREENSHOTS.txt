@@ -1,29 +1,55 @@
 Screenshots fuer das README
 ===========================
 
-Hierher gehoeren die drei Bilder, auf die README.md und README.de.md
-verweisen. Solange sie fehlen, sind die Bildverweise in beiden Dateien
-auskommentiert; GitHub zeigt deshalb keine kaputten Bilder an.
+Die drei Bilder liegen seit dem 23.09.2026 hier und sind in README.md
+und README.de.md eingebunden.
 
-Erwartete Dateinamen:
+  docs/screenshot-applet.png     1024 x 683   Applet im Panel, die
+                                              Hover-Anzeige geoeffnet,
+                                              rechts das Desklet
+  docs/screenshot-desklet.png     776 x 580   Desklet auf dem
+                                              Schreibtisch
+  docs/screenshot-settings.png    822 x 652   Einstellungsfenster mit
+                                              der Messwertliste
 
-  docs/screenshot-applet.png     Applet im Panel mit geoeffneter
-                                 Hover-Anzeige
-  docs/screenshot-desklet.png    Desklet auf dem Schreibtisch
-  docs/screenshot-settings.png   Einstellungsfenster
+Dieselben Bilder liegen im Einreichungspaket als screenshot.png je
+Bestandteil - das Applet-Bild beim Applet, das Desklet-Bild beim
+Desklet.
 
-Sobald die Bilder hier liegen, sind in README.md und README.de.md die
-drei Zeilen der Form
+Entstehung
+----------
+Aufgenommen am 23.09.2026 auf dem Referenzgeraet unter Cinnamon 6.6.9,
+Bildschirm 1536 x 1024, mit gnome-screenshot und einem Vorlauf von
+10 bis 15 Sekunden. Zugeschnitten und skaliert mit python3-PIL.
 
-    <!-- ![...](docs/screenshot-....png) -->
+Vor jeder Aufnahme wurde geprueft, was auf dem Bildschirm lag; die
+ersten beiden Versuche wurden verworfen, weil sie das Anwendungsfenster
+mit dem Gespraechsverlauf zeigten.
 
-von den Kommentarzeichen zu befreien. Die umgebenden Hinweiszeilen
-koennen dabei entfernt werden.
+Warum das Einstellungsfenster englisch ist
+------------------------------------------
+Cinnamon kann Beschriftungen in Listenspalten nicht uebersetzen
+(options innerhalb von columns, in AP24 belegt). Auf Deutsch stuende
+deshalb eine deutsche Ueberschrift ueber englischen Messwertnamen. Das
+ist eine dokumentierte Grenze von Cinnamon, sieht in einem README aber
+wie ein Mangel aus.
 
-Hinweise zur Aufnahme
----------------------
+Fuer die Aufnahme wurde die Uebersetzung des Applets voruebergehend
+entfernt (cinnamon-xlet-makepot -r), das Fenster geschlossen und neu
+geoeffnet - ein Cinnamon-Neustart genuegt dafuer nicht -, aufgenommen
+und die Uebersetzung wieder eingespielt.
+
+Die beiden anderen Bilder sind sprachneutral: CPU, LOAD, SPEED und die
+uebrigen Kuerzel sehen in jeder Sprache gleich aus. Deshalb verwenden
+README.md und README.de.md dieselben drei Dateien.
+
+Hinweise fuer neue Aufnahmen
+----------------------------
 - Kein persoenlicher Inhalt im Bild: keine Dateinamen, keine
   Browserfenster mit erkennbaren Seiten, keine Mailadressen.
-- Fuer die spaetere Einreichung bei Cinnamon Spices wird zusaetzlich
-  je Bestandteil ein screenshot.png gebraucht. Das kann dasselbe Bild
-  sein; es wird im Einreichungspaket abgelegt.
+- Vor der Aufnahme einen frischen Speedtest laufen lassen. Sonst steht
+  in der Zeile LAST eine hohe Zahl, und bei JITTER steht "--", wenn
+  zuletzt speedtest-cli gelaufen ist - das liefert keinen Jitter.
+  librespeed-cli liefert einen Wert.
+- Im Einstellungsfenster nicht mit dem Mausrad scrollen; das Rad
+  verstellt Auswahlfelder.
