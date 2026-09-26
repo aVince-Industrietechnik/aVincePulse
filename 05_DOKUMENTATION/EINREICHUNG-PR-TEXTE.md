@@ -52,7 +52,15 @@ avincepulse-applet@avince: add new applet
 
 **Beschreibung:**
 
----
+> **Ab hier kopieren, bis zur nächsten Marke.** Die Zeilen darüber –
+> Überschrift, Repository, Titel – gehören **nicht** ins
+> Beschreibungsfeld. Der Titel gehört ins Titelfeld.
+>
+> Die Absätze sind hier auf 72 Zeichen umbrochen, damit die Datei
+> lesbar bleibt. GitHub bricht selbst um; beim Einfügen ist das
+> gleichgültig.
+
+<!-- ↓↓↓ AB HIER KOPIEREN ↓↓↓ -->
 
 A hardware and network monitor for the Cinnamon panel.
 
@@ -132,6 +140,8 @@ tested against, rather than a lower bound that has not been tried.
 
 Licence: GPL-3.0-only.
 
+<!-- ↑↑↑ BIS HIER KOPIEREN ↑↑↑ -->
+
 ---
 
 # PR 2 – Desklet
@@ -146,7 +156,10 @@ avincepulse-desklet@avince: add new desklet
 
 **Beschreibung:**
 
----
+> **Ab hier kopieren, bis zur nächsten Marke.** Die Zeilen darüber
+> gehören **nicht** ins Beschreibungsfeld.
+
+<!-- ↓↓↓ AB HIER KOPIEREN ↓↓↓ -->
 
 A hardware and network monitor for the Cinnamon desktop.
 
@@ -223,6 +236,8 @@ icon.
 tested against, rather than a lower bound that has not been tried.
 
 Licence: GPL-3.0-only.
+
+<!-- ↑↑↑ BIS HIER KOPIEREN ↑↑↑ -->
 
 ---
 
