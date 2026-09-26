@@ -101,6 +101,7 @@ Tags:
 - `0.1.0-dev_AP24-END` – Entwicklungsstand nach Abschluss von AP24
 - `0.1.0-dev_AP25-END` – Entwicklungsstand nach Abschluss von AP25
 - `0.1.0-dev_AP26-END` – Entwicklungsstand nach Abschluss von AP26
+- `0.1.0-dev_AP27-END` – Entwicklungsstand nach Abschluss von AP27
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1507,6 +1508,51 @@ Aus diesem Paket stammen drei Regeln in Abschnitt 8: Dateisystem­
 abfragen laufen asynchron, ein übersetzter Text taugt nicht als
 Protokollwert, und Zeitgeber-Rückgabewerte werden benannt.
 
+### AP27 – die beiden Punkte aus dem Abschluss-Audit
+
+**Abgeschlossen am 26.09.2026.** Ziele, Akzeptanzkriterien und
+Ergebnis in `05_DOKUMENTATION/AP27-ZIELE.md`, der Zweitgerätelauf in
+`AP27-TOWERTEST.md`.
+
+Vor der Einreichung wurde der gesamte Quellcode einem unabhängigen
+technischen Abschluss-Audit unterzogen – 6.900 Zeilen, beide Schemata,
+beide Übersetzungen, Metadaten und Einreichungspakete. Ergebnis: zwei
+Punkte, die vor der Veröffentlichung besser aufgehoben sind als danach.
+
+| Punkt | Inhalt |
+|---|---|
+| **Cinnamon-Untergrenze** | `"cinnamon-version": ["6.6"]` in beide `metadata.json` |
+| **Akku-Zeile** | `_readBatteryCharge()` gegen eine leere `capacity`-Datei abgesichert |
+
+**Zur Untergrenze.** Das Feld ist eine Untergrenze, kein Bereich:
+`versionCheck()` liefert `true`, sobald die laufende Fassung größer
+oder gleich **einer** der angegebenen ist. Ohne das Feld wird gar
+nichts geprüft. 6.6 statt 6.2, weil sich eine Grenze später gefahrlos
+**senken** lässt – sie anzuheben entzöge das Spice Nutzern, die es
+bereits haben. Pflicht ist das Feld für Applets und Desklets nicht.
+
+**Zur Akku-Zeile.** `_readFile()` endet auf `trim()` und liefert bei
+einer leeren Datei `""`, nicht `null`. Die Prüfung auf `!== null` ließ
+das durch, `Number("")` war `0`, und die Anzeige stand auf „0 %" –
+im Akkubetrieb dauerhaft kritisch rot. Dieselbe Falle wie P1, P6, P7,
+P8 und P9 aus AP25; diese Stelle war dort übersehen worden.
+
+**Der Fix ist belegt, nicht behauptet.** `gegenprobe.js` führt
+dieselben Fälle gegen die Fassung vor der Änderung: leere `capacity`
+ergab „0", Leerzeichen ergaben „0", und leere `capacity` mit gültigen
+`charge_now`/`charge_full` ergab „0" statt „50" – die Ersatzrechnung
+wurde nie erreicht.
+
+Geprüft: Syntax 10/10, **494 Prüfungen in neun Skripten, 0 Fehler**,
+Funktionstest auf beiden Geräten, beide Einreichungspakete neu gebaut
+mit „No errors found".
+
+**Auf dem Tower kam ein ungeplanter Nachweis dazu:** Die
+hwmon-Nummerierung hatte sich gegenüber dem 23.09.2026 erneut
+verschoben – Linux-SSD von `hwmon2` auf `hwmon1` –, und die Automatik
+traf beide Male die richtige Platte. Ein dritter unabhängiger Beleg
+für B1, B9 und P10.
+
 ## 7. Aktuelle Quellcode-Architektur des Desklets
 
 Wesentliche Dateien:
@@ -1823,6 +1869,52 @@ bleibt.
 aus dem Quelltext und prüft seinen Rückgabewert einzeln. Kommt ein
 Zeitgeber hinzu, schlägt die Zählung an.
 
+### Eine Datei kann vorhanden und trotzdem leer sein
+
+Aus AP27. `_readFile()` endet auf `trim()`. Bei einer **fehlenden**
+Datei liefert es `null`, bei einer **vorhandenen, aber leeren** einen
+leeren Text. Eine Prüfung auf `!== null` fängt deshalb nur den ersten
+Fall.
+
+```js
+// falsch - "" kommt durch, Number("") ist 0
+const roh = this._readFile(pfad);
+if (roh !== null) { const w = Number(roh); ... }
+
+// richtig
+const w = this._zahlOderNull(this._readFile(pfad));
+if (w !== null) { ... }
+```
+
+**Jeder Rohwert aus `/proc` oder `/sys` gehört durch
+`_zahlOderNull()`**, nie durch `Number()` allein. Das gilt auch dort,
+wo vorher schon auf `null` geprüft wird.
+
+Im Abschluss-Audit vor der Einreichung wurden alle 30
+`Number()`-Aufrufe einzeln durchgesehen. Ein einziger war ungeschützt –
+der Ladezustand des Akkus –, und er hätte auf einem Gerät mit leerer
+`capacity`-Datei dauerhaft „0 %" und kritisch rot gezeigt.
+
+### Deklarierte Cinnamon-Untergrenze
+
+Aus AP27. `"cinnamon-version"` in `metadata.json` ist eine
+**Untergrenze, kein Bereich**: `versionCheck()` in
+`/usr/share/cinnamon/js/ui/extension.js` liefert `true`, sobald die
+laufende Fassung größer oder gleich **einer** der angegebenen ist. Ein
+einziger Eintrag genügt, und nach oben wird nie etwas ausgeschlossen.
+
+Fehlt das Feld, wird gar nichts geprüft – `extension.js` wertet es nur
+aus, wenn es da ist, und `ExtensionCore.py` fällt im Zweifel auf
+„kompatibel" zurück.
+
+**Pflicht ist es für Applets und Desklets nicht.** Nur
+`Type.EXTENSION` führt es unter `requiredProperties`, und
+`validate-spice` verlangt es nicht.
+
+**Beim Ändern gilt:** Senken ist gefahrlos und lässt mehr Nutzer
+hinzu. Anheben entzieht das Spice denen, die es schon verwenden. Im
+Zweifel eng anfangen.
+
 ### Sichtbare Texte
 
 Sichtbare deutsche Texte verwenden Umlaute und ß (Meldungen, Dialoge, Einstellungen, Berichte, Dateiköpfe). Code-Kommentare und Protokollzeilen bleiben in der Umschreibung (ae, oe, ue, ss). Festgelegt vom Nutzer am 18.09.2026.
@@ -2049,24 +2141,20 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-**AP01 bis AP26 sind abgeschlossen.** Version `0.1.0-dev.26`, Tag
-`0.1.0-dev_AP26-END`.
+**AP01 bis AP27 sind abgeschlossen.** Version `0.1.0-dev.27`, Tag
+`0.1.0-dev_AP27-END`.
 
-**Das Repository ist seit dem 23.09.2026 öffentlich** (Befund P26
-geschlossen), beide READMEs tragen Screenshots, der Ko-fi-Zahlungsweg
-ist verbunden. Mit AP26 sind auch die drei Befunde abgearbeitet, die
-wörtlich in der Prüfliste der Spices-Gutachter stehen.
-
-**Vor der Einreichung ist nichts mehr offen.**
+**Vor der Einreichung ist nichts mehr offen.** Vor AP27 stand ein
+unabhängiger technischer Abschluss-Audit über den gesamten Quellcode;
+seine beiden Punkte der Kategorie A sind erledigt, alles Übrige ist
+nach der Veröffentlichung vorgemerkt.
 
 ### Nächster Schritt: die Einreichung
 
-Zwei **getrennte** Pull Requests gegen die beiden Spices-Repositories.
-Was sie verlangen, steht vollständig in
+Zwei **getrennte** Pull Requests gegen die beiden
+Spices-Repositories. Was sie verlangen, steht vollständig in
 `06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/EINREICHUNG-ANFORDERUNGEN.md`
 (nur lokal und im Backup, per `.gitignore` nicht auf GitHub).
-
-Das Wichtigste daraus:
 
 | Vorgabe | Bedeutung |
 |---|---|
@@ -2077,10 +2165,9 @@ Das Wichtigste daraus:
 > „Pull Requests that don't follow this format will be closed."
 
 Die fertigen Pakete liegen unter
-`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`. Sie wurden
-in AP26 aus dem heutigen Quellcode neu gebaut und bestehen beide
-`validate-spice` mit „No errors found" (Protokoll:
-`VALIDATE-2026-09-23-AP26.txt`).
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`, in AP27 aus
+dem heutigen Quellcode neu gebaut, beide mit „No errors found"
+(Protokoll: `VALIDATE-2026-09-26-AP27.txt`).
 
 **Zwei Punkte für die Einreichung selbst:**
 
@@ -2089,20 +2176,37 @@ in AP26 aus dem heutigen Quellcode neu gebaut und bestehen beide
   und teilt den Ordner bewusst zwischen Applet und Desklet (Grundsatz
   EIGENSTÄNDIG + KOOPERATIV); eine UUID im Pfad würde das verhindern.
   Das **Verbot** – nichts ins eigene Installationsverzeichnis
-  schreiben – ist eingehalten.
+  schreiben – ist eingehalten und im Audit nachgeprüft.
+  Reihenfolge im Text: erst feststellen, dass das Verbot eingehalten
+  ist, dann die Abweichung von der Empfehlung, dann die Begründung.
 - **Den Autor auf GitHub mit `@` erwähnen** entfällt bei einer
   Neuaufnahme; es gibt noch keinen Autoreneintrag.
 
-### Danach, ohne Dringlichkeit
+### Nach der Veröffentlichung vorgemerkt
 
-- **P10, S2, P17** – eigenes Paket nach der Einreichung.
-- **B9 im Betrieb nachweisen**, freiwillig, erst nach einem Neustart
-  des Zweitgeräts aussagekräftig.
-- **P1 und P11** – die nötige Hardware gibt es auf keinem der beiden
-  Geräte.
-- **Akzeptanzkriterium 2 aus AP26 am laufenden Prozess zählen** – der
-  Nachweis „eine Dateisystemabfrage je Takt" ist im Quelltext belegt
-  und von `test_ap26.js` abgesichert, aber nicht per `strace` gezählt.
+Aus dem Abschluss-Audit vom 26.09.2026, nach Dringlichkeit:
+
+1. **Atomare Speedtest-Sperre** (`speedtest.js`, `_setzeSperre()`).
+   Heute ohne Risiko, weil beide Tests per Mausklick ausgelöst werden.
+   Das ändert sich, **sobald es einen zeitgesteuerten Speedtest gibt** –
+   seit AP15 messen beide Komponenten im selben Moment und träfen das
+   Zeitfenster zuverlässig. Vor jener Funktion zu erledigen.
+2. **Laufwerksliste zwischenspeichern** (`measurement.js`,
+   `_laufwerke()`). Bei manuell gewähltem Laufwerk liest jeder Takt
+   `/proc/self/mounts` und zählt `/dev/disk/by-uuid` auf – etwa 19
+   statt 12 Dateizugriffe. Bei „auto" entfällt es ganz.
+3. **Berichte asynchron schreiben** (`_berichtsVerzeichnis()`). Der
+   einzige Schreibpfad, der auf einem Netz-Homeverzeichnis hängen
+   könnte.
+4. **P10, S2, P17** aus AP25 sowie **P15** (Teilung durch 1024,
+   Beschriftung „TB"/„KB/s" statt „TiB"/„KiB/s").
+5. **Cinnamon 6.2 in einer virtuellen Maschine erproben.** Läuft es
+   dort, kann die Untergrenze aus AP27 gefahrlos gesenkt werden und
+   die gesamte Mint-22-Reihe kommt hinzu.
+
+Ohne Dringlichkeit: **B9 im Betrieb nachweisen** (freiwillig, erst
+nach einem Neustart des Zweitgeräts aussagekräftig) und **P1/P11** –
+die nötige Hardware gibt es auf keinem der beiden Geräte.
 
 Bewusst verschoben: das Vektorlogo (mit Messergebnis auf „nach 1.0"),
 das Mausrad im Einstellungsfenster (Cinnamon-Verhalten, nicht im Xlet
@@ -2111,6 +2215,26 @@ nicht übersetzen kann.
 
 Für jedes Paket gilt wie bisher: Ziel und Akzeptanzkriterien vorher
 schriftlich festlegen und freigeben lassen.
+
+### AP27 – Ergebnis vom 26.09.2026
+
+**Vollständiger Bericht: `05_DOKUMENTATION/AP27-ZIELE.md`**, der
+Zweitgerätelauf in `AP27-TOWERTEST.md`.
+
+| | |
+|---|---|
+| Punkte des Audits, Kategorie A | **2** – beide erledigt |
+| geänderte Quelldateien | **4** |
+| Prüfungen | **494 in neun Skripten, 0 Fehler** (430 + 64 neu) |
+| Funktionstest | beide Geräte, **0 eigene Fehlerzeilen** |
+| Einreichungspakete | neu gebaut, beide **„No errors found"** |
+
+**Der Fix ist belegt, nicht behauptet:** `gegenprobe.js` zeigt, dass
+die Fassung vor der Änderung in drei von fünf Fällen durchfiel.
+
+**Ungeplanter Nebengewinn vom Tower:** Die hwmon-Nummerierung hatte
+sich erneut verschoben, die Automatik traf trotzdem die richtige
+Platte – ein dritter unabhängiger Beleg für B1, B9 und P10.
 
 ### AP26 – Ergebnis vom 23.09.2026
 
@@ -2722,13 +2846,19 @@ git log -3 --oneline
 git tag --list
 ```
 
-**Stand 23.09.2026: AP26 ist abgeschlossen. Als Nächstes folgt die
-Einreichung bei Cinnamon Spices.**
+**Stand 26.09.2026: AP27 ist abgeschlossen. Als Nächstes folgt die
+Einreichung bei Cinnamon Spices.** Es ist kein Arbeitspaket mehr nötig.
 
-**Einstiegspunkt ist `05_DOKUMENTATION/AP26-ZIELE.md`** – Ziele,
+**Einstiegspunkt ist `05_DOKUMENTATION/AP27-ZIELE.md`** – Ziele,
 Akzeptanzkriterien und Nachweise des letzten Pakets stehen dort
-beieinander. Abschnitt 14 dieses Dokuments nennt den nächsten Schritt,
-`PRUEFBERICHT_AP25.md` bleibt die Grundlage für alles Frühere.
+beieinander, der Zweitgerätelauf in `AP27-TOWERTEST.md`. Abschnitt 14
+dieses Dokuments nennt den nächsten Schritt und was danach vorgemerkt
+ist. `PRUEFBERICHT_AP25.md` bleibt die Grundlage für alles Frühere.
+
+**Vor AP27 stand ein Abschluss-Audit** über den gesamten Quellcode.
+Seine beiden Punkte der Kategorie A sind erledigt; die Punkte der
+Kategorien B und C stehen in Abschnitt 14 unter „Nach der
+Veröffentlichung vorgemerkt".
 
 **Was die Einreichung verlangt**, steht vollständig in
 `06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/spices/EINREICHUNG-ANFORDERUNGEN.md`.
@@ -2737,36 +2867,16 @@ Commit-Nachricht je in der Form `spice name: beschreibung`. Ein PR mit
 beiden Spices wird geschlossen.
 
 Die fertigen Pakete liegen unter
-`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`, in AP26 neu
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`, in AP27 neu
 gebaut, beide mit „No errors found".
+
+**Das Repository bleibt öffentlich.** Es privat zu setzen würde Befund
+P26 wieder aufmachen, dessen Nachweis – Clone ohne Anmeldung – dann
+erneut zu führen wäre.
 
 **Aus AP25 weiterhin gültig:** Die 115 gelöschten `.bak`-Dateien liegen
 als `06_TESTVERSIONEN/0.1.0-dev_AP25-BAK-ARCHIV.tar.gz`, mit
 Wiederherstellungsprobe belegt.
-
-### Stand bei der Unterbrechung am 23.09.2026, 22:10 Uhr
-
-Die Arbeit wurde an diesem Abend beendet; fortgesetzt werden soll sie
-am Wochenende. **Es ist nichts halbfertig** – AP26 ist abgeschlossen,
-getaggt, gesichert und veröffentlicht.
-
-| | |
-|---|---|
-| Letzter Commit | `a5c6f33`, gepusht |
-| Tag | `0.1.0-dev_AP26-END` → `1fd3ca0` |
-| Arbeitsverzeichnis | sauber |
-| Backup | `2026-09-23_22-03-40`, Probe bestanden (3127/3127) |
-| Testinstallation | zeichengleich mit `02_QUELLCODE`, Version `0.1.0-dev.26` |
-| Einstellungswerte | 0 geänderte Werte; die eine Schema-Abweichung ist `panel-symbol = symbolic`, die Wahl des Nutzers |
-
-**Zum Wiedereinstieg genügt dieser Abschnitt plus `AP26-ZIELE.md`.**
-Der nächste Schritt ist die Einreichung selbst, kein Arbeitspaket mehr.
-Was dabei zu beachten ist, steht oben und vollständig in
-`EINREICHUNG-ANFORDERUNGEN.md`.
-
-Nicht vergessen: Das Repository **bleibt öffentlich**. Es privat zu
-setzen würde Befund P26 wieder aufmachen, dessen Nachweis – Clone ohne
-Anmeldung – dann erneut zu führen wäre.
 
 **Zwei Geräte.** Entwickelt und geprüft wird auf dem Referenzgerät
 (Dell Latitude 5285) mit dem Arbeitsverzeichnis auf der NAS. Das
@@ -2778,9 +2888,9 @@ Anweisung ist anzugeben, für welches der beiden Geräte sie gilt.
 Erwarteter Ausgangspunkt:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP26-END`, Versionsnummer `0.1.0-dev.26`
-- AP01 bis AP26 abgeschlossen
-- Vorhanden: `AP26-ZIELE.md`, `PRUEFBERICHT_AP25.md`, `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
+- Referenz-Tag: `0.1.0-dev_AP27-END`, Versionsnummer `0.1.0-dev.27`
+- AP01 bis AP27 abgeschlossen
+- Vorhanden: `AP27-ZIELE.md`, `AP27-TOWERTEST.md`, `AP26-ZIELE.md`, `PRUEFBERICHT_AP25.md`, `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
 - Nächster Schritt: **die Einreichung** – zwei getrennte Pull Requests. Kein weiteres Arbeitspaket ist vorher nötig; für jedes spätere gilt wieder, Ziel und Akzeptanzkriterien vorher schriftlich festzulegen und freigeben zu lassen
 
 ---

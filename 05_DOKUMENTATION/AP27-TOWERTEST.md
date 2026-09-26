@@ -128,6 +128,72 @@ ohne jeden Hinweis darauf.
 
 Die Ausgaben der Schritte 1, 2, 7, 8 und 9.
 
-## Ergebnis
+## Ergebnis – bestanden
 
-Wird nach dem Lauf hier eingetragen.
+**Durchgeführt am 26.09.2026 auf tower-linux** (Mint, Cinnamon 6.6.9,
+Desktop, AMD, kein Akku), gegen Stand `bd30b03`.
+
+| Prüfung | erwartet | Ergebnis | |
+|---|---|---|---|
+| Cinnamon-Version | ≥ 6.6 | **6.6.9** | bestanden |
+| Applet / Desklet | beide `True` | beide `True` | bestanden |
+| `battery_charge`, `psu_state` | aus | `False`, nicht in den Zeilen | bestanden |
+| `Akku erkannt` | `False` | `False` | bestanden |
+| SSD-Sensor (B1) | gleiches Gerät wie das Laufwerk | `nvme1n1p2` ↔ `hwmon1 → nvme1` | bestanden |
+| Akkuprüfung | 11 / 0 | **11 / 0** | bestanden |
+
+**Die Untergrenze 6.6 sperrt den Tower nicht aus.** Damit ist die
+Entscheidung aus AP27 auf beiden Geräten belegt.
+
+### Ein neuer Betriebsnachweis für B1 und P10, ungeplant
+
+Die hwmon-Nummerierung hat sich gegenüber dem 23.09.2026 **erneut
+verschoben**: Damals lag die Linux-SSD auf `hwmon2`, heute auf
+`hwmon1`. Die Automatik hat trotzdem beide Male die richtige Platte
+getroffen.
+
+Das ist ein unabhängiger dritter Beleg dafür, dass die Zuordnung nicht
+an der hwmon-Nummer hängt – genau die Eigenschaft, um die es bei B1,
+B9 und P10 ging. Die Sensorlage am Tower:
+
+```
+hwmon0 r8169     hwmon1 nvme -> nvme1 (Linux-SSD)   hwmon2 nvme -> nvme0
+hwmon3 k10temp   hwmon4/5 spd5118   hwmon6 asus (eeepc-wmi)
+hwmon7 iwlwifi_1 hwmon8 amdgpu
+```
+
+### Was der Tower nicht leisten konnte
+
+- **Der AP27-Fix im Betrieb.** Ohne Akku wird `_readBatteryCharge()`
+  dort nie aufgerufen; geprüft wurde er nur mit gestellten Werten. Der
+  Betriebsnachweis für den Normalfall stammt vom Referenzgerät (100 %,
+  deckungsgleich mit `/sys`).
+- **B9**, die manuelle Sensorwahl über Neustarts hinweg, wurde in
+  diesem Lauf nicht gezielt geprüft. `sensor-storage` stand auf der
+  Automatik.
+
+### Nebenbefund, geklärt
+
+`FREE 1.6 TB` gegenüber `df -h 1,7T`. Das ist **B4 aus AP25**, dort
+bereits als „kein Befund" abgeschlossen: `df` rundet auf. Die
+Randnotiz zur Basis – Teilung durch 1024⁴ bei der Beschriftung „TB",
+richtig wäre „TiB" – ist bei **P15** vermerkt und für ein späteres
+Paket vorgemerkt.
+
+Zur Gegenprobe auf dem Referenzgerät gemessen: Dort liefert
+`filesystem::free` mit 1 728 231 747 584 Byte denselben Wert wie
+`df --output=avail`, und beide zeigen `1,6T`. Die Abweichung am Tower
+liegt also allein an der Rundungsrichtung, nicht an verschiedenen
+Quellen.
+
+### Bedienhinweis aus dem Lauf
+
+Nach einem Cinnamon-Neustart stellte ein bereits offenes Terminal beim
+Einfügen `^[[200~` voran (Bracketed Paste) und meldete
+„cd: Befehl nicht gefunden". Abhilfe: ein neues Terminal öffnen, oder
+
+```bash
+bind 'set enable-bracketed-paste off'
+```
+
+Rohausgabe des Laufs am Tower: `~/ap27-tower-ergebnis.txt`.

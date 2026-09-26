@@ -136,3 +136,96 @@ Punkt 1 fasst keine Zeile Code an.
 4. Prüfungen ohne Cinnamon
 5. Installation, Cinnamon-Neustart durch den Nutzer, Funktionstest
 6. Abschluss nach der Routine aus Abschnitt 9 des Statusdokuments
+
+---
+
+# Ergebnis
+
+**Abgeschlossen am 26.09.2026.** Version `0.1.0-dev.27`.
+
+Beide Punkte umgesetzt, alle neun Akzeptanzkriterien erfüllt.
+
+| Nr. | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Feld in beiden `metadata.json` | `["6.6"]`, JSON gültig, je drei Zeilen |
+| 2 | Komponenten laden nach dem Neustart | **beide Geräte**: keine Meldung „not compatible", 0 Fehlerzeilen |
+| 3 | `"--"` statt `"0"` bei leerer `capacity` | `test_ap27.js`, dazu `gegenprobe.js` gegen den alten Stand |
+| 4 | Normalfall unverändert | Referenzgerät **100 %**, deckungsgleich mit `/sys` |
+| 5 | kein ungeschützter `Number()` mehr | in allen zehn Dateien geprüft |
+| 6 | gemeinsame Module bitgenau identisch | alle vier |
+| 7 | Syntax und Prüfskripte | 10/10; **494 Prüfungen in neun Skripten, 0 Fehler** |
+| 8 | Pakete neu gebaut | beide **„No errors found"**, `VALIDATE-2026-09-26-AP27.txt` |
+| 9 | Version, Snapshot, Tag, Backup, Release | `0.1.0-dev.27` |
+
+## Der Nachweis für Punkt 2
+
+**Nicht behauptet, sondern gemessen.** `gegenprobe.js` führt dieselben
+Fälle gegen die Fassung aus Commit `6fff747`:
+
+| Fall | vor AP27 | nach AP27 |
+|---|---|---|
+| `capacity` leer | **„0"** | `--` |
+| `capacity` nur Leerzeichen | **„0"** | `--` |
+| `capacity` leer, `charge_now`/`charge_full` gültig | **„0"** | **„50"** |
+| `capacity` gültig (87) | „87" | „87" |
+| `capacity` unlesbar | `--` | `--` |
+
+Der dritte Fall wiegt am schwersten: Ein Gerät, das seinen Ladestand
+über `charge_now` meldet und eine leere `capacity`-Datei führt, hätte
+dauerhaft 0 % gezeigt – die Ersatzrechnung wurde nie erreicht.
+
+**Warum die Gegenprobe:** In AP25 schlugen dreimal Prüfungen an,
+obwohl der Code richtig war. Umgekehrt ist eine Prüfung, die auch ohne
+die Änderung besteht, wertlos. Ein Erfolg allein belegt nichts, solange
+nicht gezeigt ist, dass die Prüfung überhaupt anschlagen kann.
+
+## Zweitgerät
+
+**Am 26.09.2026 auf tower-linux bestanden**, Einzelheiten in
+`AP27-TOWERTEST.md`.
+
+Der Tower hat keinen Akku und konnte den Fix nicht im Betrieb
+nachweisen. Er hat aber die drei Fragen beantwortet, für die er
+gebraucht wurde:
+
+- **Cinnamon 6.6.9** – die Untergrenze sperrt ihn nicht aus.
+- **`battery_charge` und `psu_state` bleiben ausgeblendet**, `Akku
+  erkannt: False`. Der Fall „kein Akku" ist unberührt.
+- **Die Zuordnung von SSD-Sensor und Laufwerk stimmt** –
+  `nvme1n1p2` ↔ `hwmon1 → nvme1`.
+
+**Ein ungeplanter dritter Beleg für B1, B9 und P10:** Die
+hwmon-Nummerierung hatte sich gegenüber dem 23.09.2026 erneut
+verschoben, die Linux-SSD lag nun auf `hwmon1` statt `hwmon2`. Die
+Automatik traf trotzdem die richtige Platte.
+
+## Was offen bleibt
+
+- **Der Fix im echten Akkubetrieb mit leerer `capacity`-Datei.** Die
+  Hardware dafür gibt es auf keinem der beiden Geräte; belegt ist er
+  mit gestellten Werten.
+- **Ob aVincePulse auf Cinnamon 6.2 liefe.** Unbekannt und nur in
+  einer virtuellen Maschine feststellbar. Läuft es dort, kann die
+  Untergrenze gesenkt werden und die gesamte Mint-22-Reihe kommt hinzu.
+
+## Nebenbefund, geklärt
+
+Die Abweichung `FREE 1.6 TB` gegenüber `df -h 1,7T` am Tower ist **B4
+aus AP25**, dort bereits als „kein Befund" abgeschlossen: `df` rundet
+auf. Zur Gegenprobe auf dem Referenzgerät gemessen – dort liefert
+`filesystem::free` denselben Wert wie `df --output=avail`, beide zeigen
+`1,6T`. Die Randnotiz zur Basis (1024⁴ mit der Beschriftung „TB") ist
+bei **P15** vermerkt und für ein späteres Paket vorgemerkt.
+
+## Neues Prüfwerkzeug
+
+| Datei | Zweck |
+|---|---|
+| `06_TESTVERSIONEN/0.1.0-dev_AP27-PRUEFDATEN/test_ap27.js` | 64 Prüfungen zu beiden Punkten |
+| `…/gegenprobe.js` | belegt, dass `test_ap27.js` anschlagen kann |
+| `05_DOKUMENTATION/werkzeuge/ap27-towertest.py` | liest den Zustand beider Komponenten aus dem laufenden Cinnamon |
+| `05_DOKUMENTATION/werkzeuge/ap27-akkupruefung.js` | prüft die Akku-Auswertung, **auch ohne Akku** |
+
+Die beiden letzten liegen bewusst in `05_DOKUMENTATION/`: Alles unter
+`06_TESTVERSIONEN/` ist per `.gitignore` ausgeschlossen und existiert
+am Zweitgerät gar nicht.

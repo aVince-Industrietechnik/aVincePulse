@@ -1779,6 +1779,7 @@ Festgelegt am 18.09.2026, fortgeschrieben mit den tatsächlichen Paketnummern:
 11. AP24 – Übersetzung Deutsch/Englisch (abgeschlossen am 21.09.2026)
 12. AP25 – Abschlussprüfung vor der Einreichung (begonnen am 21.09.2026, abgeschlossen am 23.09.2026)
 13. AP26 – die drei Punkte aus der Spices-Prüfliste (abgeschlossen am 23.09.2026)
+14. AP27 – die beiden Punkte aus dem Abschluss-Audit (abgeschlossen am 26.09.2026)
 
 Die übrigen Punkte dieses Abschnitts folgen danach in noch festzulegender Reihenfolge.
 
