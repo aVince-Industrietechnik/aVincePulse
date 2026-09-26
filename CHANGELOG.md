@@ -9,7 +9,7 @@ German readers: this file is kept in English, like `README.md`, because
 it is shown to everyone who installs aVincePulse. The German
 documentation lives in `README.de.md`.
 
-## [Unreleased]
+## [0.1.0] - 2026-09-26
 
 First public release. Development history before this point is
 recorded in the repository's commits and tags, not here.
@@ -44,7 +44,9 @@ recorded in the repository's commits and tags, not here.
 
 ### Notes
 
-- Tested on Linux Mint with Cinnamon 6.6 under X11, on one machine.
+- Requires Cinnamon 6.6 or newer. Tested on Linux Mint with Cinnamon
+  6.6 under X11, on two machines: a laptop and a desktop with an AMD
+  processor, no battery and two identical NVMe drives.
 - No root rights, no background services, no extra packages for the
   monitoring itself.
 - Nothing is written outside `~/.config/cinnamon/spices/` and

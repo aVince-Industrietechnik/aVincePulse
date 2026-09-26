@@ -9,14 +9,17 @@ speicher, freien Plattenplatz, Lüfterdrehzahl, Akku, die laufende
 Netzwerkgeschwindigkeit und die Ergebnisse eines Internet-Speedtests —
 als Applet im Panel, als Desklet auf dem Schreibtisch oder beides.
 
-> **Entwicklungsfassung.** Dies ist `0.1.0-dev.25`. Das Programm
-> funktioniert, wird täglich benutzt und hat eine vollständige
-> Abschlussprüfung hinter sich: 35 Befunde aus der Code-Durchsicht,
-> keiner kritisch, dazu eine Prüfliste auf einem zweiten Rechner —
-> einem Desktop mit AMD-Prozessor, ohne Akku und mit zwei
-> gleichartigen NVMe-Laufwerken —, die neun weitere ergab. Die
-> Oberfläche spricht Deutsch und Englisch. Noch nicht bei Cinnamon
+> **Erste Fassung.** Das Programm funktioniert, wird täglich benutzt
+> und hat eine vollständige Abschlussprüfung hinter sich: 35 Befunde
+> aus der Code-Durchsicht, keiner kritisch, dazu eine Prüfliste auf
+> einem zweiten Rechner — einem Desktop mit AMD-Prozessor, ohne Akku
+> und mit zwei gleichartigen NVMe-Laufwerken —, die neun weitere
+> ergab. Ein Abschluss-Audit vor der Einreichung brachte zwei dazu.
+> Die Oberfläche spricht Deutsch und Englisch. Noch nicht bei Cinnamon
 > Spices eingereicht.
+>
+> Die aktuelle Fassung steht auf der
+> [Releases-Seite](../../releases).
 
 ![Das Applet mit geöffneter Hover-Anzeige](docs/screenshot-applet.png)
 
@@ -110,7 +113,8 @@ die du nicht gebeten hast.
 
 ## Voraussetzungen
 
-- Linux Mint mit Cinnamon 6.x — entwickelt und geprüft mit 6.6 unter X11
+- Linux Mint mit Cinnamon **6.6 oder neuer** — entwickelt und geprüft
+  mit 6.6 unter X11, auf zwei Rechnern
 - Keine Root-Rechte, keine Hintergrunddienste, keine zusätzlichen
   Pakete für die Überwachung selbst
 

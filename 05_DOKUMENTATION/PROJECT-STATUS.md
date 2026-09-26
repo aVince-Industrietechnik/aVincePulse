@@ -102,6 +102,7 @@ Tags:
 - `0.1.0-dev_AP25-END` – Entwicklungsstand nach Abschluss von AP25
 - `0.1.0-dev_AP26-END` – Entwicklungsstand nach Abschluss von AP26
 - `0.1.0-dev_AP27-END` – Entwicklungsstand nach Abschluss von AP27
+- `0.1.0` – **die Fassung, die bei Cinnamon Spices eingereicht wird** (AP28)
 
 Hinweis zum Commit `91acca7`: Dieser Commit enthält neben den AP07-Änderungen
 zusätzlich das Verzeichnis `03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/`. Die Dateien
@@ -1987,7 +1988,13 @@ Vor größeren oder riskanten Änderungen soll zusätzlich ein NAS-Snapshot erha
 
 Festgelegt am 17.09.2026. Nach jedem abgeschlossenen und geprüften Arbeitspaket erfolgt ohne weitere Rückfrage:
 
-0. Versionsnummer in `02_QUELLCODE/Applet/metadata.json` und `02_QUELLCODE/Desklet/metadata.json` auf `0.1.0-dev.xx` setzen (xx = Nummer des Arbeitspakets) und in beide Testinstallationen übertragen. Festgelegt am 18.09.2026, erstmals mit AP19; bis AP18 stand dort unverändert `0.1.0-dev`. Das Info-Fenster von Applet und Desklet zeigt dadurch, welcher Stand installiert ist.
+0. Versionsnummer in `02_QUELLCODE/Applet/metadata.json` und `02_QUELLCODE/Desklet/metadata.json` setzen und in beide Testinstallationen übertragen. Das Info-Fenster von Applet und Desklet zeigt dadurch, welcher Stand installiert ist.
+
+   **Seit AP28 gilt die Zählung nach Semantic Versioning.** Die Einreichungsfassung trägt `0.1.0`; darauf folgen `0.1.1` für Fehlerbehebungen, `0.2.0` für neue Funktionen. Die Nummer wechselt also nicht mehr mit jedem Arbeitspaket, sondern mit jeder Fassung, die nach außen geht.
+
+   Bis AP27 hieß die Regel `0.1.0-dev.xx` mit xx als Nummer des Arbeitspakets (festgelegt am 18.09.2026, erstmals mit AP19; bis AP18 stand dort unverändert `0.1.0-dev`). Sie hat ihren Zweck erfüllt, solange nichts veröffentlicht war – ein Nutzer hätte mit „dev.27" nichts anfangen können.
+
+   **Die Versionsnummer gehört nicht in die READMEs.** Sie stand dort zweimal veraltet (AP25: `.23` statt `.25`, AP28: `.25` statt `.27`), weil die Stelle bei der Abschlussroutine nicht mitgezogen wird. Die READMEs verweisen jetzt auf die Releases-Seite.
 1. Snapshot unter `06_TESTVERSIONEN/0.1.0-dev_APxx-END/`
 2. Fortschreibung dieses Dokuments
 3. Commit und Push auf `main`
@@ -2141,8 +2148,8 @@ Bei Widersprüchen zwischen älteren Zwischenständen und der neueren Roadmap so
 
 ## 14. Nächster Entwicklungsstand
 
-**AP01 bis AP27 sind abgeschlossen.** Version `0.1.0-dev.27`, Tag
-`0.1.0-dev_AP27-END`.
+**AP01 bis AP28 sind abgeschlossen.** Version **`0.1.0`**, Tag
+`0.1.0` – die Fassung, die eingereicht wird.
 
 **Vor der Einreichung ist nichts mehr offen.** Vor AP27 stand ein
 unabhängiger technischer Abschluss-Audit über den gesamten Quellcode;
@@ -2165,9 +2172,12 @@ Spices-Repositories. Was sie verlangen, steht vollständig in
 > „Pull Requests that don't follow this format will be closed."
 
 Die fertigen Pakete liegen unter
-`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`, in AP27 aus
-dem heutigen Quellcode neu gebaut, beide mit „No errors found"
-(Protokoll: `VALIDATE-2026-09-26-AP27.txt`).
+`06_TESTVERSIONEN/0.1.0-dev_AP25-PRUEFDATEN/einreichung/`, in AP28 aus
+dem heutigen Quellcode neu gebaut, beide mit „No errors found".
+
+**Nach der Aufnahme zu ändern:** In beiden READMEs steht „Noch nicht
+bei Cinnamon Spices eingereicht". Der Satz stimmt bis dahin und ist
+danach zu berichtigen.
 
 **Zwei Punkte für die Einreichung selbst:**
 
@@ -2235,6 +2245,32 @@ die Fassung vor der Änderung in drei von fünf Fällen durchfiel.
 **Ungeplanter Nebengewinn vom Tower:** Die hwmon-Nummerierung hatte
 sich erneut verschoben, die Automatik traf trotzdem die richtige
 Platte – ein dritter unabhängiger Beleg für B1, B9 und P10.
+
+### AP28 – Einreichungsfassung 0.1.0, vom 26.09.2026
+
+**Bericht: `05_DOKUMENTATION/AP28-ZIELE.md`.** Kein Code angefasst.
+
+Anlass war die Frage, ob Texte und Übersetzungen fertig sind. Die
+Übersetzungen waren es – nachgeprüft mit einer frisch erzeugten `.pot`
+gegen das Projekt: **180/180 und 171/171, kein neuer Text, kein
+verwaister, nichts fuzzy.**
+
+Die Texte nicht ganz:
+
+| Stelle | war | ist |
+|---|---|---|
+| Version | `0.1.0-dev.27` | **`0.1.0`** |
+| Versionsnummer in den READMEs | `0.1.0-dev.25` | **entfernt**, Verweis auf die Releases |
+| „Cinnamon 6.x" an vier Stellen | widersprach `["6.6"]` | „6.6 oder neuer" |
+| Changelog | `[Unreleased]`, „on one machine" | `[0.1.0] - 2026-09-26`, zwei Rechner |
+
+**Zur Versionsnummer in den READMEs:** Sie stand dort **zweimal**
+veraltet – in AP25 als `.23`, in AP28 als `.25`. Die Stelle wird von
+der Abschlussroutine nicht mitgezogen. Sie ist deshalb entfernt, nicht
+berichtigt.
+
+Damit endet die Zählung `0.1.0-dev.xx`; Abschnitt 9 nennt die neue
+Regel nach Semantic Versioning.
 
 ### AP26 – Ergebnis vom 23.09.2026
 
@@ -2846,10 +2882,15 @@ git log -3 --oneline
 git tag --list
 ```
 
-**Stand 26.09.2026: AP27 ist abgeschlossen. Als Nächstes folgt die
+**Stand 26.09.2026: AP28 ist abgeschlossen. Als Nächstes folgt die
 Einreichung bei Cinnamon Spices.** Es ist kein Arbeitspaket mehr nötig.
 
-**Einstiegspunkt ist `05_DOKUMENTATION/AP27-ZIELE.md`** – Ziele,
+**Die Einreichungsfassung heißt `0.1.0`** und trägt ein eigenes Tag
+ohne `-dev`. Die Zählung `0.1.0-dev.xx` ist damit beendet; künftige
+Fassungen zählen `0.1.1`, `0.2.0` weiter (Abschnitt 9).
+
+**Einstiegspunkt ist `05_DOKUMENTATION/AP28-ZIELE.md`**, davor
+`AP27-ZIELE.md` – Ziele,
 Akzeptanzkriterien und Nachweise des letzten Pakets stehen dort
 beieinander, der Zweitgerätelauf in `AP27-TOWERTEST.md`. Abschnitt 14
 dieses Dokuments nennt den nächsten Schritt und was danach vorgemerkt
@@ -2888,9 +2929,9 @@ Anweisung ist anzugeben, für welches der beiden Geräte sie gilt.
 Erwarteter Ausgangspunkt:
 
 - Branch: `main`, Arbeitsverzeichnis sauber
-- Referenz-Tag: `0.1.0-dev_AP27-END`, Versionsnummer `0.1.0-dev.27`
-- AP01 bis AP27 abgeschlossen
-- Vorhanden: `AP27-ZIELE.md`, `AP27-TOWERTEST.md`, `AP26-ZIELE.md`, `PRUEFBERICHT_AP25.md`, `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
+- Referenz-Tag: `0.1.0`, Versionsnummer `0.1.0`
+- AP01 bis AP28 abgeschlossen
+- Vorhanden: `AP28-ZIELE.md`, `AP27-ZIELE.md`, `AP27-TOWERTEST.md`, `AP26-ZIELE.md`, `PRUEFBERICHT_AP25.md`, `PRUEFBERICHT_AP19.md`, `08_LIZENZEN_RECHTE/SPEEDTEST-PROGRAMME.md`, `LICENSE`, beide READMEs, `po/` je Komponente
 - Nächster Schritt: **die Einreichung** – zwei getrennte Pull Requests. Kein weiteres Arbeitspaket ist vorher nötig; für jedes spätere gilt wieder, Ziel und Akzeptanzkriterien vorher schriftlich festzulegen und freigeben zu lassen
 
 ---

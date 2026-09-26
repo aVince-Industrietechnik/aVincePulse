@@ -8,12 +8,14 @@ aVincePulse shows CPU and storage temperature, load, memory, free disk
 space, fan speed, battery, live network throughput and internet speed
 test results — as a panel applet, as a desktop desklet, or both.
 
-> **Development version.** This is `0.1.0-dev.25`. It works, is used
-> daily, and has been through a full review: 35 findings from a code
-> read-through, none critical, and a checklist run on a second machine
-> — a desktop with an AMD processor, no battery and two identical NVMe
-> drives — which turned up nine more. The interface speaks English and
-> German. Not yet submitted to Cinnamon Spices.
+> **First release.** It works, is used daily, and has been through a
+> full review: 35 findings from a code read-through, none critical, and
+> a checklist run on a second machine — a desktop with an AMD
+> processor, no battery and two identical NVMe drives — which turned up
+> nine more. A closing audit before submission added two. The interface
+> speaks English and German. Not yet submitted to Cinnamon Spices.
+>
+> The current version is on the [releases page](../../releases).
 
 ![The applet with its hover display](docs/screenshot-applet.png)
 
@@ -103,7 +105,8 @@ request.
 
 ## Requirements
 
-- Linux Mint with Cinnamon 6.x — developed and tested against 6.6 on X11
+- Linux Mint with Cinnamon **6.6 or newer** — developed and tested
+  against 6.6 on X11, on two machines
 - No root rights, no additional services, no extra packages for the
   monitoring itself
 
