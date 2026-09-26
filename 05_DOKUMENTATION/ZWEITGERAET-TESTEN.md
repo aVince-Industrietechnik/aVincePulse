@@ -78,12 +78,18 @@ Diese Liste ist zugleich die Grundlage für den Test.
 
 ### 2.2 Zugang zum Repository
 
-**Das Repository ist privat** (Befund P26). Ohne Zugang schlägt
-`git clone` fehl:
+**Seit dem 23.09.2026 ist das Repository öffentlich** (Befund P26
+geschlossen). Zum Lesen und Testen genügt deshalb:
 
+```bash
+git clone https://github.com/aVince-Industrietechnik/aVincePulse.git ~/aVincePulse
 ```
-fatal: could not read Username for 'https://github.com'
-```
+
+Ein Zugang wird erst gebraucht, wenn vom Tower aus **gepusht** werden
+soll. Bis zum 23.09.2026 war das Repository privat und `git clone`
+schlug ohne Zugang mit `fatal: could not read Username for
+'https://github.com'` fehl; die folgende Anleitung stammt aus dieser
+Zeit und bleibt für den Schreibzugang gültig.
 
 Es gibt **zwei Wege, und einer genügt.** Das Prüfskript nimmt beide an.
 

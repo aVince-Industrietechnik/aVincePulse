@@ -14,8 +14,18 @@ hinein.
 
 ## 1. Einmalig – Zugang einrichten und klonen
 
-Das Repository ist privat (Befund P26). Ohne Zugang scheitert schon der
-Clone mit `fatal: could not read Username for 'https://github.com'`.
+**Seit dem 23.09.2026 ist das Repository öffentlich** (Befund P26
+geschlossen). Ein Clone gelingt deshalb auch **ohne Anmeldung**:
+
+```bash
+git clone https://github.com/aVince-Industrietechnik/aVincePulse.git ~/aVincePulse
+```
+
+Das genügt zum Lesen und Testen. Ein Zugang wird erst gebraucht, wenn
+vom Tower aus **gepusht** werden soll – dafür die beiden Wege unten.
+
+Bis zum 23.09.2026 war das Repository privat; die folgende Anleitung
+stammt aus dieser Zeit und bleibt für den Schreibzugang gültig.
 
 Es gibt **zwei Wege, und einer genügt.**
 

@@ -973,19 +973,27 @@ var HardwareDetector = class HardwareDetector {
     }
 
     _readBatteryCharge(basePath) {
-        const capacity =
-            this._readFile(basePath + "/capacity");
+        /*
+         * _readFile() endet auf trim() und liefert bei einer LEEREN
+         * Datei "" und nicht null. Eine Pruefung auf "!== null"
+         * liesse den leeren Text durch, Number("") waere 0 und damit
+         * endlich, groesser gleich 0 und kleiner gleich 100 - die
+         * Anzeige stuende auf "0 %", und die Ersatzrechnung aus
+         * charge_now/charge_full weiter unten kaeme nie zum Zug.
+         *
+         * Im Akkubetrieb loest 0 zusaetzlich dauerhaft die kritische
+         * Warnstufe aus (Schwelle "tief", kritisch 10), obwohl der
+         * Akku voll sein kann.
+         *
+         * Dieselbe Falle wie bei P1, P6, P7, P8 und P9 aus AP25; diese
+         * Stelle war dort uebersehen worden und kam im Abschluss-Audit
+         * vom 26.09.2026 ans Licht (AP27).
+         */
+        const wert =
+            this._zahlOderNull(this._readFile(basePath + "/capacity"));
 
-        if (capacity !== null) {
-            const value = Number(capacity);
-
-            if (
-                Number.isFinite(value) &&
-                value >= 0 &&
-                value <= 100
-            )
-                return String(Math.round(value));
-        }
+        if (wert !== null && wert >= 0 && wert <= 100)
+            return String(Math.round(wert));
 
         // Nicht jede Hardware stellt capacity bereit.
         // In diesem Fall wird der Ladezustand berechnet.
