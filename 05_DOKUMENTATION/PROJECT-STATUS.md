@@ -2057,7 +2057,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-23_22-03-40` (AP26, Stand zum Feierabend); Wiederherstellungsprobe bestanden (Prüfsummen beider Dateien, Klon aus dem Bundle mit 22 Tags, Archiv entpackt und Datei für Datei über SHA-256 verglichen: **3127 von 3127 zeichengleich**, keine Datei nur auf einer Seite). Die beiden früheren Backups desselben Tages – `21-33-26` und `21-50-00` – sind ebenfalls geprüft; das jüngste ist maßgeblich, weil nur es die Messprotokolle zu den Meldungen enthält.
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-26_14-28-38` (AP27); Wiederherstellungsprobe bestanden (Prüfsummen beider Dateien, Klon aus dem Bundle mit 23 Tags auf `0.1.0-dev_AP27-END`, Archiv entpackt und Datei für Datei über SHA-256 verglichen: **3257 von 3257 zeichengleich**, keine Datei nur auf einer Seite).
 
 **Achtung beim Anlegen des Archivs:** `tar` nicht mit `--exclude-vcs-ignores` aufrufen. Die Option lässt die per `.gitignore` ausgeschlossenen Dateien weg – darunter die `.bak`-Dateien in `02_QUELLCODE` und `05_DOKUMENTATION`, die es ausschließlich auf der NAS gibt. Beim AP20-Backup ist das zunächst passiert und wurde vor der Freigabe berichtigt; die Backups bis AP19 sind davon nicht betroffen (nachgeprüft am 20.09.2026). Richtig ist der einfache Aufruf:
 
