@@ -319,3 +319,99 @@ Dieselben acht Schritte mit:
 - Der Autoreneintrag entsteht mit der Aufnahme; ab dann gilt für
   eigene Änderungen der vereinfachte Prüfweg aus dem README
   („the reviewer only has to perform the following checks").
+
+---
+
+# Eingereicht am 26.09.2026
+
+| | Applet | Desklet |
+|---|---|---|
+| Pull Request | [#9073](https://github.com/linuxmint/cinnamon-spices-applets/pull/9073) | [#1910](https://github.com/linuxmint/cinnamon-spices-desklets/pull/1910) |
+| Zweig im Fork | `avincepulse-applet` | `avincepulse-desklet` |
+| Commit | `29d11cf` | `eb9910b` |
+| Dateien | 15 | 14 |
+| Zeilen | +9.297 / −0 | +8.657 / −0 |
+| Konflikte | keine | keine |
+
+Eingereicht wurde die Fassung **0.1.0**, Tag `0.1.0`, Commit `77fb85a`.
+
+## Was beim Einreichen auffiel
+
+**Die Dateirechte.** Alles, was von der NAS kommt, trägt `755` – dort
+liegt ein CIFS-Einhängepunkt mit festen Rechten. Im Spices-Repository
+sind von 9.379 Dateien nur 395 ausführbar, und das sind Skripte.
+Vor dem Commit deshalb:
+
+```bash
+find "UUID" -type f -exec chmod 644 {} \;
+find "UUID" -type d -exec chmod 755 {} \;
+```
+
+Sonst wären 29 unnötig ausführbare Dateien eingereicht worden.
+
+**`validate-spice` im echten Repository** ist der eigentliche Test,
+nicht die Kopie unter `PRUEFDATEN/`. Beide Pakete: „No errors found".
+
+## Der automatische Scanner
+
+Beide Pull Requests bekamen sofort einen Kommentar von
+`github-actions` – einen regex-gestützten „Best-practices scanner".
+Er bezeichnet seine Funde selbst als „advisory" und sagt: „This check
+is not perfect and will not replace a normal review."
+
+**14 Hinweise beim Applet, 13 beim Desklet** (dem Desklet fehlt das
+Panel-Symbol und damit eine `file_test`-Stelle).
+
+### hardcoded_data_dir – sachlich falsch, mit Beleg beantwortet
+
+Beanstandet wurde `GLib.get_home_dir() + "/.local/share/locale"` in
+`bindtextdomain()`, empfohlen `get_user_data_dir()`.
+
+**Das wäre ein Fehler.** Cinnamon installiert die Übersetzungskataloge
+selbst an den festen Pfad, nicht an den XDG-Pfad – nachgeprüft in der
+installierten Fassung 6.6.9:
+
+| Cinnamon-Datei | Zeile |
+|---|---|
+| `cinnamon-settings/bin/ExtensionCore.py` | 80 |
+| `cinnamon-settings/bin/KeybindingTable.py` | 679, 716 |
+| `cinnamon-settings/bin/Spices.py` | 27 |
+| `cinnamon-settings/xlet-settings.py` | 70 |
+
+Bei gesetztem `XDG_DATA_HOME` liefen beide auseinander und die
+Übersetzung wäre schlicht nicht auffindbar. Das ist Befund **P20 aus
+AP25**, im Code begründet.
+
+### Die übrigen Hinweise – erwartet
+
+`enumerate_children` (5), `file_test` (4 bzw. 3),
+`file_get_contents` (3), `query_exists` (1). Alle betreffen
+`/proc`, `/sys`, `/dev/disk/by-uuid` oder eigene kleine Dateien –
+keiner kann auf einem Netzlaufwerk liegen.
+
+**Der eine Zugriff, der wirklich blockieren konnte, taucht nicht
+auf:** `query_filesystem_info()` je Takt ist seit AP26 asynchron.
+Genau der Punkt, den die Prüfliste „at all costs" nennt.
+
+Beantwortet wurde beides je einmal im Pull Request, mit den
+Zeilenangaben aus Cinnamons eigenem Code.
+
+## Wie es weitergeht
+
+Der Validate-Workflow **wartet auf die Freigabe eines Betreuers** –
+bei einem ersten Beitrag Standard, GitHub führt fremde Workflows nicht
+ungefragt aus.
+
+Danach prüft ein Mensch. Im Applet-Repository lagen zum Zeitpunkt der
+Einreichung **149 offene Pull Requests**, im Desklet-Repository 63.
+Geduld einplanen.
+
+## Nach der Aufnahme
+
+1. **„Noch nicht bei Cinnamon Spices eingereicht"** in `README.md` und
+   `README.de.md` berichtigen.
+2. **Den Spices-Link** in `HOMEPAGE-PROMPT-avince-de.md` eintragen und
+   dort den Installationsweg auf *Systemeinstellungen → Applets →
+   Herunterladen* umstellen.
+3. **Der Autoreneintrag** entsteht mit der Aufnahme; ab dann gilt für
+   eigene Änderungen der vereinfachte Prüfweg aus dem README.
