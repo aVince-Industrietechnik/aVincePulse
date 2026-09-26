@@ -2922,7 +2922,16 @@ Wiederherstellungsprobe belegt.
 **Zwei Geräte.** Entwickelt und geprüft wird auf dem Referenzgerät
 (Dell Latitude 5285) mit dem Arbeitsverzeichnis auf der NAS. Das
 Zweitgerät (`tower-linux`) arbeitet aus einem Git-Clone unter
-`~/aVincePulse`; Anleitung und Einstieg dort:
+`~/aVincePulse`.
+
+**Der Tower erreicht die NAS ebenfalls** (bestätigt am 26.09.2026).
+Für Tests gilt trotzdem der Clone als Arbeitsgrundlage: Er entspricht
+dem, was ein Nutzer bekommt, und er zwingt dazu, alles Nötige
+tatsächlich in Git zu haben. **Im NAS-Verzeichnis vom Tower aus nur
+lesen** – dort liegt das Git-Repository des Referenzgeräts, und
+gleichzeitiges Schreiben von zwei Rechnern bringt es durcheinander.
+
+Anleitung und Einstieg dort:
 `ZWEITGERAET-TESTEN.md` und `ZWEITGERAET-EINSTIEG.md`. Bei jeder
 Anweisung ist anzugeben, für welches der beiden Geräte sie gilt.
 

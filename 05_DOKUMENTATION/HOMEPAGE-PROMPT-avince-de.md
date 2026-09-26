@@ -20,22 +20,26 @@ benennt, was noch offen ist.
 cd ~/aVincePulse && git pull && cat 05_DOKUMENTATION/HOMEPAGE-PROMPT-avince-de.md
 ```
 
-## Alle genannten Pfade sind relativ zum Projektordner
+## Zwei mögliche Projektordner
 
-Damit der Text auf beiden Geräten stimmt:
+**Der Tower hat Zugriff auf die NAS** (bestätigt am 26.09.2026). Damit
+gibt es dort zwei Wege zum Projekt, und der Text unten lässt die
+Sitzung selbst herausfinden, welcher greift:
 
-| Gerät | Projektordner |
-|---|---|
-| Referenzgerät 5285 | `/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Development` |
-| Tower | `~/aVincePulse` |
+| Weg | Pfad | Inhalt |
+|---|---|---|
+| NAS | `/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Development` | **alles**, auch `06_TESTVERSIONEN/` |
+| Clone | `~/aVincePulse` | alles außer `06_TESTVERSIONEN/` |
 
-**Alles, was für die Homepage gebraucht wird, liegt in Git** – die drei
-Bildschirmfotos, das Logo in allen Größen, beide Projektbeschreibungen
-und die Lizenzhinweise. Am Tower genügt also ein `git pull`; die NAS
-wird nicht gebraucht.
+**Für die Homepage genügt der Clone.** Die drei Bildschirmfotos, das
+Logo in allen Größen, beide Projektbeschreibungen und die
+Lizenzhinweise liegen in Git. Nur `06_TESTVERSIONEN/` fehlt dort –
+Prüfdaten und Snapshots, die für eine Webseite keine Rolle spielen.
 
-Nicht in Git ist `06_TESTVERSIONEN/` – das sind Prüfdaten und
-Snapshots, die für die Homepage keine Rolle spielen.
+**Wenn über die NAS gearbeitet wird, gilt eine Regel:** nur lesen.
+Dort liegt das Git-Repository des Referenzgeräts. Zwei Rechner, die
+gleichzeitig darin committen, bringen es durcheinander. Für die
+Homepage wird ohnehin nur gelesen – Bilder und Texte.
 
 ---
 
@@ -73,18 +77,29 @@ Frag mich das ab, bevor du etwas vorschlägst.
 
 WO DU DAS MATERIAL FINDEST
 
-Das Projekt aVincePulse ist öffentlich:
-https://github.com/aVince-Industrietechnik/aVincePulse
+Das Projekt aVincePulse liegt auf diesem Rechner an einer von zwei
+Stellen. Finde zuerst heraus, an welcher:
 
-Am Tower liegt ein Clone unter ~/aVincePulse. Falls er fehlt:
+    for p in /mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Development ~/aVincePulse; do if [ -d "$p/docs" ]; then echo "gefunden: $p"; fi; done
 
-    git clone https://github.com/aVince-Industrietechnik/aVincePulse.git ~/aVincePulse
-
-Sonst zuerst aktualisieren:
+Beide enthalten alles, was für die Homepage gebraucht wird. Gibt es
+beide, nimm den Clone unter ~/aVincePulse und bring ihn auf Stand:
 
     cd ~/aVincePulse && git pull
 
-Alle folgenden Pfade sind relativ zu diesem Ordner.
+WICHTIG, falls du über die NAS arbeitest: dort NUR LESEN. In diesem
+Ordner liegt das Git-Repository des anderen Rechners; gleichzeitiges
+Schreiben von zwei Geräten bringt es durcheinander. Für die Homepage
+brauchst du ohnehin nur Bilder und Texte.
+
+Ist gar nichts da:
+
+    git clone https://github.com/aVince-Industrietechnik/aVincePulse.git ~/aVincePulse
+
+Das Projekt ist öffentlich, ein Zugang wird zum Lesen nicht gebraucht:
+https://github.com/aVince-Industrietechnik/aVincePulse
+
+Alle folgenden Pfade sind relativ zu dem Ordner, den du gefunden hast.
 
   docs/screenshot-applet.png     das Applet mit geöffneter Anzeige
   docs/screenshot-desklet.png    das Desklet auf dem Schreibtisch
