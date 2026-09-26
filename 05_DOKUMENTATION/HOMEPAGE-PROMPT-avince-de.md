@@ -1,37 +1,41 @@
 # Übernahmetext für die Homepage avince.de
 
-**Angelegt am 26.09.2026.** Gehört nicht zum Programm, sondern zu dem,
-was danach kommt: eine Inhaltsseite auf **avince.de**, die aVincePulse
-vorstellt, und ein Bereich, in dem später weitere eigene Programme
-dazukommen – für Linux und in Zukunft für Windows.
+**Angelegt am 26.09.2026, überarbeitet am selben Tag für die Arbeit am
+Zweitgerät.**
+
+Gehört nicht zum Programm, sondern zu dem, was danach kommt: eine
+Inhaltsseite auf **avince.de**, die aVincePulse vorstellt, und ein
+Bereich, in dem später weitere eigene Programme dazukommen – für Linux
+und in Zukunft für Windows.
 
 ## Wozu diese Datei
 
-Der Text unten ist zum **Kopieren in eine neue Claude-Sitzung** gedacht.
-Er enthält alles über aVincePulse, was für die Seite gebraucht wird,
-damit die Sitzung nicht erst das Projekt durchsuchen muss – und er
+Der Text unten ist zum **Kopieren in eine neue Sitzung** gedacht. Er
+enthält alles über aVincePulse, was für die Seite gebraucht wird, und
 benennt, was noch offen ist.
 
-Die Datei liegt hier, weil hier alles zum Thema zu finden ist. Sie
-liegt in Git und ist deshalb auch am Zweitgerät lesbar:
+**Auf beiden Geräten lesbar**, weil sie in Git liegt:
 
 ```bash
-cd ~/aVincePulse && cat 05_DOKUMENTATION/HOMEPAGE-PROMPT-avince-de.md
+cd ~/aVincePulse && git pull && cat 05_DOKUMENTATION/HOMEPAGE-PROMPT-avince-de.md
 ```
 
-## Was der Text bewusst offen lässt
+## Alle genannten Pfade sind relativ zum Projektordner
 
-Über avince.de selbst ist hier nichts bekannt: nicht, womit die Seite
-gebaut ist, nicht, wie Änderungen eingespielt werden, nicht, wie sie
-aussieht. Der Text fordert deshalb ausdrücklich, **zuerst zu fragen**,
-statt etwas zu vermuten und darauf aufzubauen.
+Damit der Text auf beiden Geräten stimmt:
 
-## Vor dem Einfügen prüfen
+| Gerät | Projektordner |
+|---|---|
+| Referenzgerät 5285 | `/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Development` |
+| Tower | `~/aVincePulse` |
 
-**Der Stand bei Cinnamon Spices.** Im Text steht „NOCH NICHT
-AUFGENOMMEN". Sobald die beiden Pull Requests angenommen sind, gehört
-dort die Adresse des Eintrags hin – und auf der Seite selbst ein
-Installationsweg über die Systemeinstellungen statt über GitHub.
+**Alles, was für die Homepage gebraucht wird, liegt in Git** – die drei
+Bildschirmfotos, das Logo in allen Größen, beide Projektbeschreibungen
+und die Lizenzhinweise. Am Tower genügt also ein `git pull`; die NAS
+wird nicht gebraucht.
+
+Nicht in Git ist `06_TESTVERSIONEN/` – das sind Prüfdaten und
+Snapshots, die für die Homepage keine Rolle spielen.
 
 ---
 
@@ -52,7 +56,7 @@ du anfasst, warum, und was passiert, wenn etwas schiefgeht. Keine
 Änderung ohne meine Freigabe, keine Löschung ohne ausdrückliche
 Freigabe. Sprich Deutsch, in der Du-Form.
 
-WAS ICH NOCH NICHT GESAGT HABE UND WAS DU WISSEN MUSST
+WAS DU NOCH NICHT WEISST UND MICH FRAGEN MUSST
 
 - Womit avince.de gebaut ist (WordPress, Baukasten, statisches HTML,
   etwas anderes?)
@@ -61,29 +65,55 @@ WAS ICH NOCH NICHT GESAGT HABE UND WAS DU WISSEN MUSST
 - Wie das jetzige Design aussieht und welche Seiten es schon gibt
 - Ob die Seite ein- oder mehrsprachig sein soll
 
+Es gibt ein privates GitHub-Repository "aVince-Industrietechnik/
+aVince-home". Frag mich, ob das die Homepage ist und ob wir damit
+arbeiten.
+
 Frag mich das ab, bevor du etwas vorschlägst.
 
-WAS ENTSTEHEN SOLL
+WO DU DAS MATERIAL FINDEST
 
-1. Eine Übersichtsseite "Programme" oder "Software", die später
-   mehrere Einträge trägt – ausbaufähig angelegt, nicht auf einen
-   Eintrag zugeschnitten.
+Das Projekt aVincePulse ist öffentlich:
+https://github.com/aVince-Industrietechnik/aVincePulse
 
-2. Eine eigene Inhaltsseite für aVincePulse mit Beschreibung,
-   Bildern, Installationshinweis und den Links unten.
+Am Tower liegt ein Clone unter ~/aVincePulse. Falls er fehlt:
 
-3. Ein Muster, nach dem ich weitere Programme ergänzen kann, ohne
-   jedes Mal von vorn anzufangen.
+    git clone https://github.com/aVince-Industrietechnik/aVincePulse.git ~/aVincePulse
 
-WAS aVincePulse IST – für die Texte
+Sonst zuerst aktualisieren:
+
+    cd ~/aVincePulse && git pull
+
+Alle folgenden Pfade sind relativ zu diesem Ordner.
+
+  docs/screenshot-applet.png     das Applet mit geöffneter Anzeige
+  docs/screenshot-desklet.png    das Desklet auf dem Schreibtisch
+  docs/screenshot-settings.png   das Einstellungsfenster
+  docs/LIESMICH-SCREENSHOTS.txt  wie die Bilder entstanden sind
+
+  03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/
+      00_Referenz/      das Ursprungslogo
+      01_PNG_Iconset/   Symbole von 16 bis 1024 Pixel
+      03_Panel/         die Leistensymbole, auch einfarbig
+
+  README.md      die englische Projektbeschreibung
+  README.de.md   die deutsche - taugt als Vorlage für die Seitentexte
+
+  08_LIZENZEN_RECHTE/GRAFIKEN.md        Herkunft und Rechte der Bilder
+  08_LIZENZEN_RECHTE/NAME-UND-MARKE.md  zum Namen aVincePulse
+
+Lies README.de.md zuerst. Dort steht in ausformulierter Form, was das
+Programm tut und was es bewusst nicht tut.
+
+WAS aVincePulse IST – in Kürze
 
 Ein Hardware- und Netzwerkmonitor für Linux Mint mit Cinnamon,
 Version 6.6 oder neuer. Zwei Bestandteile:
 
-- ein APPLET für die Leiste: zeigt dort nur ein kleines Symbol,
-  die Messwerte erscheinen groß in der Bildschirmmitte, wenn man
-  darauf zeigt oder klickt. Die Leiste bleibt aufgeräumt, die Werte
-  sind quer durch den Raum lesbar.
+- ein APPLET für die Leiste: zeigt dort nur ein kleines Symbol, die
+  Messwerte erscheinen groß in der Bildschirmmitte, wenn man darauf
+  zeigt oder klickt. Die Leiste bleibt aufgeräumt, die Werte sind quer
+  durch den Raum lesbar.
 - ein DESKLET für den Schreibtisch: zeigt die Werte dauerhaft.
 
 Beide teilen dieselbe Mess- und Sensorlogik und zeigen dieselben
@@ -121,26 +151,37 @@ Veröffentlichung. 494 Prüfungen in neun Prüfskripten.
 Das ist kein Wochenendprojekt, und das darf man der Seite ansehen –
 aber bitte ohne Zahlenprotzerei.
 
-MATERIAL
+STAND: EINGEREICHT, NOCH NICHT AUFGENOMMEN
 
-Drei Bildschirmfotos liegen im Projekt unter
-/mnt/LX-NAS-linux/60_SETUP_INSTALLATION/aVincePulse_Development/docs/
-  screenshot-applet.png    das Applet mit geöffneter Anzeige
-  screenshot-desklet.png   das Desklet auf dem Schreibtisch
-  screenshot-settings.png  das Einstellungsfenster
+Am 26.09.2026 bei Cinnamon Spices eingereicht, Fassung 0.1.0:
 
-Logo und Symbole in verschiedenen Größen:
-  .../03_GRAFIK_ICONS/01_V_SIGNAL_ICONSET/
+  Applet  https://github.com/linuxmint/cinnamon-spices-applets/pull/9073
+  Desklet https://github.com/linuxmint/cinnamon-spices-desklets/pull/1910
 
-Die englische und die deutsche Projektbeschreibung als Vorlage:
-  .../README.md und README.de.md
+Beide Anträge sind offen. **Bis zur Aufnahme darf die Seite nicht
+behaupten, das Programm sei bei Cinnamon Spices erhältlich.** Der
+Installationsweg ist derzeit der über GitHub, wie im README
+beschrieben.
+
+Frag mich nach dem Stand, bevor du etwas dazu schreibst.
 
 LINKS FÜR DIE SEITE
 
 - Quellcode: https://github.com/aVince-Industrietechnik/aVincePulse
 - Unterstützen: https://ko-fi.com/avince
-- Bei Cinnamon Spices: NOCH NICHT AUFGENOMMEN. Frag mich nach dem
-  Stand, bevor du darauf verlinkst.
+- Bei Cinnamon Spices: noch nicht aufgenommen, siehe oben
+
+WAS ENTSTEHEN SOLL
+
+1. Eine Übersichtsseite "Programme" oder "Software", die später
+   mehrere Einträge trägt – ausbaufähig angelegt, nicht auf einen
+   Eintrag zugeschnitten.
+
+2. Eine eigene Inhaltsseite für aVincePulse mit Beschreibung,
+   Bildern, Installationshinweis und den Links oben.
+
+3. Ein Muster, nach dem ich weitere Programme ergänzen kann, ohne
+   jedes Mal von vorn anzufangen.
 
 WORAUF ICH WERT LEGE
 
@@ -159,15 +200,14 @@ Fang damit an, mir die offenen Fragen oben zu stellen.
 
 ## Wenn die Aufnahme durch ist
 
-Zwei Stellen im Text sind dann zu ändern:
+Drei Stellen sind dann zu ändern:
 
-1. **Der Spices-Link.** Statt „NOCH NICHT AUFGENOMMEN" die Adresse des
-   Eintrags auf `cinnamon-spices.linuxmint.com`.
-2. **Der Installationsweg.** Dann ist der übliche Weg
-   *Systemeinstellungen → Applets → Herunterladen*, nicht mehr der
-   Umweg über GitHub. Das gehört auf die Seite, weil es für Nutzer der
-   einfachere Weg ist.
-
-Ebenso zu berichtigen ist dann der Satz „Noch nicht bei Cinnamon Spices
-eingereicht" in `README.md` und `README.de.md` – er steht als
-Merkposten in `PROJECT-STATUS.md`, Abschnitt 14.
+1. **Im Text oben:** Der Abschnitt „STAND: EINGEREICHT" wird zur
+   Adresse des Eintrags auf `cinnamon-spices.linuxmint.com`.
+2. **Auf der Seite:** Der Installationsweg wird
+   *Systemeinstellungen → Applets → Herunterladen* statt des Umwegs
+   über GitHub. Das ist für Nutzer der einfachere Weg und gehört
+   dann nach vorn.
+3. **In `README.md` und `README.de.md`:** Der Satz „Noch nicht bei
+   Cinnamon Spices eingereicht" – er steht als Merkposten auch in
+   `PROJECT-STATUS.md`, Abschnitt 14.
