@@ -2064,7 +2064,7 @@ Jedes Backup enthält:
 - `SHA256SUMS.txt`
 - `BACKUP-INFO.txt` – Arbeitspaket, Commit, Zeitpunkt und Anleitung zur Wiederherstellung
 
-Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-26_15-10-42` (Einreichungsfassung `0.1.0`); Wiederherstellungsprobe bestanden (Prüfsummen beider Dateien, Klon aus dem Bundle mit 24 Tags auf `0.1.0`, Archiv entpackt und Datei für Datei über SHA-256 verglichen: **3367 von 3367 zeichengleich**, keine Datei nur auf einer Seite).
+Letztes Backup zum Zeitpunkt dieser Fortschreibung: `2026-09-26_18-02-52` – **der eingereichte Stand**, Version `0.1.0`, einschließlich der Dokumentation der Einreichung selbst. Wiederherstellungsprobe bestanden (Prüfsummen beider Dateien, Klon aus dem Bundle mit 24 Tags und Version `0.1.0` in den Metadaten, Archiv entpackt und Datei für Datei über SHA-256 verglichen: **3391 von 3391 zeichengleich**, keine Datei nur auf einer Seite). Die 45 Dateien der beiden Einreichungspakete sind enthalten; die Klone der Spices-Forks unter `~/cinnamon-spices-*` bewusst nicht – sie liegen außerhalb des Projekts und sind jederzeit neu herstellbar.
 
 **Achtung beim Anlegen des Archivs:** `tar` nicht mit `--exclude-vcs-ignores` aufrufen. Die Option lässt die per `.gitignore` ausgeschlossenen Dateien weg – darunter die `.bak`-Dateien in `02_QUELLCODE` und `05_DOKUMENTATION`, die es ausschließlich auf der NAS gibt. Beim AP20-Backup ist das zunächst passiert und wurde vor der Freigabe berichtigt; die Backups bis AP19 sind davon nicht betroffen (nachgeprüft am 20.09.2026). Richtig ist der einfache Aufruf:
 
